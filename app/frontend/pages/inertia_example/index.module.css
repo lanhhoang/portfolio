@@ -36,7 +36,8 @@
   padding: 1.5em;
   will-change: filter;
   transition: filter 300ms;
-  filter: drop-shadow(0 20px 13px rgb(0 0 0 / 0.03)) drop-shadow(0 8px 5px rgb(0 0 0 / 0.08));
+  filter: drop-shadow(0 20px 13px rgb(0 0 0 / 0.03))
+    drop-shadow(0 8px 5px rgb(0 0 0 / 0.08));
 }
 .logo.inertia:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
@@ -65,7 +66,8 @@
 
 @media (prefers-color-scheme: dark) {
   .logo {
-    filter: drop-shadow(0 20px 13px rgb(255 255 255 / 0.03)) drop-shadow(0 8px 5px rgb(255 255 255 / 0.08));
+    filter: drop-shadow(0 20px 13px rgb(255 255 255 / 0.03))
+      drop-shadow(0 8px 5px rgb(255 255 255 / 0.08));
   }
 }
 

@@ -257,6 +257,11 @@
       "selfCloseVoidElements": "always"
     }
   },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "overrides": [
     { "includes": ["app/frontend/**/*.{js,mjs,cjs,ts,jsx,tsx}"] },
     {

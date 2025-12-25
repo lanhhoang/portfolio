@@ -1,11 +1,11 @@
-import { version as react_version } from "react";
-import { Head } from "@inertiajs/react";
+import { version as react_version } from "react"
+import { Head } from "@inertiajs/react"
 
-import railsSvg from "/assets/rails.svg";
-import inertiaSvg from "/assets/inertia.svg";
-import reactSvg from "/assets/react.svg";
+import railsSvg from "/assets/rails.svg"
+import inertiaSvg from "/assets/inertia.svg"
+import reactSvg from "/assets/react.svg"
 
-import cs from "./index.module.css";
+import cs from "./index.module.css"
 
 export default function InertiaExample({
   rails_version,
@@ -13,10 +13,10 @@ export default function InertiaExample({
   rack_version,
   inertia_rails_version,
 }: {
-  rails_version: string;
-  ruby_version: string;
-  rack_version: string;
-  inertia_rails_version: string;
+  rails_version: string
+  ruby_version: string
+  rack_version: string
+  inertia_rails_version: string
 }) {
   return (
     <div className={cs.root}>
@@ -24,21 +24,33 @@ export default function InertiaExample({
 
       <nav className={cs.subNav}>
         <a href="https://rubyonrails.org" target="_blank">
-          <img className={`${cs.logo} ${cs.rails}`} alt="Ruby on Rails Logo" src={railsSvg} />
+          <img
+            className={`${cs.logo} ${cs.rails}`}
+            alt="Ruby on Rails Logo"
+            src={railsSvg}
+          />
         </a>
         <a href="https://inertia-rails.dev" target="_blank">
-          <img className={`${cs.logo} ${cs.inertia}`} src={inertiaSvg} alt="Inertia logo" />
+          <img
+            className={`${cs.logo} ${cs.inertia}`}
+            src={inertiaSvg}
+            alt="Inertia logo"
+          />
         </a>
         <a href="https://react.dev" target="_blank">
-          <img className={`${cs.logo} ${cs.react}`} src={reactSvg} alt="React logo" />
+          <img
+            className={`${cs.logo} ${cs.react}`}
+            src={reactSvg}
+            alt="React logo"
+          />
         </a>
       </nav>
 
       <div className={cs.footer}>
         <div className={cs.card}>
           <p>
-            Edit <code>app/frontend/pages/inertia_example/index.tsx</code> and save to test{" "}
-            <abbr title="Hot Module Replacement">HMR</abbr>.
+            Edit <code>app/frontend/pages/inertia_example/index.tsx</code> and
+            save to test <abbr title="Hot Module Replacement">HMR</abbr>.
           </p>
         </div>
 
@@ -69,5 +81,5 @@ export default function InertiaExample({
         </ul>
       </div>
     </div>
-  );
+  )
 }
