@@ -2,7 +2,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json"
+    "check": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json",
+    "lint-format": "biome format",
+    "lint-format:fix": "biome format --write"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.10",

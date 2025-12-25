@@ -3,12 +3,12 @@
   margin: 0;
   padding: 0;
   align-items: center;
-  background-color: #F0E7E9;
+  background-color: #f0e7e9;
   background-image: url(data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjEwMjQiIHZpZXdCb3g9IjAgMCAxNDQwIDEwMjQiIHdpZHRoPSIxNDQwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Im0xNDQwIDUxMC4wMDA2NDh2LTUxMC4wMDA2NDhoLTE0NDB2Mzg0LjAwMDY0OGM0MTcuMzExOTM5IDEzMS4xNDIxNzkgODkxIDE3MS41MTMgMTQ0MCAxMjZ6IiBmaWxsPSIjZmZmIi8+PC9zdmc+);
   background-position: center center;
   background-repeat: no-repeat;
   background-size: cover;
-  color: #261B23;
+  color: #261b23;
   display: flex;
   flex-direction: column;
   font-family: Sans-Serif;
@@ -44,7 +44,7 @@
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
-.logo.rails:hover  {
+.logo.rails:hover {
   filter: drop-shadow(0 0 2em rgb(211 0 1 / 0.6));
 }
 
