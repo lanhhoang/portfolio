@@ -35,7 +35,7 @@ gem "thruster", require: false
 gem "vite_rails", "~> 3.0"
 
 # The Rails adapter for Inertia.js [https://inertia-rails.dev]
-gem "inertia_rails", "~> 3.15"
+gem "inertia_rails", "~> 3.16"
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 gem "image_processing", "~> 1.2"
