@@ -1,5 +1,7 @@
 import { useThemeInitializer } from "@/lib/theme"
+
 import { ThemeToggle } from "@/components/ThemeToggle"
+import { CosmicBackground } from "@/components/CosmicBackground"
 
 export function Home() {
   useThemeInitializer()
@@ -9,6 +11,7 @@ export function Home() {
       {/* Theme Toggle */}
       <ThemeToggle />
       {/* Background Effects */}
+      <CosmicBackground />
       {/* Navbar */}
       {/* Hero Section */}
       {/* About Section */}
