@@ -4,6 +4,7 @@ import { ThemeToggle } from "@/components/ThemeToggle"
 import { CosmicBackground } from "@/components/CosmicBackground"
 
 import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
 
 export function Home() {
   useThemeInitializer()
@@ -29,6 +30,7 @@ export function Home() {
         </main>
 
         {/* Footer */}
+        <Footer />
       </div>
     </div>
   );
