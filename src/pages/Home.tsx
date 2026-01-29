@@ -5,6 +5,7 @@ import { CosmicBackground } from "@/components/CosmicBackground"
 
 import { Navbar } from "@/components/Navbar"
 import { Hero } from "@/components/Hero"
+import { About } from "@/components/About"
 import { Footer } from "@/components/Footer"
 
 export function Home() {
@@ -26,6 +27,7 @@ export function Home() {
           {/* Hero Section */}
           <Hero />
           {/* About Section */}
+          <About />
           {/* Skills Section */}
           {/* Projects Section */}
           {/* Contact Section */}
