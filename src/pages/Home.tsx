@@ -4,6 +4,7 @@ import { ThemeToggle } from "@/components/ThemeToggle"
 import { CosmicBackground } from "@/components/CosmicBackground"
 
 import { Navbar } from "@/components/Navbar"
+import { Hero } from "@/components/Hero"
 import { Footer } from "@/components/Footer"
 
 export function Home() {
@@ -23,6 +24,7 @@ export function Home() {
         {/* Sections */}
         <main>
           {/* Hero Section */}
+          <Hero />
           {/* About Section */}
           {/* Skills Section */}
           {/* Projects Section */}
