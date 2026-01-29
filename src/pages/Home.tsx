@@ -3,6 +3,9 @@ import { useThemeInitializer } from "@/lib/theme"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import { CosmicBackground } from "@/components/CosmicBackground"
 
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
+
 export function Home() {
   useThemeInitializer()
 
@@ -12,13 +15,23 @@ export function Home() {
       <ThemeToggle />
       {/* Background Effects */}
       <CosmicBackground />
-      {/* Navbar */}
-      {/* Hero Section */}
-      {/* About Section */}
-      {/* Skills Section */}
-      {/* Projects Section */}
-      {/* Contact Section */}
-      {/* Footer */}
+
+      <div className="relative z-10">
+        {/* Navbar */}
+        <Navbar />
+
+        {/* Sections */}
+        <main>
+          {/* Hero Section */}
+          {/* About Section */}
+          {/* Skills Section */}
+          {/* Projects Section */}
+          {/* Contact Section */}
+        </main>
+
+        {/* Footer */}
+        <Footer />
+      </div>
     </div>
   );
 }
