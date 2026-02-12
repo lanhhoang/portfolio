@@ -11,7 +11,7 @@ export function Navbar() {
   return (
     <header className="z-999 relative">
       <motion.div
-        className="fixed top-0 left-1/2 h-18 w-full rounded-none border border-white border-opacity-40 bg-white bg-opacity-50 shadow-lg shadow-black/3 backdrop-blur-[0.5rem] sm:top-6 sm:h-13 sm:w-xl sm:rounded-full dark:bg-gray-950 dark:border-black/40 dark:bg-opacity-75"
+        className="fixed top-0 left-1/2 h-18 w-full rounded-none border border-white/20 bg-white/10 shadow-lg shadow-black/3 backdrop-blur-[0.5rem] sm:top-6 sm:h-13 sm:w-xl sm:rounded-full dark:border-white/10 dark:bg-white/5"
         initial={{ y: -100, x: "-50%", opacity: 0 }}
         animate={{ y: 0, x: "-50%", opacity: 1 }}
       ></motion.div>
