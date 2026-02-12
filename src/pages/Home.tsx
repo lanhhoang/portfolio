@@ -1,3 +1,5 @@
+import { useEffect } from "react"
+
 import { useThemeInitializer } from "@/lib/theme"
 
 import { ThemeToggle } from "@/components/ThemeToggle"
@@ -14,6 +16,11 @@ import { Footer } from "@/components/Footer"
 
 export function Home() {
   useThemeInitializer()
+
+  useEffect(() => {
+    // Smooth scroll behavior
+    document.documentElement.style.scrollBehavior = "smooth";
+  }, []);
 
   return (
     <div className="relative min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white overflow-x-hidden">
