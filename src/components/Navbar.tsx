@@ -1,74 +1,61 @@
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
-const navItems = [
-  { label: "About", href: "#about" },
-  { label: "Skills", href: "#skills" },
-  { label: "Projects", href: "#projects" },
-  { label: "Experience", href: "#experience" },
-  { label: "Contact", href: "#contact" },
-];
+import { motion } from "framer-motion";
+import clsx from "clsx";
+
+import { links } from "@/lib/data";
+import { useActiveSectionContext } from "@/hooks/useActiveSectionContext";
 
 export function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
+  const { activeSection, setActiveSection, setTimeOfLastClick } =
+    useActiveSectionContext();
 
   return (
-    <nav className="fixed top-4 left-4 right-4 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-lg border border-gray-200 dark:border-slate-700 shadow-lg">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <div className="shrink-0">
-            <a
-              href="#home"
-              className="text-2xl font-heading font-bold bg-linear-to-r from-purple-600 to-purple-800 dark:from-purple-400 dark:to-purple-600 bg-clip-text text-transparent hover:from-purple-700 hover:to-purple-900 dark:hover:from-purple-300 dark:hover:to-purple-500 transition-all duration-300 cursor-pointer"
+    <header className="z-999 relative">
+      <motion.div
+        className="fixed top-0 left-1/2 h-18 w-full rounded-none border border-white border-opacity-40 bg-white bg-opacity-50 shadow-lg shadow-black/3 backdrop-blur-[0.5rem] sm:top-6 sm:h-13 sm:w-xl sm:rounded-full dark:bg-gray-950 dark:border-black/40 dark:bg-opacity-75"
+        initial={{ y: -100, x: "-50%", opacity: 0 }}
+        animate={{ y: 0, x: "-50%", opacity: 1 }}
+      ></motion.div>
+
+      <nav className="flex fixed top-[0.15rem] left-1/2 h-12 -translate-x-1/2 py-2 sm:top-[1.7rem] sm:h-[initial] sm:py-0">
+        <ul className="flex w-88 flex-wrap items-center justify-center gap-y-1 text-[0.9rem] font-medium text-gray-500 sm:w-[initial] sm:flex-nowrap sm:gap-5">
+          {links.map((link) => (
+            <motion.li
+              className="h-3/4 flex items-center justify-center relative"
+              key={link.hash}
+              initial={{ y: -100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
             >
-              Portfolio
-            </a>
-          </div>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1">
-            {navItems.map((item) => (
               <a
-                key={item.href}
-                href={item.href}
-                className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-slate-800 transition-colors duration-200 cursor-pointer"
+                className={clsx(
+                  "flex w-full items-center justify-center px-3 py-3 hover:text-gray-950 transition dark:text-gray-500 dark:hover:text-gray-300",
+                  {
+                    "text-gray-950 dark:text-gray-200":
+                      activeSection === link.name,
+                  }
+                )}
+                href={link.hash}
+                onClick={() => {
+                  setActiveSection(link.name);
+                  setTimeOfLastClick(Date.now());
+                }}
               >
-                {item.label}
+                {link.name}
+                {activeSection === link.name && (
+                  <motion.span
+                    className="bg-gray-200 rounded-full absolute inset-0 -z-10 dark:bg-gray-800"
+                    layoutId="activeSection"
+                    transition={{
+                      type: "spring",
+                      stiffness: 380,
+                      damping: 30,
+                    }}
+                  ></motion.span>
+                )}
               </a>
-            ))}
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors duration-200 cursor-pointer"
-            >
-              {isOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Navigation */}
-        {isOpen && (
-          <div className="md:hidden pb-4 space-y-2">
-            {navItems.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-slate-800 transition-colors duration-200 cursor-pointer"
-                onClick={() => setIsOpen(false)}
-              >
-                {item.label}
-              </a>
-            ))}
-          </div>
-        )}
-      </div>
-    </nav>
+            </motion.li>
+          ))}
+        </ul>
+      </nav>
+    </header>
   );
 }

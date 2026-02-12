@@ -1,28 +1,5 @@
 import { motion } from "framer-motion";
-import {
-  SiReact, SiTypescript, SiTailwindcss, SiNodedotjs,
-  SiPostgresql, SiGraphql, SiDocker, SiAmazonwebservices, SiFramer,
-  SiGit, SiRubyonrails, SiPython, SiGo, SiRuby, SiFastapi, SiJavascript
-} from "react-icons/si";
-
-const skills = [
-  { name: "Ruby", icon: SiRuby, color: "#CC0000" },
-  { name: "Ruby on Rails", icon: SiRubyonrails, color: "#CC0000" },
-  { name: "Python", icon: SiPython, color: "#3776AB" },
-  { name: "FastAPI", icon: SiFastapi, color: "#009688" },
-  { name: "Go", icon: SiGo, color: "#007D9C" },
-  { name: "PostgreSQL", icon: SiPostgresql, color: "#4169E1" },
-  { name: "JavaScript", icon: SiJavascript, color: "#F7DF1E" },
-  { name: "TypeScript", icon: SiTypescript, color: "#3178C6" },
-  { name: "React", icon: SiReact, color: "#61DAFB" },
-  { name: "Framer Motion", icon: SiFramer, color: "#0055FF" },
-  { name: "Node.js", icon: SiNodedotjs, color: "#339933" },
-  { name: "Tailwind CSS", icon: SiTailwindcss, color: "#06B6D4" },
-  { name: "GraphQL", icon: SiGraphql, color: "#E10098" },
-  { name: "Git", icon: SiGit, color: "#F05032" },
-  { name: "Docker", icon: SiDocker, color: "#2496ED" },
-  { name: "AWS", icon: SiAmazonwebservices, color: "#FF9900" },
-];
+import { skills } from "@/lib/data";
 
 export function Skills() {
   const containerVariants = {
