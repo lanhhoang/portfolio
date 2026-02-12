@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { ArrowRight, Github, Linkedin, Mail } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { socialLinks } from "@/lib/data";
 
 export function Hero() {
   const containerVariants = {
@@ -90,34 +91,22 @@ export function Hero() {
           variants={itemVariants}
           className="flex justify-center gap-6"
         >
-          <motion.a
-            href="https://github.com/lanhhoang"
-            target="_blank"
-            rel="noopener noreferrer"
-            whileHover={{ scale: 1.1, y: -5 }}
-            whileTap={{ scale: 0.95 }}
-            className="w-12 h-12 rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-purple-100 dark:hover:bg-purple-900/30 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-300 cursor-pointer"
-          >
-            <Github className="w-6 h-6" />
-          </motion.a>
-          <motion.a
-            href="https://linkedin.com/in/lanh"
-            target="_blank"
-            rel="noopener noreferrer"
-            whileHover={{ scale: 1.1, y: -5 }}
-            whileTap={{ scale: 0.95 }}
-            className="w-12 h-12 rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-purple-100 dark:hover:bg-purple-900/30 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-300 cursor-pointer"
-          >
-            <Linkedin className="w-6 h-6" />
-          </motion.a>
-          <motion.a
-            href="mailto:lanhhoang.swe@gmail.com"
-            whileHover={{ scale: 1.1, y: -5 }}
-            whileTap={{ scale: 0.95 }}
-            className="w-12 h-12 rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-purple-100 dark:hover:bg-purple-900/30 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-300 cursor-pointer"
-          >
-            <Mail className="w-6 h-6" />
-          </motion.a>
+          {socialLinks.map((link) => {
+            const Icon = link.icon;
+            return (
+              <motion.a
+                key={link.label}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.1, y: -5 }}
+                whileTap={{ scale: 0.95 }}
+                className="w-12 h-12 rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-purple-100 dark:hover:bg-purple-900/30 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-300 cursor-pointer"
+              >
+                <Icon className="w-6 h-6" />
+              </motion.a>
+            );
+          })}
         </motion.div>
       </motion.div>
 

@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { Heart, Github, Linkedin } from "lucide-react";
+import { Heart } from "lucide-react";
+import { socialLinks } from "@/lib/data";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -23,11 +24,6 @@ export function Footer() {
     },
   };
 
-  const socialLinks = [
-    { icon: Github, href: "https://github.com/lanhhoang", label: "GitHub" },
-    { icon: Linkedin, href: "https://linkedin.com/in/lanh", label: "LinkedIn" },
-  ];
-
   return (
     <footer className="relative border-t border-gray-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -39,7 +35,7 @@ export function Footer() {
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             {/* Brand */}
             <motion.div variants={itemVariants}>
-              <h2 className="text-2xl font-heading font-bold bg-gradient-to-r from-purple-600 to-purple-800 dark:from-purple-400 dark:to-purple-600 bg-clip-text text-transparent mb-2">
+              <h2 className="text-2xl font-heading font-bold bg-linear-to-r from-purple-600 to-purple-800 dark:from-purple-400 dark:to-purple-600 bg-clip-text text-transparent mb-2">
                 Portfolio
               </h2>
               <p className="text-gray-600 dark:text-gray-400 text-sm">

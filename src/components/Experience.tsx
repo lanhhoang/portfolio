@@ -1,56 +1,6 @@
 import { motion } from "framer-motion";
 import { Briefcase, Calendar } from "lucide-react";
-
-const experiences = [
-  {
-    title: "Software Engineer",
-    company: "Centennial Innovates",
-    period: "2024 - Present",
-    description:
-      "Leading development of mental health platform for Canada market",
-    highlights: [
-      "Engineered an asynchronous job processing system using Redis and Sidekiq, moving heavy computations to background workers and improving application response time by 20%",
-      "Designed secure payment and notification services integrating Stripe and SendGrid, ensuring PCI compliance and reliable email delivery",
-      "Optimized the CI/CD pipeline via GitHub Actions, reducing build and deployment times by 25% through caching strategies",
-    ],
-  },
-  {
-    title: "Software Engineer",
-    company: "Remitano",
-    period: "2020 - 2021",
-    description:
-      "Developed and maintained Remitano P2P exchange platform",
-    highlights: [
-      "Integrated third-party APIs to automate trading across 6 external exchanges, directly contributing to a 10X increase in monthly trading volume",
-      "Led a major infrastructure upgrade, migrating the core monolith from Ruby on Rails 5 to 6. Refactored legacy modules to adhere to modern standards, reducing technical debt",
-      "Engineered distributed services in Python and Rails to provide alternative verification methods, reducing user wait times by 50%",
-    ],
-  },
-  {
-    title: "Software Engineer",
-    company: "LOGIVAN",
-    period: "2019 - 2020",
-    description:
-      "Developed and maintained LOGIVAN platform to connect shippers with truck drivers",
-    highlights: [
-      "Developed a custom truck-matching algorithm, factoring in load capacity, route constraints, and truck type to automate the dispatch process and tripled daily order fulfillment",
-      "Analyzed query execution plans, added composite indexes, optimized PostgreSQL database performance for a dataset of 30k + active pricing records to reduce quote generation time by 20%",
-      "Architected a constraints - based API for order creation, abstracting complex logic away from the frontend and reducing order flow complexity by 25%",
-    ],
-  },
-  {
-    title: "Software Engineer",
-    company: "TINYpulse",
-    period: "2017 - 2019",
-    description:
-      "Developed and maintained TINYpulse platform to improve employee engagement",
-    highlights: [
-      "Integrated Slack API for real-time survey participation, reducing average user response time by 75% for 50k+ monthly users",
-      "Refactored React frontend components, implementing efficient data fetching patterns that decreased page load times by 60%",
-      "Built a high-volume data ingestion tool for CSV organization imports, reducing manual customer onboarding time",
-    ],
-  },
-];
+import { experiences } from "@/lib/data";
 
 export function Experience() {
   const containerVariants = {
