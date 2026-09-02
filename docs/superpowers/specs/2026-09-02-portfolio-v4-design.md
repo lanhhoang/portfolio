@@ -19,7 +19,7 @@ The primary technical goal is one cohesive application with the fewest operation
 
 The first release is successful when:
 
-- Visitors can browse projects, posts, profile information, a résumé, and a contact form on desktop and mobile.
+- Visitors can use every public and admin flow from a phone, with layouts progressively enhanced for desktop and large screens.
 - Public navigation and content support English, French, and Vietnamese without silently falling back to the wrong language.
 - Visitors can search and filter published projects and posts within the active language.
 - The interface follows the visitor's light/dark system preference, supports a saved override, and uses the owner-selected accent preset.
@@ -41,7 +41,7 @@ The first release is successful when:
 - About/profile page
 - Localized résumé page and PDF download
 - Contact form
-- Responsive navigation and language switcher
+- Mobile-first responsive layout, navigation, and language switcher
 - System-aware light and dark themes with a saved visitor override
 - One owner-selected accent from Brown, Green, Lime, Orange, and Yellow
 - SEO metadata, canonical URLs, `hreflang`, sitemap, and structured data
@@ -49,7 +49,7 @@ The first release is successful when:
 ### Private v1
 
 - Owner-only authentication with password and TOTP
-- English-language dashboard UI
+- English-language, mobile-first responsive dashboard UI
 - Project and translation management
 - Post and translation management
 - Markdown editing and preview per locale
@@ -284,14 +284,27 @@ Theme colors are semantic CSS custom properties rather than values scattered thr
 The owner selects one global accent preset in admin. Lime is the default. Each preset has a brighter dark-mode value and a darker light-mode value so text and controls retain sufficient contrast:
 
 | Preset | Dark mode | Light mode |
-| --- | --- | --- |
-| Brown | `#C58A63` | `#7A4E35` |
-| Green | `#5BC98B` | `#216E46` |
-| Lime | `#BAFF54` | `#5A7600` |
-| Orange | `#FF8A3D` | `#A94300` |
-| Yellow | `#FFD84D` | `#806100` |
+| ------ | --------- | ---------- |
+| Brown  | `#C58A63` | `#7A4E35`  |
+| Green  | `#5BC98B` | `#216E46`  |
+| Lime   | `#BAFF54` | `#5A7600`  |
+| Orange | `#FF8A3D` | `#A94300`  |
+| Yellow | `#FFD84D` | `#806100`  |
 
 Accent-filled controls use a dedicated contrasting foreground token. The design must maintain readable line lengths, visible focus states, WCAG AA contrast, and reduced-motion support in every theme/accent combination.
+
+### Mobile-first layout rules
+
+Base CSS targets narrow screens, touch input, single-column reading flow, and compact assets. Features are then added through content-driven `min-width` breakpoints:
+
+- navigation expands from an accessible menu to a persistent header
+- project and content grids gain columns only when each item remains readable
+- typography scales without creating narrow multi-line fragments
+- media requests use responsive image widths appropriate to the viewport
+- interactive controls do not depend on hover and provide comfortable touch targets
+- content uses maximum widths on large screens instead of stretching edge-to-edge
+
+Phone layouts must not overflow horizontally at supported zoom levels. Desktop and large-screen layouts add hierarchy, whitespace, and density without changing content order or hiding functionality.
 
 ### Homepage hierarchy
 
@@ -310,11 +323,11 @@ Accent-filled controls use a dedicated contrasting foreground token. The design 
 - **Résumé:** localized summary with a direct locale-specific PDF download.
 - **Contact:** localized short form with explicit submission, validation, and delivery feedback.
 
-A compact language switcher is present throughout the public site. On small screens, navigation collapses to an accessible menu, grids become a single reading column, and display type scales down without producing narrow multi-line fragments.
+A compact language switcher is present throughout the public site. The mobile content order remains the source order so keyboard, screen-reader, and visual navigation stay aligned at every breakpoint.
 
 ## 9. Admin Experience
 
-The admin uses a restrained utility layout rather than reproducing the public site's display typography.
+The admin uses a restrained utility layout rather than reproducing the public site's display typography. It is mobile-first: forms stack by default, primary actions remain reachable by touch, and wide data tables become labeled record rows or cards before columns become unreadable. Larger screens progressively add side navigation, columns, and denser tables without introducing desktop-only actions.
 
 ### Dashboard
 
@@ -460,7 +473,9 @@ Use Rails' default test stack. Add the smallest tests that protect private acces
 
 ### Presentation and recovery checks
 
-- responsive layouts at small-phone, tablet, laptop, and wide-desktop widths
+- public and admin layouts at phone portrait, phone landscape, tablet, laptop, desktop, and large-desktop widths
+- no horizontal overflow at 320 CSS pixels or 200% browser zoom
+- touch operation without hover-only actions
 - keyboard navigation and visible focus
 - WCAG AA contrast across both themes and all five accent presets
 - reduced motion and no incorrect-theme flash on initial paint
