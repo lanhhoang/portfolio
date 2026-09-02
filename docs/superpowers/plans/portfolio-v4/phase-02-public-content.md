@@ -1,0 +1,1957 @@
+# Portfolio v4 Phase 2: Public Content Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Replace the Phase 1 public shell's static content with localized, database-backed profile, résumé, project, post, tag, search, and uploaded-asset delivery.
+
+**Architecture:** Shared records hold locale-independent data and Active Storage attachments; normalized translation records hold authored text and publication state. One Commonmarker service renders and sanitizes Markdown before persistence, one query object applies locale/publication/search/tag boundaries, and server-rendered public controllers consume the locale contract established in Phase 1.
+
+**Tech Stack:** Ruby 4.0.6, Rails 8.1.x, SQLite, Active Record, Active Storage disk service, Commonmarker, Rails HTML sanitizer, Minitest
+
+**Spec:** `docs/superpowers/specs/2026-09-02-portfolio-v4-design.md`
+
+## Global Constraints
+
+- Public locales are exactly `en`, `fr`, and `vi`; English authored content is required and other translations are optional.
+- Public URLs use explicit locale prefixes; `/` redirects by locale cookie, supported `Accept-Language`, then `/en`.
+- The admin interface is English and supports one owner only; there is no registration.
+- Public and admin CSS is mobile-first; every action remains usable at 320 CSS pixels, 200% zoom, and without hover.
+- Initial color mode follows `prefers-color-scheme`; a manual override is stored in `localStorage` and applied before paint.
+- Accent presets are fixed to Brown, Green, Lime, Orange, and Yellow; Lime is the default.
+- Markdown raw HTML stays disabled and rendered output is sanitized before persistence.
+- Draft, scheduled, missing, and unpublished translations never leak through public routes, search, metadata, or sitemap.
+- Contact messages commit before email delivery and remain retryable after delivery failure.
+- Production remains one application container on one small Ubuntu server; do not add Redis, a separate API, SPA, CMS, search service, CDN, or observability platform.
+- Primary SQLite data and every Active Storage asset receive encrypted off-site backups with 7 daily, 4 weekly, and 6 monthly restore points.
+- Use Rails defaults and the standard library before adding dependencies. The only dependency added in this phase is `commonmarker`.
+- Use Minitest. Every behavior task follows red-green-refactor and ends with a focused test run and commit.
+
+## Assumptions and Phase Boundary
+
+- Phase 1 is accepted before this plan starts; `PublicController#current_locale`, locale-preserving URL defaults, the locale-constrained route scope, shared public layout, and navigation remain intact.
+- Keep Phase 1's root redirect and contact route unchanged. Add only the exact routes listed in Task 4 inside its existing `/:locale` scope.
+- Phase 5 owns publish/unpublish/schedule commands, English-first publication, and the due-publication job. This phase stores state and timestamps and exposes read-only publication scopes; it must not add transition commands.
+- Phase 4 owns upload validation and admin nested forms. This phase fixes attachment names and proves storage/delivery without introducing admin routes.
+- Authored content never falls back to English. Missing optional home content is omitted; missing detail/about/résumé translations return 404.
+
+## File Map
+
+| Path                                                                                                                                                  | Responsibility                                                                          |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `db/migrate/20260902020000_create_active_storage_tables.active_storage.rb`                                                                            | Active Storage blob, attachment, and variant metadata tables                            |
+| `db/migrate/20260902020100_create_public_content.rb`                                                                                                  | All shared content, translation, tag, singleton, constraints, and query indexes         |
+| `app/models/{project,project_translation,post,post_translation,tag,tag_translation,tagging,profile,profile_translation,resume,resume_translation}.rb` | Associations, validations, singleton access, publication scopes, fixed attachment names |
+| `app/services/markdown_renderer.rb`                                                                                                                   | `MarkdownRenderer.call(markdown) -> String`                                             |
+| `app/queries/public_content_search.rb`                                                                                                                | Locale-safe published search and localized tag filtering                                |
+| `app/controllers/public/`                                                                                                                             | Homepage, work, journal, about, résumé, and PDF delivery                                |
+| `app/views/public/`                                                                                                                                   | Text-first localized server-rendered pages                                              |
+| `config/routes.rb`                                                                                                                                    | Public content route replacements inside the Phase 1 locale scope                       |
+| `config/locales/{en,fr,vi}.yml`                                                                                                                       | Fixed interface copy for this phase                                                     |
+| `app/helpers/theme_helper.rb`, `app/views/layouts/application.html.erb`                                                                               | Read the persisted accent while preserving the Phase 1 `data-accent` contract           |
+| `db/seeds.rb`                                                                                                                                         | Idempotent development-only demonstration records and attachments                       |
+| `test/models/public_content_test.rb`                                                                                                                  | Domain constraints, associations, singletons, and publication boundaries                |
+| `test/services/markdown_renderer_test.rb`                                                                                                             | Markdown rendering and sanitization                                                     |
+| `test/queries/public_content_search_test.rb`                                                                                                          | Search escaping, locale/state isolation, and localized tag filtering                    |
+| `test/requests/public_content_test.rb`                                                                                                                | Route rendering, 404 boundaries, filters, asset fallbacks, and downloads                |
+
+---
+
+### Task 1: Persist the Public Content Domain and Fix Attachment Interfaces
+
+**Files:**
+
+- Create: `db/migrate/20260902020000_create_active_storage_tables.active_storage.rb`
+- Create: `db/migrate/20260902020100_create_public_content.rb`
+- Create: `app/models/concerns/portfolio_attachment_validations.rb`
+- Create: `app/models/project.rb`
+- Create: `app/models/project_translation.rb`
+- Create: `app/models/post.rb`
+- Create: `app/models/post_translation.rb`
+- Create: `app/models/tag.rb`
+- Create: `app/models/tag_translation.rb`
+- Create: `app/models/tagging.rb`
+- Create: `app/models/profile.rb`
+- Create: `app/models/profile_translation.rb`
+- Create: `app/models/resume.rb`
+- Create: `app/models/resume_translation.rb`
+- Create: `test/models/public_content_test.rb`
+- Generated: `db/schema.rb`
+
+**Interfaces:**
+
+- Consumes: Rails 8.1 Active Record and Active Storage loaded by the Phase 1 application.
+- Produces: `Project#cover_image`, `Project#gallery_images`, `Post#cover_image`, `Profile#portrait`, `ResumeTranslation#pdf`; all shared/translation associations; `Profile.current`; `Resume.current`; and `ProjectTranslation.publicly_visible(locale:)` / `PostTranslation.publicly_visible(locale:)`.
+
+- [ ] **Step 1: Write the failing domain test**
+
+Create `test/models/public_content_test.rb`:
+
+```ruby
+require "test_helper"
+
+class PublicContentTest < ActiveSupport::TestCase
+  test "every shared localized record requires an English translation" do
+    records = [
+      Project.new(role: "Designer"),
+      Post.new,
+      Tag.new,
+      Profile.new(public_contact_email: "owner@example.test"),
+      Resume.new(updated_on: Date.new(2026, 9, 2))
+    ]
+
+    records.each do |record|
+      assert_not record.valid?
+      assert_includes record.errors[:translations], "must include English"
+    end
+  end
+
+  test "French and Vietnamese translations remain optional" do
+    project = Project.new(role: "Designer")
+    project.translations.build(
+      locale: "en", title: "Demo", slug: "demo", summary: "Summary",
+      body_markdown: "Body", state: "draft"
+    )
+
+    assert project.save
+    assert_equal ["en"], project.translations.pluck(:locale)
+  end
+
+  test "translation locale and slug pairs are unique" do
+    first = build_project(slug: "shared-slug")
+    assert first.save!
+
+    second = build_project(slug: "shared-slug")
+    assert_not second.save
+    assert_includes second.translations.first.errors[:slug], "has already been taken"
+
+    first.translations.create!(
+      locale: "fr", title: "Démo", slug: "shared-slug", summary: "Résumé",
+      body_markdown: "Corps", state: "draft"
+    )
+    assert_equal 2, first.translations.count
+  end
+
+  test "public scopes require the requested locale and a published timestamp not in the future" do
+    visible = build_project(slug: "visible", state: "published", published_at: 1.day.ago)
+    draft = build_project(slug: "draft", state: "draft")
+    future = build_project(slug: "future", state: "published", published_at: 1.day.from_now)
+    [visible, draft, future].each(&:save!)
+    visible.translations.create!(
+      locale: "fr", title: "Visible", slug: "visible-fr", summary: "Résumé",
+      body_markdown: "Corps", state: "published", published_at: 1.day.ago
+    )
+
+    assert_equal ["visible"], ProjectTranslation.publicly_visible(locale: "en").pluck(:slug)
+    assert_equal ["visible-fr"], ProjectTranslation.publicly_visible(locale: "fr").pluck(:slug)
+  end
+
+  test "profile and resume singleton rows are database constrained and exposed through current" do
+    profile = Profile.new(public_contact_email: "owner@example.test")
+    profile.translations.build(
+      locale: "en", display_name: "Demo Owner", headline: "Ideas. Interfaces. Impact.",
+      introduction: "A demonstration profile.", biography_markdown: "Biography",
+      availability_label: "Available"
+    )
+    profile.save!
+
+    resume = Resume.new(updated_on: Date.new(2026, 9, 2))
+    resume.translations.build(
+      locale: "en", title: "Résumé", description: "Demonstration résumé"
+    )
+    resume.save!
+
+    assert_equal profile, Profile.current
+    assert_equal resume, Resume.current
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      Profile.insert!({ public_contact_email: "second@example.test", singleton_guard: 1 })
+    end
+  end
+
+  test "attachment names are stable and reject invalid type or size" do
+    assert_equal %w[cover_image gallery_images], Project.attachment_reflections.keys.sort
+    assert_equal %w[cover_image], Post.attachment_reflections.keys
+    assert_equal %w[portrait], Profile.attachment_reflections.keys
+    assert_equal %w[pdf], ResumeTranslation.attachment_reflections.keys
+
+    project = build_project(slug: "invalid-image")
+    project.cover_image.attach(
+      io: StringIO.new("plain text"), filename: "cover.txt", content_type: "text/plain"
+    )
+    assert_not project.valid?
+    assert_includes project.errors[:cover_image], "must be a JPEG, PNG, or WebP image"
+
+    resume = Resume.new(updated_on: Date.new(2026, 9, 2))
+    translation = resume.translations.build(locale: "en", title: "Résumé", description: "English")
+    oversized = ActiveStorage::Blob.create_before_direct_upload!(
+      filename: "resume.pdf", byte_size: 5.megabytes + 1,
+      checksum: Digest::MD5.base64digest(""), content_type: "application/pdf"
+    )
+    translation.pdf.attach(oversized)
+    assert_not resume.valid?
+    assert_includes translation.errors[:pdf], "must be 5 MB or smaller"
+  end
+
+  private
+
+  def build_project(slug:, state: "draft", published_at: nil)
+    Project.new(role: "Designer").tap do |project|
+      project.translations.build(
+        locale: "en", title: slug.humanize, slug: slug, summary: "Summary",
+        body_markdown: "Body", state: state, published_at: published_at
+      )
+    end
+  end
+end
+```
+
+- [ ] **Step 2: Run the test and confirm the domain is absent**
+
+Run:
+
+```bash
+bin/rails test test/models/public_content_test.rb
+```
+
+Expected: FAIL with `uninitialized constant PublicContentTest::Project`.
+
+- [ ] **Step 3: Add the exact Active Storage migration**
+
+Create `db/migrate/20260902020000_create_active_storage_tables.active_storage.rb`:
+
+```ruby
+class CreateActiveStorageTables < ActiveRecord::Migration[8.1]
+  def change
+    create_table :active_storage_blobs do |t|
+      t.string :key, null: false
+      t.string :filename, null: false
+      t.string :content_type
+      t.text :metadata
+      t.string :service_name, null: false
+      t.bigint :byte_size, null: false
+      t.string :checksum
+      t.datetime :created_at, null: false
+      t.index :key, unique: true
+    end
+
+    create_table :active_storage_attachments do |t|
+      t.string :name, null: false
+      t.string :record_type, null: false
+      t.bigint :record_id, null: false
+      t.bigint :blob_id, null: false
+      t.datetime :created_at, null: false
+      t.index :blob_id
+      t.index %i[record_type record_id name blob_id],
+        unique: true, name: :index_active_storage_attachments_uniqueness
+      t.foreign_key :active_storage_blobs, column: :blob_id
+    end
+
+    create_table :active_storage_variant_records do |t|
+      t.bigint :blob_id, null: false
+      t.string :variation_digest, null: false
+      t.index %i[blob_id variation_digest],
+        unique: true, name: :index_active_storage_variant_records_uniqueness
+      t.foreign_key :active_storage_blobs, column: :blob_id
+    end
+  end
+end
+```
+
+Do not run `active_storage:install`; the deterministic migration above is the installation and avoids a second generated migration.
+
+- [ ] **Step 4: Add the exact content migration, constraints, and indexes**
+
+Create `db/migrate/20260902020100_create_public_content.rb`:
+
+```ruby
+class CreatePublicContent < ActiveRecord::Migration[8.1]
+  LOCALES = "'en', 'fr', 'vi'"
+  STATES = "'draft', 'scheduled', 'published'"
+
+  def change
+    create_table :projects do |t|
+      t.string :role, null: false
+      t.date :started_on
+      t.date :ended_on
+      t.string :live_url
+      t.string :source_url
+      t.integer :featured_position
+      t.timestamps
+      t.index :featured_position
+      t.check_constraint "featured_position IS NULL OR featured_position > 0",
+        name: "projects_featured_position_positive"
+    end
+
+    create_table :project_translations do |t|
+      t.references :project, null: false, foreign_key: true
+      t.string :locale, null: false
+      t.string :title, null: false
+      t.string :slug, null: false
+      t.text :summary, null: false
+      t.text :body_markdown, null: false
+      t.text :body_html, null: false, default: ""
+      t.string :state, null: false, default: "draft"
+      t.datetime :scheduled_at
+      t.datetime :published_at
+      t.timestamps
+      t.index %i[project_id locale], unique: true
+      t.index %i[locale slug], unique: true
+      t.index %i[locale state published_at], name: :index_project_translations_public_listing
+      t.check_constraint "locale IN (#{LOCALES})", name: "project_translations_locale"
+      t.check_constraint "state IN (#{STATES})", name: "project_translations_state"
+    end
+
+    create_table :posts do |t|
+      t.timestamps
+    end
+
+    create_table :post_translations do |t|
+      t.references :post, null: false, foreign_key: true
+      t.string :locale, null: false
+      t.string :title, null: false
+      t.string :slug, null: false
+      t.text :excerpt, null: false
+      t.text :body_markdown, null: false
+      t.text :body_html, null: false, default: ""
+      t.string :state, null: false, default: "draft"
+      t.datetime :scheduled_at
+      t.datetime :published_at
+      t.timestamps
+      t.index %i[post_id locale], unique: true
+      t.index %i[locale slug], unique: true
+      t.index %i[locale state published_at], name: :index_post_translations_public_listing
+      t.check_constraint "locale IN (#{LOCALES})", name: "post_translations_locale"
+      t.check_constraint "state IN (#{STATES})", name: "post_translations_state"
+    end
+
+    create_table :tags do |t|
+      t.timestamps
+    end
+
+    create_table :tag_translations do |t|
+      t.references :tag, null: false, foreign_key: true
+      t.string :locale, null: false
+      t.string :name, null: false
+      t.string :slug, null: false
+      t.timestamps
+      t.index %i[tag_id locale], unique: true
+      t.index %i[locale slug], unique: true
+      t.check_constraint "locale IN (#{LOCALES})", name: "tag_translations_locale"
+    end
+
+    create_table :taggings do |t|
+      t.references :tag, null: false, foreign_key: true
+      t.string :taggable_type, null: false
+      t.bigint :taggable_id, null: false
+      t.timestamps
+      t.index %i[taggable_type taggable_id], name: :index_taggings_on_taggable
+      t.index %i[tag_id taggable_type taggable_id], unique: true,
+        name: :index_taggings_uniqueness
+    end
+
+    create_table :profiles do |t|
+      t.string :public_contact_email, null: false
+      t.json :social_links, null: false, default: {}
+      t.string :accent, null: false, default: "lime"
+      t.integer :singleton_guard, null: false, default: 1
+      t.timestamps
+      t.index :singleton_guard, unique: true
+      t.check_constraint "singleton_guard = 1", name: "profiles_singleton"
+      t.check_constraint "accent IN ('brown', 'green', 'lime', 'orange', 'yellow')",
+        name: "profiles_accent"
+    end
+
+    create_table :profile_translations do |t|
+      t.references :profile, null: false, foreign_key: true
+      t.string :locale, null: false
+      t.string :display_name, null: false
+      t.string :headline, null: false
+      t.text :introduction, null: false
+      t.text :biography_markdown, null: false
+      t.text :biography_html, null: false, default: ""
+      t.string :availability_label, null: false
+      t.timestamps
+      t.index %i[profile_id locale], unique: true
+      t.check_constraint "locale IN (#{LOCALES})", name: "profile_translations_locale"
+    end
+
+    create_table :resumes do |t|
+      t.date :updated_on, null: false
+      t.integer :singleton_guard, null: false, default: 1
+      t.timestamps
+      t.index :singleton_guard, unique: true
+      t.check_constraint "singleton_guard = 1", name: "resumes_singleton"
+    end
+
+    create_table :resume_translations do |t|
+      t.references :resume, null: false, foreign_key: true
+      t.string :locale, null: false
+      t.string :title, null: false
+      t.text :description, null: false
+      t.timestamps
+      t.index %i[resume_id locale], unique: true
+      t.check_constraint "locale IN (#{LOCALES})", name: "resume_translations_locale"
+    end
+  end
+end
+```
+
+The composite unique indexes are the authoritative race-safe constraints. The listing indexes match `publicly_visible` ordering. SQLite cannot add a foreign key to a polymorphic target, so `taggings.taggable_type/id` is protected by model associations and the unique index.
+
+- [ ] **Step 5: Add shared attachment validation and fixed attachment names**
+
+Create `app/models/concerns/portfolio_attachment_validations.rb`:
+
+```ruby
+module PortfolioAttachmentValidations
+  extend ActiveSupport::Concern
+
+  IMAGE_TYPES = %w[image/jpeg image/png image/webp].freeze
+
+  class_methods do
+    def validates_portfolio_attachment(name, content_types:, max_size:, type_message:)
+      validate do
+        attachment = public_send(name)
+        blobs = attachment.respond_to?(:blobs) ? attachment.blobs : [attachment.blob].compact
+
+        blobs.each do |blob|
+          errors.add(name, type_message) unless blob.content_type.in?(content_types)
+          errors.add(name, "must be #{max_size / 1.megabyte} MB or smaller") if blob.byte_size > max_size
+        end
+      end
+    end
+  end
+end
+```
+
+Create `app/models/project.rb`:
+
+```ruby
+class Project < ApplicationRecord
+  include PortfolioAttachmentValidations
+
+  has_one_attached :cover_image
+  has_many_attached :gallery_images
+
+  validates_portfolio_attachment :cover_image,
+    content_types: PortfolioAttachmentValidations::IMAGE_TYPES, max_size: 10.megabytes,
+    type_message: "must be a JPEG, PNG, or WebP image"
+  validates_portfolio_attachment :gallery_images,
+    content_types: PortfolioAttachmentValidations::IMAGE_TYPES, max_size: 10.megabytes,
+    type_message: "must be a JPEG, PNG, or WebP image"
+
+  has_many :translations, class_name: "ProjectTranslation",
+    inverse_of: :project, dependent: :destroy, autosave: true
+  has_many :taggings, as: :taggable, dependent: :destroy
+  has_many :tags, through: :taggings
+
+  validates :role, presence: true
+  validates :featured_position, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
+  validate :english_translation_present
+
+  private
+
+  def english_translation_present
+    return if translations.reject(&:marked_for_destruction?).any? { |translation| translation.locale == "en" }
+
+    errors.add(:translations, "must include English")
+  end
+end
+```
+
+Create `app/models/post.rb`:
+
+```ruby
+class Post < ApplicationRecord
+  include PortfolioAttachmentValidations
+
+  has_one_attached :cover_image
+
+  validates_portfolio_attachment :cover_image,
+    content_types: PortfolioAttachmentValidations::IMAGE_TYPES, max_size: 10.megabytes,
+    type_message: "must be a JPEG, PNG, or WebP image"
+
+  has_many :translations, class_name: "PostTranslation",
+    inverse_of: :post, dependent: :destroy, autosave: true
+  has_many :taggings, as: :taggable, dependent: :destroy
+  has_many :tags, through: :taggings
+
+  validate :english_translation_present
+
+  private
+
+  def english_translation_present
+    return if translations.reject(&:marked_for_destruction?).any? { |translation| translation.locale == "en" }
+
+    errors.add(:translations, "must include English")
+  end
+end
+```
+
+Create `app/models/tag.rb`:
+
+```ruby
+class Tag < ApplicationRecord
+  has_many :translations, class_name: "TagTranslation",
+    inverse_of: :tag, dependent: :destroy, autosave: true
+  has_many :taggings, dependent: :destroy
+
+  validate :english_translation_present
+
+  private
+
+  def english_translation_present
+    return if translations.reject(&:marked_for_destruction?).any? { |translation| translation.locale == "en" }
+
+    errors.add(:translations, "must include English")
+  end
+end
+```
+
+Create `app/models/tagging.rb`:
+
+```ruby
+class Tagging < ApplicationRecord
+  belongs_to :tag
+  belongs_to :taggable, polymorphic: true
+
+  validates :tag_id, uniqueness: { scope: %i[taggable_type taggable_id] }
+end
+```
+
+Create `app/models/profile.rb`:
+
+```ruby
+class Profile < ApplicationRecord
+  include PortfolioAttachmentValidations
+
+  ACCENTS = %w[brown green lime orange yellow].freeze
+
+  has_one_attached :portrait
+
+  validates_portfolio_attachment :portrait,
+    content_types: PortfolioAttachmentValidations::IMAGE_TYPES, max_size: 10.megabytes,
+    type_message: "must be a JPEG, PNG, or WebP image"
+  has_many :translations, class_name: "ProfileTranslation",
+    inverse_of: :profile, dependent: :destroy, autosave: true
+
+  validates :public_contact_email, presence: true
+  validates :accent, inclusion: { in: ACCENTS }
+  validate :english_translation_present
+
+  def self.current
+    find_by(singleton_guard: 1)
+  end
+
+  private
+
+  def english_translation_present
+    return if translations.reject(&:marked_for_destruction?).any? { |translation| translation.locale == "en" }
+
+    errors.add(:translations, "must include English")
+  end
+end
+```
+
+Create `app/models/resume.rb`:
+
+```ruby
+class Resume < ApplicationRecord
+  has_many :translations, class_name: "ResumeTranslation",
+    inverse_of: :resume, dependent: :destroy, autosave: true
+
+  validates :updated_on, presence: true
+  validate :english_translation_present
+
+  def self.current
+    find_by(singleton_guard: 1)
+  end
+
+  private
+
+  def english_translation_present
+    return if translations.reject(&:marked_for_destruction?).any? { |translation| translation.locale == "en" }
+
+    errors.add(:translations, "must include English")
+  end
+end
+```
+
+- [ ] **Step 6: Add translation records and publication scopes**
+
+Create `app/models/project_translation.rb`:
+
+```ruby
+class ProjectTranslation < ApplicationRecord
+  belongs_to :project, inverse_of: :translations
+
+  enum :state, { draft: "draft", scheduled: "scheduled", published: "published" }, validate: true
+
+  validates :locale, inclusion: { in: %w[en fr vi] }, uniqueness: { scope: :project_id }
+  validates :title, :slug, :summary, :body_markdown, presence: true
+  validates :slug, uniqueness: { scope: :locale }
+  validates :scheduled_at, presence: true, if: :scheduled?
+  validates :published_at, presence: true, if: :published?
+
+  scope :publicly_visible, ->(locale:) {
+    where(locale: locale.to_s, state: "published").where("published_at <= ?", Time.current)
+  }
+end
+```
+
+Create `app/models/post_translation.rb`:
+
+```ruby
+class PostTranslation < ApplicationRecord
+  belongs_to :post, inverse_of: :translations
+
+  enum :state, { draft: "draft", scheduled: "scheduled", published: "published" }, validate: true
+
+  validates :locale, inclusion: { in: %w[en fr vi] }, uniqueness: { scope: :post_id }
+  validates :title, :slug, :excerpt, :body_markdown, presence: true
+  validates :slug, uniqueness: { scope: :locale }
+  validates :scheduled_at, presence: true, if: :scheduled?
+  validates :published_at, presence: true, if: :published?
+
+  scope :publicly_visible, ->(locale:) {
+    where(locale: locale.to_s, state: "published").where("published_at <= ?", Time.current)
+  }
+end
+```
+
+Create `app/models/tag_translation.rb`:
+
+```ruby
+class TagTranslation < ApplicationRecord
+  belongs_to :tag, inverse_of: :translations
+
+  validates :locale, inclusion: { in: %w[en fr vi] }, uniqueness: { scope: :tag_id }
+  validates :name, :slug, presence: true
+  validates :slug, uniqueness: { scope: :locale }
+end
+```
+
+Create `app/models/profile_translation.rb`:
+
+```ruby
+class ProfileTranslation < ApplicationRecord
+  belongs_to :profile, inverse_of: :translations
+
+  validates :locale, inclusion: { in: %w[en fr vi] }, uniqueness: { scope: :profile_id }
+  validates :display_name, :headline, :introduction, :biography_markdown,
+    :availability_label, presence: true
+end
+```
+
+Create `app/models/resume_translation.rb`:
+
+```ruby
+class ResumeTranslation < ApplicationRecord
+  include PortfolioAttachmentValidations
+
+  belongs_to :resume, inverse_of: :translations
+  has_one_attached :pdf
+
+  validates_portfolio_attachment :pdf,
+    content_types: %w[application/pdf], max_size: 5.megabytes,
+    type_message: "must be a PDF"
+
+  validates :locale, inclusion: { in: %w[en fr vi] }, uniqueness: { scope: :resume_id }
+  validates :title, :description, presence: true
+end
+```
+
+- [ ] **Step 7: Migrate and run the focused test**
+
+Run:
+
+```bash
+bin/rails db:migrate
+bin/rails test test/models/public_content_test.rb
+```
+
+Expected: migration succeeds; 6 tests pass.
+
+- [ ] **Step 8: Commit the domain**
+
+```bash
+git add db/migrate/20260902020000_create_active_storage_tables.active_storage.rb \
+  db/migrate/20260902020100_create_public_content.rb db/schema.rb \
+  app/models/concerns/portfolio_attachment_validations.rb \
+  app/models/project.rb app/models/project_translation.rb \
+  app/models/post.rb app/models/post_translation.rb \
+  app/models/tag.rb app/models/tag_translation.rb app/models/tagging.rb \
+  app/models/profile.rb app/models/profile_translation.rb \
+  app/models/resume.rb app/models/resume_translation.rb \
+  test/models/public_content_test.rb
+git commit -m "feat: add localized public content domain"
+```
+
+---
+
+### Task 2: Render and Sanitize Markdown Once on Persistence
+
+**Files:**
+
+- Modify: `Gemfile`
+- Create: `app/services/markdown_renderer.rb`
+- Modify: `app/models/project_translation.rb`
+- Modify: `app/models/post_translation.rb`
+- Modify: `app/models/profile_translation.rb`
+- Create: `test/services/markdown_renderer_test.rb`
+- Modify: `test/models/public_content_test.rb`
+- Generated: `Gemfile.lock`
+
+**Interfaces:**
+
+- Consumes: `body_markdown` and `biography_markdown` fields from Task 1.
+- Produces: `MarkdownRenderer.call(markdown) -> String`, persisted `body_html` / `biography_html`, raw HTML disabled, and sanitized technical code blocks.
+
+- [ ] **Step 1: Write failing renderer tests**
+
+Create `test/services/markdown_renderer_test.rb`:
+
+````ruby
+require "test_helper"
+
+class MarkdownRendererTest < ActiveSupport::TestCase
+  test "renders technical Markdown" do
+    html = MarkdownRenderer.call("## Example\n\n```ruby\nputs :ok\n```")
+
+    assert_includes html, "<h2>Example</h2>"
+    assert_includes html, '<code class="language-ruby">'
+    assert_includes html, "puts :ok"
+  end
+
+  test "removes raw HTML scripts event handlers and unsafe link protocols" do
+    markdown = <<~MARKDOWN
+      <script>alert(1)</script>
+      <img src=x onerror="alert(2)">
+      [unsafe](javascript:alert(3))
+      [safe](https://example.test/docs)
+    MARKDOWN
+
+    html = MarkdownRenderer.call(markdown)
+
+    assert_not_includes html, "<script"
+    assert_not_includes html, "onerror"
+    assert_not_includes html, "javascript:"
+    assert_includes html, 'href="https://example.test/docs"'
+  end
+end
+````
+
+Append this test to `test/models/public_content_test.rb` before `private`:
+
+```ruby
+  test "Markdown HTML is refreshed before translated content is saved" do
+    project = build_project(slug: "rendered")
+    project.translations.first.body_markdown = "**Safe** <script>alert(1)</script>"
+    project.save!
+
+    translation = project.translations.first.reload
+    assert_includes translation.body_html, "<strong>Safe</strong>"
+    assert_not_includes translation.body_html, "<script"
+  end
+```
+
+- [ ] **Step 2: Run the tests and confirm the renderer is absent**
+
+```bash
+bin/rails test test/services/markdown_renderer_test.rb test/models/public_content_test.rb
+```
+
+Expected: FAIL with `uninitialized constant MarkdownRenderer`.
+
+- [ ] **Step 3: Install Commonmarker**
+
+Add this line to the application dependency section of `Gemfile`:
+
+```ruby
+gem "commonmarker"
+```
+
+Run:
+
+```bash
+bundle install
+```
+
+Expected: `Gemfile.lock` records the current Commonmarker release compatible with Ruby 4.0.6.
+
+- [ ] **Step 4: Add the one renderer and explicit safe list**
+
+Create `app/services/markdown_renderer.rb`:
+
+```ruby
+class MarkdownRenderer
+  ALLOWED_TAGS = %w[
+    a blockquote br code del em h1 h2 h3 h4 h5 h6 hr li ol p pre
+    strong table tbody td th thead tr ul
+  ].freeze
+  ALLOWED_ATTRIBUTES = %w[href title class start].freeze
+
+  def self.call(markdown)
+    html = Commonmarker.to_html(
+      markdown.to_s,
+      options: {
+        render: { unsafe: false },
+        extension: { strikethrough: true, table: true, tagfilter: true }
+      }
+    )
+
+    Rails::HTML5::SafeListSanitizer.new.sanitize(
+      html,
+      tags: ALLOWED_TAGS,
+      attributes: ALLOWED_ATTRIBUTES
+    )
+  end
+end
+```
+
+`unsafe: false` prevents raw HTML rendering. The second sanitizer is intentional defense in depth and retains only the tags/attributes needed by prose, tables, links, and fenced code. Rails' sanitizer also rejects unsafe URI protocols.
+
+- [ ] **Step 5: Render project and post bodies before validation**
+
+In `app/models/project_translation.rb`, add immediately after the enum:
+
+```ruby
+  before_validation :render_body_html, if: :will_save_change_to_body_markdown?
+```
+
+Add at the end of the class, after the scope:
+
+```ruby
+
+  private
+
+  def render_body_html
+    self.body_html = MarkdownRenderer.call(body_markdown)
+  end
+```
+
+Make the same two exact additions in `app/models/post_translation.rb`:
+
+```ruby
+  before_validation :render_body_html, if: :will_save_change_to_body_markdown?
+```
+
+```ruby
+  private
+
+  def render_body_html
+    self.body_html = MarkdownRenderer.call(body_markdown)
+  end
+```
+
+- [ ] **Step 6: Render profile biographies before validation**
+
+In `app/models/profile_translation.rb`, add after `belongs_to`:
+
+```ruby
+  before_validation :render_biography_html, if: :will_save_change_to_biography_markdown?
+```
+
+Add before the final `end`:
+
+```ruby
+
+  private
+
+  def render_biography_html
+    self.biography_html = MarkdownRenderer.call(biography_markdown)
+  end
+```
+
+- [ ] **Step 7: Run renderer and model tests**
+
+```bash
+bin/rails test test/services/markdown_renderer_test.rb test/models/public_content_test.rb
+```
+
+Expected: all tests pass; the unsafe strings are absent and the code fence has `language-ruby`.
+
+- [ ] **Step 8: Commit rendering**
+
+```bash
+git add Gemfile Gemfile.lock app/services/markdown_renderer.rb \
+  app/models/project_translation.rb app/models/post_translation.rb \
+  app/models/profile_translation.rb test/services/markdown_renderer_test.rb \
+  test/models/public_content_test.rb
+git commit -m "feat: render sanitized Markdown content"
+```
+
+---
+
+### Task 3: Add Locale-Safe Search and Localized Tag Filtering
+
+**Files:**
+
+- Create: `app/queries/public_content_search.rb`
+- Create: `test/queries/public_content_search_test.rb`
+
+**Interfaces:**
+
+- Consumes: a `ProjectTranslation` or `PostTranslation` relation plus Task 1's publication scopes and tag associations.
+- Produces: `PublicContentSearch.new(scope:, locale:, query:, tag_slug:).results -> ActiveRecord::Relation`, ordered newest first and always publication/locale bounded.
+
+- [ ] **Step 1: Write failing query tests**
+
+Create `test/queries/public_content_search_test.rb`:
+
+```ruby
+require "test_helper"
+
+class PublicContentSearchTest < ActiveSupport::TestCase
+  test "project search stays published and locale bounded" do
+    matching = create_project_translation(slug: "match", summary: "Uses SQLite safely")
+    create_project_translation(slug: "draft-match", summary: "Uses SQLite safely", state: "draft")
+    french = matching.project.translations.create!(
+      locale: "fr", title: "SQLite français", slug: "sqlite-fr",
+      summary: "SQLite en français", body_markdown: "Corps", state: "published",
+      published_at: 2.days.ago
+    )
+
+    results = PublicContentSearch.new(
+      scope: ProjectTranslation.all, locale: "en", query: "SQLite", tag_slug: nil
+    ).results
+
+    assert_equal [matching], results.to_a
+    assert_not_includes results, french
+  end
+
+  test "literal percent and underscore do not become LIKE wildcards" do
+    literal = create_post_translation(slug: "literal", excerpt: "100%_covered")
+    create_post_translation(slug: "wildcard", excerpt: "100Xcovered")
+
+    results = PublicContentSearch.new(
+      scope: PostTranslation.all, locale: "en", query: "%_", tag_slug: ""
+    ).results
+
+    assert_equal [literal], results.to_a
+  end
+
+  test "tag slug must be translated in the active locale and attached to the result" do
+    tagged = create_project_translation(slug: "tagged", summary: "Tagged work")
+    untagged = create_project_translation(slug: "untagged", summary: "Other work")
+    tag = Tag.new
+    tag.translations.build(locale: "en", name: "Ruby", slug: "ruby")
+    tag.translations.build(locale: "fr", name: "Rubis", slug: "rubis")
+    tag.save!
+    tagged.project.tags << tag
+
+    english = PublicContentSearch.new(
+      scope: ProjectTranslation.all, locale: "en", query: nil, tag_slug: "ruby"
+    ).results
+    wrong_locale = PublicContentSearch.new(
+      scope: ProjectTranslation.all, locale: "en", query: nil, tag_slug: "rubis"
+    ).results
+
+    assert_equal [tagged], english.to_a
+    assert_empty wrong_locale
+    assert_not_includes english, untagged
+  end
+
+  private
+
+  def create_project_translation(slug:, summary:, state: "published")
+    project = Project.new(role: "Engineer")
+    project.translations.build(
+      locale: "en", title: slug.humanize, slug: slug, summary: summary,
+      body_markdown: "Technical body", state: state,
+      published_at: (2.days.ago if state == "published")
+    )
+    project.save!
+    project.translations.first
+  end
+
+  def create_post_translation(slug:, excerpt:)
+    post = Post.new
+    post.translations.build(
+      locale: "en", title: slug.humanize, slug: slug, excerpt: excerpt,
+      body_markdown: "Technical body", state: "published", published_at: 2.days.ago
+    )
+    post.save!
+    post.translations.first
+  end
+end
+```
+
+- [ ] **Step 2: Run the query tests and verify failure**
+
+```bash
+bin/rails test test/queries/public_content_search_test.rb
+```
+
+Expected: FAIL with `uninitialized constant PublicContentSearchTest::PublicContentSearch`.
+
+- [ ] **Step 3: Implement the single query object**
+
+Create `app/queries/public_content_search.rb`:
+
+```ruby
+class PublicContentSearch
+  CONFIGURATION = {
+    "ProjectTranslation" => {
+      searchable: %w[title summary body_markdown],
+      parent: :project,
+      taggable_type: "Project"
+    },
+    "PostTranslation" => {
+      searchable: %w[title excerpt body_markdown],
+      parent: :post,
+      taggable_type: "Post"
+    }
+  }.freeze
+
+  def initialize(scope:, locale:, query:, tag_slug:)
+    @scope = scope
+    @locale = locale.to_s
+    @query = query.to_s.strip
+    @tag_slug = tag_slug.to_s.strip
+    @configuration = CONFIGURATION.fetch(scope.klass.name)
+  end
+
+  def results
+    relation = @scope.publicly_visible(locale: @locale)
+    relation = apply_query(relation) if @query.present?
+    relation = apply_tag(relation) if @tag_slug.present?
+    relation.distinct.order(published_at: :desc)
+  end
+
+  private
+
+  def apply_query(relation)
+    table = @scope.klass.table_name
+    clauses = @configuration.fetch(:searchable).map do |column|
+      "LOWER(#{table}.#{column}) LIKE :pattern ESCAPE '\\'"
+    end
+    escaped = ActiveRecord::Base.sanitize_sql_like(@query.downcase)
+
+    relation.where(clauses.join(" OR "), pattern: "%#{escaped}%")
+  end
+
+  def apply_tag(relation)
+    relation
+      .joins(@configuration.fetch(:parent) => { tags: :translations })
+      .where(
+        taggings: { taggable_type: @configuration.fetch(:taggable_type) },
+        tag_translations: { locale: @locale, slug: @tag_slug }
+      )
+  end
+end
+```
+
+The table and column names come only from the frozen model configuration; visitor input is passed only as bound values. `sanitize_sql_like` escapes `%`, `_`, and the escape character before wildcard wrapping.
+
+- [ ] **Step 4: Run query tests and inspect the SQL**
+
+```bash
+bin/rails test test/queries/public_content_search_test.rb
+bin/rails runner 'puts PublicContentSearch.new(scope: ProjectTranslation.all, locale: "en", query: "%_", tag_slug: nil).results.to_sql'
+```
+
+Expected: 3 tests pass. The printed SQL contains bound/quoted `%\\%\\_%`, `locale = 'en'`, `state = 'published'`, and a `published_at` upper bound.
+
+- [ ] **Step 5: Commit the query boundary**
+
+```bash
+git add app/queries/public_content_search.rb test/queries/public_content_search_test.rb
+git commit -m "feat: add locale-aware public content search"
+```
+
+---
+
+### Task 4: Deliver Localized Public Pages and Résumé Assets
+
+**Files:**
+
+- Modify: `config/routes.rb`
+- Create: `app/controllers/public/home_controller.rb`
+- Create: `app/controllers/public/projects_controller.rb`
+- Create: `app/controllers/public/posts_controller.rb`
+- Create: `app/controllers/public/profiles_controller.rb`
+- Create: `app/controllers/public/resumes_controller.rb`
+- Create: `app/views/public/home/show.html.erb`
+- Create: `app/views/public/projects/index.html.erb`
+- Create: `app/views/public/projects/show.html.erb`
+- Create: `app/views/public/posts/index.html.erb`
+- Create: `app/views/public/posts/show.html.erb`
+- Create: `app/views/public/profiles/show.html.erb`
+- Create: `app/views/public/resumes/show.html.erb`
+- Create: `app/views/public/shared/_tags.html.erb`
+- Modify: `config/locales/en.yml`
+- Modify: `config/locales/fr.yml`
+- Modify: `config/locales/vi.yml`
+- Modify: `app/helpers/theme_helper.rb`
+- Modify: `app/views/layouts/application.html.erb`
+- Create: `test/requests/public_content_test.rb`
+
+**Interfaces:**
+
+- Consumes: Phase 1 `current_locale`, URL defaults, layout, locale scope, and theme/accent HTML contract; Tasks 1–3 domain interfaces.
+- Produces: localized homepage/work/journal/about/résumé routes, `localized_project_path`, `localized_post_path`, `localized_resume_download_path`, public search/filter forms, attachment fallbacks, and persisted profile accent delivery.
+
+- [ ] **Step 1: Write failing public request tests**
+
+Create `test/requests/public_content_test.rb`:
+
+```ruby
+require "test_helper"
+
+class PublicContentRequestTest < ActionDispatch::IntegrationTest
+  setup do
+    @profile = Profile.new(public_contact_email: "owner@example.test", accent: "orange")
+    @profile.translations.build(
+      locale: "en", display_name: "Demo Owner", headline: "Ideas. Interfaces. Impact.",
+      introduction: "A demonstration introduction.", biography_markdown: "## Biography",
+      availability_label: "Available"
+    )
+    @profile.save!
+
+    @resume = Resume.new(updated_on: Date.new(2026, 9, 2))
+    @resume.translations.build(locale: "en", title: "Résumé", description: "Current résumé")
+    @resume.save!
+
+    @project = Project.new(role: "Engineer", featured_position: 1)
+    @project.translations.build(
+      locale: "en", title: "Visible Project", slug: "visible-project", summary: "SQLite search target",
+      body_markdown: "Project body", state: "published", published_at: 2.days.ago
+    )
+    @project.save!
+
+    @draft = Project.new(role: "Engineer")
+    @draft.translations.build(
+      locale: "en", title: "Secret Draft", slug: "secret-draft", summary: "Private",
+      body_markdown: "Draft body", state: "draft"
+    )
+    @draft.save!
+
+    @post = Post.new
+    @post.translations.build(
+      locale: "en", title: "Visible Post", slug: "visible-post", excerpt: "Published writing",
+      body_markdown: "Post body", state: "published", published_at: 1.day.ago
+    )
+    @post.save!
+  end
+
+  test "homepage renders active-locale database content and persisted accent" do
+    get "/en"
+
+    assert_response :success
+    assert_select 'html[data-accent="orange"]'
+    assert_select "h1", text: "Ideas. Interfaces. Impact."
+    assert_select "h2", text: "Visible Project"
+    assert_select "h2", text: "Visible Post"
+    assert_select "img", count: 0
+  end
+
+  test "project index searches published active-locale content only" do
+    get "/en/projects", params: { q: "SQLite" }
+
+    assert_response :success
+    assert_select "h2", text: "Visible Project"
+    assert_select "h2", text: "Secret Draft", count: 0
+  end
+
+  test "draft and absent locale detail routes return 404" do
+    get "/en/projects/secret-draft"
+    assert_response :not_found
+
+    get "/fr/projects/visible-project"
+    assert_response :not_found
+  end
+
+  test "post detail renders stored HTML" do
+    get "/en/blog/visible-post"
+
+    assert_response :success
+    assert_select "article p", text: "Post body"
+  end
+
+  test "missing optional translations return 404 for about and resume" do
+    get "/fr/about"
+    assert_response :not_found
+
+    get "/fr/resume"
+    assert_response :not_found
+  end
+
+  test "resume page has a text fallback and download returns 404 without a PDF" do
+    get "/en/resume"
+    assert_response :success
+    assert_select "p", text: I18n.t("public.resume.pdf_unavailable", locale: :en)
+
+    get "/en/resume/download"
+    assert_response :not_found
+  end
+end
+```
+
+- [ ] **Step 2: Run the request tests and confirm routes are absent**
+
+```bash
+bin/rails test test/requests/public_content_test.rb
+```
+
+Expected: FAIL because the content routes/controllers are not defined.
+
+- [ ] **Step 3: Replace the five content declarations inside the Phase 1 locale scope**
+
+In the existing locale-constrained `scope "/:locale"` block in `config/routes.rb`, keep its root redirect and contact declaration unchanged. Replace its home, projects, blog, about, and résumé declarations with exactly:
+
+```ruby
+  get "/", to: "public/home#show", as: :localized_root
+  get "projects", to: "public/projects#index", as: :localized_projects
+  get "projects/:slug", to: "public/projects#show", as: :localized_project
+  get "blog", to: "public/posts#index", as: :localized_blog
+  get "blog/:slug", to: "public/posts#show", as: :localized_post
+  get "about", to: "public/profiles#show", as: :localized_about
+  get "resume", to: "public/resumes#show", as: :localized_resume
+  get "resume/download", to: "public/resumes#download", as: :localized_resume_download
+```
+
+Run:
+
+```bash
+bin/rails routes -g 'localized_(root|projects|project|blog|post|about|resume)'
+```
+
+Expected helpers include `localized_root`, `localized_projects`, `localized_project`, `localized_blog`, `localized_post`, `localized_about`, `localized_resume`, and `localized_resume_download`, all with a required `:locale` segment.
+
+- [ ] **Step 4: Add homepage and detail controllers**
+
+Create `app/controllers/public/home_controller.rb`:
+
+```ruby
+module Public
+  class HomeController < PublicController
+    def show
+      @profile = Profile.current
+      @profile_translation = @profile&.translations&.find_by(locale: current_locale.to_s)
+      @projects = ProjectTranslation.publicly_visible(locale: current_locale)
+        .joins(:project)
+        .where.not(projects: { featured_position: nil })
+        .order("projects.featured_position ASC")
+        .limit(4)
+      @posts = PostTranslation.publicly_visible(locale: current_locale)
+        .order(published_at: :desc)
+        .limit(5)
+    end
+  end
+end
+```
+
+Create `app/controllers/public/projects_controller.rb`:
+
+```ruby
+module Public
+  class ProjectsController < PublicController
+    def index
+      @translations = PublicContentSearch.new(
+        scope: ProjectTranslation.all,
+        locale: current_locale,
+        query: params[:q],
+        tag_slug: params[:tag]
+      ).results
+      @tag_translations = available_tags
+    end
+
+    def show
+      @translation = ProjectTranslation.publicly_visible(locale: current_locale)
+        .includes(project: { tags: :translations })
+        .find_by!(slug: params[:slug])
+    end
+
+    private
+
+    def available_tags
+      visible_ids = ProjectTranslation.publicly_visible(locale: current_locale).select(:project_id)
+
+      TagTranslation.joins(tag: :taggings)
+        .where(locale: current_locale.to_s)
+        .where(taggings: { taggable_type: "Project", taggable_id: visible_ids })
+        .distinct
+        .order(:name)
+    end
+  end
+end
+```
+
+Create `app/controllers/public/posts_controller.rb`:
+
+```ruby
+module Public
+  class PostsController < PublicController
+    def index
+      @translations = PublicContentSearch.new(
+        scope: PostTranslation.all,
+        locale: current_locale,
+        query: params[:q],
+        tag_slug: params[:tag]
+      ).results
+      @tag_translations = available_tags
+    end
+
+    def show
+      @translation = PostTranslation.publicly_visible(locale: current_locale)
+        .includes(post: { tags: :translations })
+        .find_by!(slug: params[:slug])
+    end
+
+    private
+
+    def available_tags
+      visible_ids = PostTranslation.publicly_visible(locale: current_locale).select(:post_id)
+
+      TagTranslation.joins(tag: :taggings)
+        .where(locale: current_locale.to_s)
+        .where(taggings: { taggable_type: "Post", taggable_id: visible_ids })
+        .distinct
+        .order(:name)
+    end
+  end
+end
+```
+
+Create `app/controllers/public/profiles_controller.rb`:
+
+```ruby
+module Public
+  class ProfilesController < PublicController
+    def show
+      @profile = Profile.current || raise(ActiveRecord::RecordNotFound)
+      @translation = @profile.translations.find_by!(locale: current_locale.to_s)
+    end
+  end
+end
+```
+
+Create `app/controllers/public/resumes_controller.rb`:
+
+```ruby
+module Public
+  class ResumesController < PublicController
+    def show
+      load_translation
+    end
+
+    def download
+      load_translation
+      raise ActiveRecord::RecordNotFound unless @translation.pdf.attached?
+
+      redirect_to rails_blob_path(@translation.pdf, disposition: "attachment")
+    end
+
+    private
+
+    def load_translation
+      @resume = Resume.current || raise(ActiveRecord::RecordNotFound)
+      @translation = @resume.translations.find_by!(locale: current_locale.to_s)
+    end
+  end
+end
+```
+
+- [ ] **Step 5: Add the shared localized tag partial**
+
+Create `app/views/public/shared/_tags.html.erb`:
+
+```erb
+<% translations = taggable.tags.flat_map(&:translations).select { |item| item.locale == I18n.locale.to_s } %>
+<% if translations.any? %>
+  <ul aria-label="<%= t("public.tags.label") %>" class="flex flex-wrap gap-2">
+    <% translations.each do |translation| %>
+      <li><span class="text-sm uppercase"><%= translation.name %></span></li>
+    <% end %>
+  </ul>
+<% end %>
+```
+
+- [ ] **Step 6: Add homepage and project views**
+
+Create `app/views/public/home/show.html.erb`:
+
+```erb
+<main class="page-container space-y-16">
+  <% if @profile_translation %>
+    <section aria-labelledby="home-heading" class="space-y-6">
+      <p class="text-sm uppercase"><%= @profile_translation.availability_label %></p>
+      <h1 id="home-heading" class="text-5xl font-bold"><%= @profile_translation.headline %></h1>
+      <p class="max-w-prose text-lg"><%= @profile_translation.introduction %></p>
+      <% if @profile.portrait.attached? %>
+        <%= image_tag @profile.portrait, alt: @profile_translation.display_name, class: "max-w-full" %>
+      <% end %>
+    </section>
+  <% end %>
+
+  <section aria-labelledby="selected-work-heading" class="space-y-6">
+    <h2 id="selected-work-heading" class="text-sm uppercase"><%= t("public.home.selected_work") %></h2>
+    <% if @projects.any? %>
+      <div class="grid gap-8 md:grid-cols-2">
+        <% @projects.each do |translation| %>
+          <article class="space-y-3">
+            <% if translation.project.cover_image.attached? %>
+              <%= image_tag translation.project.cover_image, alt: translation.title, loading: "lazy", class: "max-w-full" %>
+            <% end %>
+            <h2 class="text-2xl font-bold"><%= link_to translation.title, localized_project_path(locale: current_locale, slug: translation.slug) %></h2>
+            <p><%= translation.summary %></p>
+          </article>
+        <% end %>
+      </div>
+    <% else %>
+      <p><%= t("public.projects.empty") %></p>
+    <% end %>
+  </section>
+
+  <section aria-labelledby="recent-writing-heading" class="space-y-6">
+    <h2 id="recent-writing-heading" class="text-sm uppercase"><%= t("public.home.recent_writing") %></h2>
+    <% if @posts.any? %>
+      <ol class="space-y-4">
+        <% @posts.each do |translation| %>
+          <li>
+            <h2 class="text-xl font-bold"><%= link_to translation.title, localized_post_path(locale: current_locale, slug: translation.slug) %></h2>
+            <p><%= translation.excerpt %></p>
+          </li>
+        <% end %>
+      </ol>
+    <% else %>
+      <p><%= t("public.posts.empty") %></p>
+    <% end %>
+  </section>
+</main>
+```
+
+Create `app/views/public/projects/index.html.erb`:
+
+```erb
+<main class="page-container space-y-8">
+  <header>
+    <p class="text-sm uppercase"><%= t("navigation.work") %></p>
+    <h1 class="text-4xl font-bold"><%= t("public.projects.title") %></h1>
+  </header>
+
+  <%= form_with url: localized_projects_path(locale: current_locale), method: :get, class: "grid gap-4", role: "search" do |form| %>
+    <%= form.label :q, t("public.search.label") %>
+    <%= form.search_field :q, value: params[:q], class: "min-h-11" %>
+    <%= form.label :tag, t("public.tags.label") %>
+    <%= form.select :tag,
+      options_for_select([[t("public.tags.all"), ""]] + @tag_translations.map { |tag| [tag.name, tag.slug] }, params[:tag]),
+      {}, class: "min-h-11" %>
+    <%= form.submit t("public.search.submit"), class: "min-h-11" %>
+  <% end %>
+
+  <% if @translations.any? %>
+    <div class="grid gap-8 md:grid-cols-2">
+      <% @translations.each do |translation| %>
+        <article class="space-y-3">
+          <% if translation.project.cover_image.attached? %>
+            <%= image_tag translation.project.cover_image, alt: translation.title, loading: "lazy", class: "max-w-full" %>
+          <% end %>
+          <h2 class="text-2xl font-bold"><%= link_to translation.title, localized_project_path(locale: current_locale, slug: translation.slug) %></h2>
+          <p><%= translation.summary %></p>
+          <%= render "public/shared/tags", taggable: translation.project %>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <p><%= t("public.projects.empty") %></p>
+  <% end %>
+</main>
+```
+
+Create `app/views/public/projects/show.html.erb`:
+
+```erb
+<main class="page-container">
+  <article class="space-y-8">
+    <header class="space-y-3">
+      <p class="text-sm uppercase"><%= @translation.project.role %></p>
+      <h1 class="text-4xl font-bold"><%= @translation.title %></h1>
+      <p class="max-w-prose text-lg"><%= @translation.summary %></p>
+      <%= render "public/shared/tags", taggable: @translation.project %>
+    </header>
+
+    <% if @translation.project.cover_image.attached? %>
+      <%= image_tag @translation.project.cover_image, alt: @translation.title, class: "max-w-full" %>
+    <% end %>
+
+    <div class="prose"><%= @translation.body_html.html_safe %></div>
+
+    <% if @translation.project.gallery_images.attached? %>
+      <ul class="grid gap-4 md:grid-cols-2">
+        <% @translation.project.gallery_images.each_with_index do |image, index| %>
+          <li><%= image_tag image, alt: t("public.projects.gallery_alt", title: @translation.title, number: index + 1), loading: "lazy", class: "max-w-full" %></li>
+        <% end %>
+      </ul>
+    <% end %>
+
+    <% if @translation.project.live_url.present? || @translation.project.source_url.present? %>
+      <nav aria-label="<%= t("public.projects.links") %>" class="flex gap-4">
+        <%= link_to t("public.projects.live"), @translation.project.live_url, rel: "noopener" if @translation.project.live_url.present? %>
+        <%= link_to t("public.projects.source"), @translation.project.source_url, rel: "noopener" if @translation.project.source_url.present? %>
+      </nav>
+    <% end %>
+  </article>
+</main>
+```
+
+- [ ] **Step 7: Add journal, about, and résumé views**
+
+Create `app/views/public/posts/index.html.erb`:
+
+```erb
+<main class="page-container space-y-8">
+  <header>
+    <p class="text-sm uppercase"><%= t("navigation.journal") %></p>
+    <h1 class="text-4xl font-bold"><%= t("public.posts.title") %></h1>
+  </header>
+
+  <%= form_with url: localized_blog_path(locale: current_locale), method: :get, class: "grid gap-4", role: "search" do |form| %>
+    <%= form.label :q, t("public.search.label") %>
+    <%= form.search_field :q, value: params[:q], class: "min-h-11" %>
+    <%= form.label :tag, t("public.tags.label") %>
+    <%= form.select :tag,
+      options_for_select([[t("public.tags.all"), ""]] + @tag_translations.map { |tag| [tag.name, tag.slug] }, params[:tag]),
+      {}, class: "min-h-11" %>
+    <%= form.submit t("public.search.submit"), class: "min-h-11" %>
+  <% end %>
+
+  <% if @translations.any? %>
+    <ol class="space-y-8">
+      <% @translations.each do |translation| %>
+        <li>
+          <article class="space-y-3">
+            <p><%= l(translation.published_at.to_date, format: :long) %></p>
+            <h2 class="text-2xl font-bold"><%= link_to translation.title, localized_post_path(locale: current_locale, slug: translation.slug) %></h2>
+            <p><%= translation.excerpt %></p>
+            <%= render "public/shared/tags", taggable: translation.post %>
+          </article>
+        </li>
+      <% end %>
+    </ol>
+  <% else %>
+    <p><%= t("public.posts.empty") %></p>
+  <% end %>
+</main>
+```
+
+Create `app/views/public/posts/show.html.erb`:
+
+```erb
+<main class="page-container">
+  <article class="space-y-8">
+    <header class="space-y-3">
+      <p><%= l(@translation.published_at.to_date, format: :long) %></p>
+      <h1 class="text-4xl font-bold"><%= @translation.title %></h1>
+      <p class="max-w-prose text-lg"><%= @translation.excerpt %></p>
+      <%= render "public/shared/tags", taggable: @translation.post %>
+    </header>
+
+    <% if @translation.post.cover_image.attached? %>
+      <%= image_tag @translation.post.cover_image, alt: @translation.title, class: "max-w-full" %>
+    <% end %>
+
+    <div class="prose"><%= @translation.body_html.html_safe %></div>
+  </article>
+</main>
+```
+
+Create `app/views/public/profiles/show.html.erb`:
+
+```erb
+<main class="page-container">
+  <article class="space-y-8">
+    <header class="space-y-3">
+      <p class="text-sm uppercase"><%= @translation.availability_label %></p>
+      <h1 class="text-4xl font-bold"><%= @translation.display_name %></h1>
+      <p class="max-w-prose text-lg"><%= @translation.introduction %></p>
+    </header>
+
+    <% if @profile.portrait.attached? %>
+      <%= image_tag @profile.portrait, alt: @translation.display_name, class: "max-w-full" %>
+    <% end %>
+
+    <div class="prose"><%= @translation.biography_html.html_safe %></div>
+
+    <% if @profile.social_links.any? %>
+      <ul class="flex flex-wrap gap-4">
+        <% @profile.social_links.sort.each do |label, url| %>
+          <li><%= link_to label, url, rel: "me noopener" %></li>
+        <% end %>
+      </ul>
+    <% end %>
+    <%= mail_to @profile.public_contact_email %>
+  </article>
+</main>
+```
+
+Create `app/views/public/resumes/show.html.erb`:
+
+```erb
+<main class="page-container">
+  <article class="space-y-6">
+    <h1 class="text-4xl font-bold"><%= @translation.title %></h1>
+    <p class="max-w-prose"><%= @translation.description %></p>
+    <p><%= t("public.resume.updated", date: l(@resume.updated_on, format: :long)) %></p>
+    <% if @translation.pdf.attached? %>
+      <%= link_to t("public.resume.download"), localized_resume_download_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %>
+    <% else %>
+      <p><%= t("public.resume.pdf_unavailable") %></p>
+    <% end %>
+  </article>
+</main>
+```
+
+- [ ] **Step 8: Add exact English, French, and Vietnamese interface copy**
+
+Merge this `public` key under the existing `en:` root in `config/locales/en.yml`:
+
+```yaml
+public:
+  home:
+    selected_work: "Selected work"
+    recent_writing: "Recent writing"
+  search:
+    label: "Search"
+    submit: "Apply"
+  tags:
+    label: "Tags"
+    all: "All tags"
+  projects:
+    title: "Work"
+    empty: "No published projects match these filters."
+    gallery_alt: "%{title}, image %{number}"
+    links: "Project links"
+    live: "Visit project"
+    source: "View source"
+  posts:
+    title: "Journal"
+    empty: "No published posts match these filters."
+  resume:
+    updated: "Updated %{date}"
+    download: "Download PDF"
+    pdf_unavailable: "The PDF is not available yet."
+```
+
+Merge under `fr:` in `config/locales/fr.yml`:
+
+```yaml
+public:
+  home:
+    selected_work: "Projets sélectionnés"
+    recent_writing: "Articles récents"
+  search:
+    label: "Rechercher"
+    submit: "Appliquer"
+  tags:
+    label: "Étiquettes"
+    all: "Toutes les étiquettes"
+  projects:
+    title: "Projets"
+    empty: "Aucun projet publié ne correspond à ces filtres."
+    gallery_alt: "%{title}, image %{number}"
+    links: "Liens du projet"
+    live: "Voir le projet"
+    source: "Voir le code source"
+  posts:
+    title: "Journal"
+    empty: "Aucun article publié ne correspond à ces filtres."
+  resume:
+    updated: "Mis à jour le %{date}"
+    download: "Télécharger le PDF"
+    pdf_unavailable: "Le PDF n’est pas encore disponible."
+```
+
+Merge under `vi:` in `config/locales/vi.yml`:
+
+```yaml
+public:
+  home:
+    selected_work: "Dự án nổi bật"
+    recent_writing: "Bài viết gần đây"
+  search:
+    label: "Tìm kiếm"
+    submit: "Áp dụng"
+  tags:
+    label: "Thẻ"
+    all: "Tất cả thẻ"
+  projects:
+    title: "Dự án"
+    empty: "Không có dự án đã xuất bản phù hợp với bộ lọc."
+    gallery_alt: "%{title}, hình %{number}"
+    links: "Liên kết dự án"
+    live: "Xem dự án"
+    source: "Xem mã nguồn"
+  posts:
+    title: "Nhật ký"
+    empty: "Không có bài viết đã xuất bản phù hợp với bộ lọc."
+  resume:
+    updated: "Cập nhật %{date}"
+    download: "Tải PDF"
+    pdf_unavailable: "Bản PDF chưa có sẵn."
+```
+
+Keep the Phase 1 `navigation.*`, `theme.*`, `locales.*`, and date formats unchanged.
+
+- [ ] **Step 9: Source the Phase 1 accent contract from Profile**
+
+Add to `app/helpers/theme_helper.rb` without changing `theme_bootstrap_script`:
+
+```ruby
+  def site_accent
+    Profile.find_by(singleton_guard: 1)&.accent || "lime"
+  end
+```
+
+In `app/views/layouts/application.html.erb`, replace only the hard-coded accent value on the existing `<html>` element:
+
+```erb
+<html lang="<%= I18n.locale %>" data-accent="<%= site_accent %>">
+```
+
+Retain every other Phase 1 attribute on that element if it has more attributes; only `data-accent` changes. The `lime` fallback keeps boot, migration, and empty-database pages renderable.
+
+- [ ] **Step 10: Run request and regression tests**
+
+```bash
+bin/rails test test/requests/public_content_test.rb
+bin/rails test test/models/public_content_test.rb \
+  test/services/markdown_renderer_test.rb \
+  test/queries/public_content_search_test.rb \
+  test/requests/public_content_test.rb
+```
+
+Expected: all tests pass. The request test proves active-locale content, draft/missing-locale 404s, stored HTML, text-first fallbacks, and the persisted accent.
+
+- [ ] **Step 11: Commit public delivery**
+
+```bash
+git add config/routes.rb app/controllers/public app/views/public \
+  config/locales/en.yml config/locales/fr.yml config/locales/vi.yml \
+  app/helpers/theme_helper.rb app/views/layouts/application.html.erb \
+  test/requests/public_content_test.rb
+git commit -m "feat: deliver localized public content pages"
+```
+
+---
+
+### Task 5: Add Idempotent Development Seeds and Accept Phase 2
+
+**Files:**
+
+- Modify: `db/seeds.rb`
+
+**Interfaces:**
+
+- Consumes: every Phase 2 model, attachment name, state, and Markdown callback.
+- Produces: non-personal development data in all three locales, one localized tag, one featured project, one post, profile/accent/portrait, and one PDF per résumé translation.
+
+- [ ] **Step 1: Replace the seed file with deterministic development data**
+
+Replace `db/seeds.rb` with:
+
+````ruby
+if Rails.env.development?
+  require "base64"
+  require "stringio"
+
+  translations = {
+    "en" => {
+      profile: ["Demo Designer", "Ideas. Interfaces. Impact.", "A neutral demonstration profile.", "## About\n\nThis content is safe to replace.", "Available"],
+      tag: ["Ruby", "ruby"],
+      project: ["Sample System", "sample-system", "A database-backed demonstration project.", "## Result\n\nA small, useful result."],
+      post: ["A Sample Technical Note", "sample-technical-note", "A short demonstration article.", "## Note\n\n```ruby\nputs :hello\n```"],
+      resume: ["Demo Résumé", "A localized demonstration résumé."]
+    },
+    "fr" => {
+      profile: ["Designer Démo", "Idées. Interfaces. Impact.", "Un profil de démonstration neutre.", "## À propos\n\nCe contenu peut être remplacé.", "Disponible"],
+      tag: ["Ruby", "ruby-fr"],
+      project: ["Système exemple", "systeme-exemple", "Un projet de démonstration stocké en base.", "## Résultat\n\nUn résultat simple et utile."],
+      post: ["Une note technique", "note-technique", "Un court article de démonstration.", "## Note\n\n```ruby\nputs :bonjour\n```"],
+      resume: ["CV de démonstration", "Un CV de démonstration localisé."]
+    },
+    "vi" => {
+      profile: ["Nhà thiết kế mẫu", "Ý tưởng. Giao diện. Tác động.", "Hồ sơ minh họa trung lập.", "## Giới thiệu\n\nNội dung này có thể được thay thế.", "Sẵn sàng"],
+      tag: ["Ruby", "ruby-vi"],
+      project: ["Hệ thống mẫu", "he-thong-mau", "Dự án minh họa được lưu trong cơ sở dữ liệu.", "## Kết quả\n\nMột kết quả nhỏ và hữu ích."],
+      post: ["Ghi chú kỹ thuật mẫu", "ghi-chu-ky-thuat-mau", "Một bài viết minh họa ngắn.", "## Ghi chú\n\n```ruby\nputs :xin_chao\n```"],
+      resume: ["Hồ sơ mẫu", "Hồ sơ minh họa đã được bản địa hóa."]
+    }
+  }
+
+  profile = Profile.find_or_initialize_by(singleton_guard: 1)
+  profile.assign_attributes(
+    public_contact_email: "owner@example.test",
+    social_links: { "GitHub" => "https://github.com/example" },
+    accent: "lime"
+  )
+  translations.each do |locale, copy|
+    item = profile.translations.find_or_initialize_by(locale: locale)
+    item.assign_attributes(
+      display_name: copy[:profile][0], headline: copy[:profile][1],
+      introduction: copy[:profile][2], biography_markdown: copy[:profile][3],
+      availability_label: copy[:profile][4]
+    )
+  end
+  profile.save!
+
+  tag = Tag.first_or_initialize
+  translations.each do |locale, copy|
+    item = tag.translations.find_or_initialize_by(locale: locale)
+    item.assign_attributes(name: copy[:tag][0], slug: copy[:tag][1])
+  end
+  tag.save!
+
+  project = Project.find_or_initialize_by(live_url: "https://example.test/sample-system")
+  project.assign_attributes(
+    role: "Designer and engineer", started_on: Date.new(2026, 1, 1),
+    ended_on: Date.new(2026, 6, 30), source_url: "https://github.com/example/sample-system",
+    featured_position: 1
+  )
+  translations.each do |locale, copy|
+    item = project.translations.find_or_initialize_by(locale: locale)
+    item.assign_attributes(
+      title: copy[:project][0], slug: copy[:project][1], summary: copy[:project][2],
+      body_markdown: copy[:project][3], state: "published", published_at: Time.zone.parse("2026-07-01 09:00")
+    )
+  end
+  project.save!
+  project.tags << tag unless project.tags.exists?(tag.id)
+
+  post = Post.first_or_initialize
+  translations.each do |locale, copy|
+    item = post.translations.find_or_initialize_by(locale: locale)
+    item.assign_attributes(
+      title: copy[:post][0], slug: copy[:post][1], excerpt: copy[:post][2],
+      body_markdown: copy[:post][3], state: "published", published_at: Time.zone.parse("2026-08-01 09:00")
+    )
+  end
+  post.save!
+  post.tags << tag unless post.tags.exists?(tag.id)
+
+  resume = Resume.find_or_initialize_by(singleton_guard: 1)
+  resume.updated_on = Date.new(2026, 9, 2)
+  translations.each do |locale, copy|
+    item = resume.translations.find_or_initialize_by(locale: locale)
+    item.assign_attributes(title: copy[:resume][0], description: copy[:resume][1])
+  end
+  resume.save!
+
+  png = Base64.decode64(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+  )
+  attach_png = lambda do |record, name, filename|
+    attachment = record.public_send(name)
+    attachment.attach(io: StringIO.new(png), filename: filename, content_type: "image/png") unless attachment.attached?
+  end
+  attach_png.call(profile, :portrait, "demo-portrait.png")
+  attach_png.call(project, :cover_image, "demo-project.png")
+  attach_png.call(post, :cover_image, "demo-post.png")
+
+  resume.translations.each do |translation|
+    next if translation.pdf.attached?
+
+    pdf = "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n"
+    translation.pdf.attach(
+      io: StringIO.new(pdf), filename: "demo-resume-#{translation.locale}.pdf",
+      content_type: "application/pdf"
+    )
+  end
+
+  puts "Seeded localized demo profile, tag, project, post, résumé, and attachments."
+else
+  puts "Development demo seeds skipped in #{Rails.env}."
+end
+````
+
+These records are demonstrative and contain no personal content. Re-running the seed updates the same records and does not create duplicate attachments.
+
+- [ ] **Step 2: Rebuild development data and prove seed idempotency**
+
+Run:
+
+```bash
+bin/rails db:seed
+bin/rails db:seed
+bin/rails runner 'puts [Profile.count, Resume.count, Project.count, Post.count, Tag.count, ActiveStorage::Attachment.count].join(",")'
+```
+
+Expected final line:
+
+```text
+1,1,1,1,1,6
+```
+
+The six attachments are one portrait, one project cover, one post cover, and three localized PDFs.
+
+- [ ] **Step 3: Exercise every public route against seeded data**
+
+Start the app:
+
+```bash
+bin/dev
+```
+
+In another shell run:
+
+```bash
+curl -fsS http://localhost:3000/en >/dev/null
+curl -fsS 'http://localhost:3000/fr/projects?q=système&tag=ruby-fr' >/dev/null
+curl -fsS http://localhost:3000/vi/projects/he-thong-mau >/dev/null
+curl -fsS http://localhost:3000/en/blog/sample-technical-note >/dev/null
+curl -fsS http://localhost:3000/fr/about >/dev/null
+curl -fsS http://localhost:3000/vi/resume >/dev/null
+curl -fsSI http://localhost:3000/en/resume/download | grep -E 'HTTP/|location:'
+```
+
+Expected: all page commands exit 0; the download response is a redirect to an Active Storage blob URL. Stop `bin/dev` after the check.
+
+- [ ] **Step 4: Run the phase boundary suites**
+
+```bash
+bin/rails test
+bin/rails test:system
+```
+
+Expected: both commands pass. Phase 1 locale/theme/navigation tests remain green; all Phase 2 model, renderer, query, and request tests pass.
+
+- [ ] **Step 5: Perform the mobile and language boundary check**
+
+At 320 CSS pixels and at 200% zoom, manually verify:
+
+1. `/en/projects` and `/en/blog` have no horizontal overflow.
+2. Search, tag select, and submit controls remain keyboard and touch usable.
+3. A project/post without an image keeps a complete text-first layout.
+4. `/fr/projects/visible-project` returns 404 rather than English content.
+5. View source for a seeded article contains stored rendered HTML and no `<script>` from authored Markdown.
+6. `/en`, `/fr`, and `/vi` display only their own authored text.
+
+- [ ] **Step 6: Commit seeds and tag the accepted phase**
+
+```bash
+git add db/seeds.rb
+git commit -m "chore: add localized public content seeds"
+git tag portfolio-v4-phase-2
+```
+
+## Phase 2 Acceptance Checklist
+
+- [ ] `MarkdownRenderer.call(markdown)` returns sanitized HTML, preserves fenced code, and never renders authored raw HTML.
+- [ ] `ProjectTranslation.publicly_visible(locale:)` and `PostTranslation.publicly_visible(locale:)` exclude wrong-locale, draft, scheduled, and future-published rows.
+- [ ] `PublicContentSearch.new(scope:, locale:, query:, tag_slug:).results` escapes `%`/`_`, uses bound values, filters translated tag slugs, and orders by `published_at DESC`.
+- [ ] The database enforces shared-record/locale and locale/slug uniqueness plus singleton profile/résumé rows.
+- [ ] English is required while French and Vietnamese authored translations may be absent.
+- [ ] Attachment interfaces are exactly `Project#cover_image`, `Project#gallery_images`, `Post#cover_image`, `Profile#portrait`, and `ResumeTranslation#pdf`.
+- [ ] Homepage, work, journal, about, résumé, and résumé download read from SQLite in the active locale.
+- [ ] Draft, scheduled, missing, and untranslated detail URLs return 404.
+- [ ] Missing images and PDFs leave intentional text-first output.
+- [ ] Development seeds are non-personal, cover all record types/locales/assets, and are idempotent.
+- [ ] `bin/rails test` and `bin/rails test:system` pass before creating `portfolio-v4-phase-2`.
+
+## Risks and Rollback
+
+- **Commonmarker option drift:** `bundle install` must resolve a release supporting the documented `Commonmarker.to_html(..., options:)` API; keep the locked release in `Gemfile.lock`. A dependency upgrade must rerun the two sanitizer tests before merge.
+- **SQLite LIKE limitations:** this intentionally uses a linear `LOWER(...) LIKE` scan. Replace only the query object's internals with SQLite FTS after measured content volume or relevance demonstrates a problem.
+- **Singleton creation races:** unique `singleton_guard` indexes are authoritative; Phase 4 should load `Profile.current` / `Resume.current` rather than create extra rows.
+- **Publication scope coupling:** Phase 5 may add transition methods, but it must retain these scope names and state/timestamp columns.
+- **Rollback:** revert the phase commits in reverse order before shared production data exists. After acceptance, use forward corrective migrations rather than editing either migration in this plan.
