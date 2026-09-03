@@ -1,31 +1,49 @@
-# Files in the config/locales directory are used for internationalization and
-# are automatically loaded by Rails. If you want to use locales other than
-# English, add the necessary files in this directory.
-#
-# To use the locales, use `I18n.t`:
-#
-#     I18n.t "hello"
-#
-# In views, this is aliased to just `t`:
-#
-#     <%= t("hello") %>
-#
-# To use a different locale, set it with `I18n.locale`:
-#
-#     I18n.locale = :es
-#
-# This would use the information in config/locales/es.yml.
-#
-# To learn more about the API, please read the Rails Internationalization guide
-# at https://guides.rubyonrails.org/i18n.html.
-#
-# Be aware that YAML interprets the following case-insensitive strings as
-# booleans: `true`, `false`, `on`, `off`, `yes`, `no`. Therefore, these strings
-# must be quoted to be interpreted as strings. For example:
-#
-#     en:
-#       "yes": yup
-#       enabled: "ON"
-
 en:
-  hello: "Hello world"
+  site:
+    name: "Portfolio"
+  navigation:
+    label: "Primary navigation"
+    work: "Work"
+    journal: "Journal"
+    about: "About"
+    resume: "Résumé"
+    contact: "Contact"
+  locales:
+    label: "Choose language"
+    en: "English"
+    fr: "Français"
+    vi: "Tiếng Việt"
+  menu:
+    open: "Open menu"
+    close: "Close menu"
+  theme:
+    toggle: "Toggle color theme"
+    switch_to_light: "Switch to light theme"
+    switch_to_dark: "Switch to dark theme"
+  pages:
+    home:
+      eyebrow: "Portfolio"
+      title: "Ideas. Interfaces. Impact."
+      introduction: "A focused home for selected work, technical writing, and ways to connect."
+    projects:
+      eyebrow: "Selected work"
+      title: "Work"
+      introduction: "Selected project case studies, outcomes, and technical decisions."
+    blog:
+      eyebrow: "Technical writing"
+      title: "Journal"
+      introduction: "Technical articles, practical notes, and engineering lessons."
+    about:
+      eyebrow: "Profile"
+      title: "About"
+      introduction: "Biography, experience, skills, and external profiles."
+    resume:
+      eyebrow: "Experience"
+      title: "Résumé"
+      introduction: "Localized experience with a direct résumé download."
+    contact:
+      eyebrow: "Start a conversation"
+      title: "Contact"
+      introduction: "A direct and secure way to start a conversation."
+  footer:
+    rights: "Built with care."

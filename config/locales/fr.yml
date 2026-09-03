@@ -1,0 +1,49 @@
+fr:
+  site:
+    name: "Portfolio"
+  navigation:
+    label: "Navigation principale"
+    work: "Réalisations"
+    journal: "Journal"
+    about: "À propos"
+    resume: "CV"
+    contact: "Contact"
+  locales:
+    label: "Choisir la langue"
+    en: "English"
+    fr: "Français"
+    vi: "Tiếng Việt"
+  menu:
+    open: "Ouvrir le menu"
+    close: "Fermer le menu"
+  theme:
+    toggle: "Changer le thème de couleur"
+    switch_to_light: "Passer au thème clair"
+    switch_to_dark: "Passer au thème sombre"
+  pages:
+    home:
+      eyebrow: "Portfolio"
+      title: "Idées. Interfaces. Impact."
+      introduction: "Un espace ciblé pour des réalisations, des écrits techniques et des prises de contact."
+    projects:
+      eyebrow: "Travaux sélectionnés"
+      title: "Réalisations"
+      introduction: "Des études de cas, leurs résultats et leurs décisions techniques."
+    blog:
+      eyebrow: "Écrits techniques"
+      title: "Journal"
+      introduction: "Des articles techniques, des notes pratiques et des retours d’expérience."
+    about:
+      eyebrow: "Profil"
+      title: "À propos"
+      introduction: "Biographie, expérience, compétences et profils externes."
+    resume:
+      eyebrow: "Expérience"
+      title: "CV"
+      introduction: "Une expérience localisée avec un téléchargement direct du CV."
+    contact:
+      eyebrow: "Échangeons"
+      title: "Contact"
+      introduction: "Un moyen direct et sécurisé de commencer une conversation."
+  footer:
+    rights: "Conçu avec soin."
