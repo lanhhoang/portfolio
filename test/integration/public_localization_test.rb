@@ -71,4 +71,10 @@ class PublicLocalizationTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
   end
+
+  test "localized shell routes reject non-HTML formats" do
+    assert_raises(ActionController::RoutingError) do
+      Rails.application.routes.recognize_path("/en/about.json")
+    end
+  end
 end

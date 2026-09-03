@@ -176,6 +176,7 @@ button {
 .site-mark {
   display: inline-flex;
   width: fit-content;
+  min-width: 2.75rem;
   min-height: 2.75rem;
   align-items: center;
   font-family: var(--font-display);

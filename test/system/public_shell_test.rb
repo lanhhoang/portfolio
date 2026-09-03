@@ -18,6 +18,12 @@ class PublicShellTest < ApplicationSystemTestCase
     assert_current_path localized_root_path(locale: "fr")
   end
 
+  test "site mark has a comfortable touch target" do
+    visit localized_root_path(locale: "en")
+
+    assert_operator page.evaluate_script("document.querySelector('.site-mark').getBoundingClientRect().width"), :>=, 44
+  end
+
   test "mobile menu is keyboard operable and the page does not overflow" do
     page.current_window.resize_to(320, 800)
     visit localized_root_path(locale: "en")
