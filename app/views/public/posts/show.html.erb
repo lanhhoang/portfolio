@@ -11,6 +11,6 @@
       <%= image_tag @translation.post.cover_image, alt: @translation.title, class: "max-w-full" %>
     <% end %>
 
-    <div class="rich-text"><%= @translation.body_html.html_safe %></div>
+    <div class="rich-text"><%= sanitize @translation.body_html %></div>
   </article>
 </main>

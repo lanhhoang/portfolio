@@ -72,6 +72,16 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     assert_select "article p", text: "Post body"
   end
 
+  test "stored body HTML is sanitized again at render time" do
+    @post.translations.first.update_columns(body_html: "<p>Safe</p><script>alert(1)</script>")
+
+    get "/en/blog/visible-post"
+
+    assert_response :success
+    assert_select "article p", text: "Safe"
+    assert_select "script", text: "alert(1)", count: 0
+  end
+
   test "detail locale switches use published sibling slugs and disable unavailable translations" do
     @project.translations.create!(
       locale: "fr", title: "Projet visible", slug: "projet-visible", summary: "Résumé",

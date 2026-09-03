@@ -10,7 +10,7 @@
       <%= image_tag @profile.portrait, alt: @translation.display_name, class: "max-w-full" %>
     <% end %>
 
-    <div class="rich-text"><%= @translation.biography_html.html_safe %></div>
+    <div class="rich-text"><%= sanitize @translation.biography_html %></div>
 
     <% if @profile.social_links.any? %>
       <ul class="flex flex-wrap gap-4">

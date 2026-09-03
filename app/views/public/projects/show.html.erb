@@ -11,7 +11,7 @@
       <%= image_tag @translation.project.cover_image, alt: @translation.title, class: "max-w-full" %>
     <% end %>
 
-    <div class="rich-text"><%= @translation.body_html.html_safe %></div>
+    <div class="rich-text"><%= sanitize @translation.body_html %></div>
 
     <% if @translation.project.gallery_images.attached? %>
       <ul class="grid gap-4 md:grid-cols-2">
