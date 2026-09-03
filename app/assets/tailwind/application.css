@@ -131,6 +131,23 @@ button {
   cursor: pointer;
 }
 
+input,
+select {
+  width: 100%;
+  max-width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+input[type="submit"] {
+  cursor: pointer;
+}
+
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
@@ -225,12 +242,17 @@ button {
   gap: 0.25rem 0.875rem;
 }
 
-.locale-switcher a {
+.locale-switcher a,
+.locale-switcher span {
   display: inline-flex;
   min-height: 2.75rem;
   align-items: center;
   font-size: 0.75rem;
   font-weight: 700;
+}
+
+.locale-switcher span[aria-disabled="true"] {
+  color: var(--muted);
 }
 
 .locale-switcher a[aria-current="true"] {

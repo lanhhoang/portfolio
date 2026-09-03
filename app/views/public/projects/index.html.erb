@@ -4,7 +4,7 @@
     <h1 class="text-4xl font-bold"><%= t("public.projects.title") %></h1>
   </header>
 
-  <%= form_with url: localized_projects_path(locale: current_locale), method: :get, class: "grid gap-4", role: "search" do |form| %>
+  <%= form_with url: localized_projects_path(locale: current_locale), method: :get, class: "grid gap-4", html: { role: "search" } do |form| %>
     <%= form.label :q, t("public.search.label") %>
     <%= form.search_field :q, value: params[:q], class: "min-h-11" %>
     <%= form.label :tag, t("public.tags.label") %>

@@ -26,6 +26,11 @@ class Profile < ApplicationRecord
   private
 
   def social_links_are_http_urls
+    unless social_links.is_a?(Hash)
+      errors.add(:social_links, "must contain HTTP(S) URLs with a host")
+      return
+    end
+
     social_links.each_value do |value|
       uri = URI.parse(value.to_s)
       errors.add(:social_links, "must contain HTTP(S) URLs with a host") unless uri.is_a?(URI::HTTP) && uri.host.present?

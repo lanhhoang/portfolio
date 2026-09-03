@@ -8,11 +8,6 @@ class PublicController < ApplicationController
     redirect_to localized_root_path(locale: preferred_locale)
   end
 
-  def home = render_page(:home)
-  def projects = render_page(:projects)
-  def blog = render_page(:blog)
-  def about = render_page(:about)
-  def resume = render_page(:resume)
   def contact = render_page(:contact)
 
   def current_locale

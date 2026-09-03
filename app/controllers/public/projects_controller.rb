@@ -37,7 +37,6 @@ module Public
       sibling_slugs.each do |locale, slug|
         @locale_switch_paths[locale] = localized_project_path(locale: locale, slug: slug)
       end
-      @locale_switch_paths[@translation.locale] = localized_project_path(locale: current_locale, slug: params[:slug])
     end
   end
 end

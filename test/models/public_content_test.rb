@@ -134,6 +134,18 @@ class PublicContentTest < ActiveSupport::TestCase
     assert project.errors[:source_url].any?
   end
 
+  test "malformed social links are rejected without raising" do
+    profile = Profile.new(public_contact_email: "owner@example.test", social_links: [])
+    profile.translations.build(
+      locale: "en", display_name: "Demo", headline: "Headline",
+      introduction: "Introduction", biography_markdown: "Biography",
+      availability_label: "Available"
+    )
+
+    assert_not profile.valid?
+    assert profile.errors[:social_links].any?
+  end
+
   test "Markdown HTML is refreshed before translated content is saved" do
     project = build_project(slug: "rendered")
     project.translations.first.body_markdown = "**Safe** <script>alert(1)</script>"

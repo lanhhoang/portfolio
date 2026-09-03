@@ -75,7 +75,7 @@ class PublicLocalizationTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "fixed copy comes from the active locale without fallback" do
+  test "authored content comes from the active locale without fallback" do
     {
       "en" => "Demo Owner",
       "fr" => "Propriétaire démo",

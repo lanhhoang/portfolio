@@ -72,6 +72,61 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     assert_select "article p", text: "Post body"
   end
 
+  test "detail locale switches use published sibling slugs and disable unavailable translations" do
+    @project.translations.create!(
+      locale: "fr", title: "Projet visible", slug: "projet-visible", summary: "Résumé",
+      body_markdown: "Corps", state: "published", published_at: 1.day.ago
+    )
+    @project.translations.create!(
+      locale: "vi", title: "Dự án nháp", slug: "du-an-nhap", summary: "Tóm tắt",
+      body_markdown: "Nội dung", state: "draft"
+    )
+
+    get "/en/projects/visible-project"
+
+    assert_select '.locale-switcher a[href="/fr/projects/projet-visible"]', text: "Français"
+    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"]', text: "Tiếng Việt"
+    assert_select '.locale-switcher a[href="/vi/projects/visible-project"]', count: 0
+
+    @post.translations.create!(
+      locale: "fr", title: "Article visible", slug: "article-visible", excerpt: "Extrait",
+      body_markdown: "Corps", state: "published", published_at: 1.day.ago
+    )
+
+    get "/en/blog/visible-post"
+
+    assert_select '.locale-switcher a[href="/fr/blog/article-visible"]', text: "Français"
+    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"]', text: "Tiếng Việt"
+  end
+
+  test "singleton locale switches link existing and disable missing translations" do
+    @profile.translations.create!(
+      locale: "fr", display_name: "Propriétaire démo", headline: "Titre",
+      introduction: "Introduction", biography_markdown: "Biographie",
+      availability_label: "Disponible"
+    )
+    @resume.translations.create!(locale: "fr", title: "CV", description: "CV actuel")
+
+    get "/en/about"
+    assert_select '.locale-switcher a[href="/fr/about"]', text: "Français"
+    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"]', text: "Tiếng Việt"
+
+    get "/en/resume"
+    assert_select '.locale-switcher a[href="/fr/resume"]', text: "Français"
+    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"]', text: "Tiếng Việt"
+  end
+
+  test "French and Vietnamese dates render without missing translations" do
+    @resume.translations.create!(locale: "fr", title: "CV", description: "CV actuel")
+    @resume.translations.create!(locale: "vi", title: "Hồ sơ", description: "Hồ sơ hiện tại")
+
+    get "/fr/resume"
+    assert_select "p", text: "Mis à jour le 2 septembre 2026"
+
+    get "/vi/resume"
+    assert_select "p", text: "Cập nhật 2 tháng 9, 2026"
+  end
+
   test "missing optional translations return 404 for about and resume" do
     get "/fr/about"
     assert_response :not_found

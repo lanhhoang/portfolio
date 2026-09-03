@@ -77,4 +77,4 @@ vi:
     skip_to_content: "Chuyển đến nội dung"
   date:
     formats:
-      long: "%-d %B %Y"
+      long: "%-d tháng %-m, %Y"

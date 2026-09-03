@@ -47,6 +47,28 @@ class PublicShellTest < ApplicationSystemTestCase
     assert_selector ".menu-button", visible: :hidden
   end
 
+  test "public search controls remain visible and usable at mobile width" do
+    page.current_window.resize_to(320, 800)
+    visit localized_projects_path(locale: "en")
+
+    metrics = page.evaluate_script(<<~JAVASCRIPT)
+      Array.from(document.querySelectorAll('form[role="search"] input, form[role="search"] select')).map((control) => {
+        const style = getComputedStyle(control);
+        return {
+          height: control.getBoundingClientRect().height,
+          borderWidth: parseFloat(style.borderTopWidth),
+          paddingLeft: parseFloat(style.paddingLeft)
+        };
+      });
+    JAVASCRIPT
+
+    assert_equal 3, metrics.size
+    assert metrics.all? { |item| item["height"] >= 44 }
+    assert metrics.all? { |item| item["borderWidth"] >= 1 }
+    assert metrics.all? { |item| item["paddingLeft"] >= 8 }
+    assert page.evaluate_script("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
+  end
+
   test "theme override is accessible and persists across pages" do
     visit localized_root_path(locale: "en")
     page.execute_script('localStorage.removeItem("portfolio-theme")')
