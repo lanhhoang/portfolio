@@ -104,7 +104,7 @@
 
 - Install Active Storage and add shared plus normalized translation tables.
 - Add `commonmarker` and a single sanitized Markdown renderer.
-- Implement publication scopes, locale-specific slug constraints, English-required validation, attachments, and tags.
+- Implement publication scopes, locale-specific slug constraints, English-required validation, MIME/extension/size attachment validation, and tags restricted to projects/posts.
 - Build public homepage, project, journal, about, and résumé controllers/views.
 - Add locale-aware SQLite search and tag filtering.
 - Add development seeds that demonstrate all record types without personal data.
@@ -112,6 +112,7 @@
 **Interfaces produced:**
 
 - `MarkdownRenderer.call(markdown) -> String`.
+- `SearchText.normalize(value) -> String`, used for persisted Unicode case-folded search text and incoming queries.
 - `ProjectTranslation.publicly_visible(locale:)` and `PostTranslation.publicly_visible(locale:)`.
 - `PublicContentSearch.new(scope:, locale:, query:, tag_slug:).results`.
 - `Profile.current` and `Resume.current` singleton accessors.
@@ -121,7 +122,7 @@
 
 - Each public page reads from SQLite and renders only the active locale.
 - English is mandatory; French/Vietnamese records can be absent.
-- Search escapes wildcard input and never crosses locale/publication boundaries.
+- Search escapes wildcard input, matches Unicode capitalization and normalization variants without removing accents, and never crosses locale/publication boundaries.
 - Missing attachments have intentional text-first fallbacks.
 - `bin/rails test` passes with model, request, and query coverage.
 
@@ -165,7 +166,7 @@
 
 - Build the admin dashboard and CRUD controllers/views for every content type.
 - Use translation tabs with completion/publication indicators and stable localized slugs.
-- Add shared image and locale-specific PDF upload controls with type/size validation.
+- Add shared image and locale-specific PDF upload controls with MIME type, filename extension, and size validation.
 - Add a Turbo Frame Markdown preview endpoint.
 - Add safe destructive confirmations and validation-preserving forms.
 - Add accent selection limited to the five enum values.
