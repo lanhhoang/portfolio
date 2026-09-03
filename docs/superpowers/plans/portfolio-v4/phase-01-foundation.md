@@ -108,7 +108,7 @@ Commit `1df2b54` already generated and committed the Rails application. The revi
 - Consumes: generated `ApplicationController`, Rails I18n, browser cookies, and the six route helpers defined here.
 - Produces: `PublicController#current_locale`, locale-preserving URL defaults, `portfolio_locale`, six localized shell routes, and complete shell translations.
 
-- [ ] **Step 1: Write the failing locale integration tests**
+- [x] **Step 1: Write the failing locale integration tests**
 
 Create `test/integration/public_localization_test.rb`:
 
@@ -189,7 +189,7 @@ class PublicLocalizationTest < ActionDispatch::IntegrationTest
 end
 ```
 
-- [ ] **Step 2: Run the locale tests and verify red**
+- [x] **Step 2: Run the locale tests and verify red**
 
 Run:
 
@@ -199,7 +199,7 @@ bin/rails test test/integration/public_localization_test.rb
 
 Expected: FAIL with undefined localized route helpers because the locale routes do not exist.
 
-- [ ] **Step 3: Restrict Rails I18n to the three supported locales**
+- [x] **Step 3: Restrict Rails I18n to the three supported locales**
 
 Inside `class Application < Rails::Application` in `config/application.rb`, add:
 
@@ -228,7 +228,7 @@ Rails.application.routes.draw do
 end
 ```
 
-- [ ] **Step 4: Implement locale precedence, cookie persistence, and scoped rendering**
+- [x] **Step 4: Implement locale precedence, cookie persistence, and scoped rendering**
 
 Create `app/controllers/public_controller.rb`:
 
@@ -316,7 +316,7 @@ Create `app/views/public/page.html.erb`:
 </main>
 ```
 
-- [ ] **Step 5: Add complete English shell copy**
+- [x] **Step 5: Add complete English shell copy**
 
 Replace `config/locales/en.yml` with:
 
@@ -372,7 +372,7 @@ en:
     rights: "Built with care."
 ```
 
-- [ ] **Step 6: Add complete French shell copy**
+- [x] **Step 6: Add complete French shell copy**
 
 Create `config/locales/fr.yml`:
 
@@ -428,7 +428,7 @@ fr:
     rights: "Conçu avec soin."
 ```
 
-- [ ] **Step 7: Add complete Vietnamese shell copy**
+- [x] **Step 7: Add complete Vietnamese shell copy**
 
 Create `config/locales/vi.yml`:
 
@@ -484,7 +484,7 @@ vi:
     rights: "Được xây dựng cẩn thận."
 ```
 
-- [ ] **Step 8: Run the focused and full tests**
+- [x] **Step 8: Run the focused and full tests**
 
 Run:
 
@@ -495,7 +495,7 @@ bin/rails test
 
 Expected: both commands exit 0; the focused file reports 8 tests with 0 failures and 0 errors.
 
-- [ ] **Step 9: Commit strict localization**
+- [x] **Step 9: Commit strict localization**
 
 ```bash
 git add app/controllers/public_controller.rb app/views/public/page.html.erb config/application.rb config/routes.rb config/locales/en.yml config/locales/fr.yml config/locales/vi.yml test/integration/public_localization_test.rb
@@ -522,7 +522,7 @@ git commit -m "feat: add localized public shell routes"
 - Consumes: `current_locale`, the six localized route helpers, all Task 2 I18n keys, generated asset helpers, and `SITE_ACCENT`.
 - Produces: `locale_switch_path`, `accent_preset`, `theme_bootstrap_script`, semantic header/footer markup, root data attributes, and shared responsive CSS classes.
 
-- [ ] **Step 1: Write failing helper tests for accent and pre-paint theme behavior**
+- [x] **Step 1: Write failing helper tests for accent and pre-paint theme behavior**
 
 Create `test/helpers/theme_helper_test.rb`:
 
@@ -555,7 +555,7 @@ class ThemeHelperTest < ActionView::TestCase
 end
 ```
 
-- [ ] **Step 2: Write the failing static shell integration tests**
+- [x] **Step 2: Write the failing static shell integration tests**
 
 Create `test/integration/public_shell_test.rb`:
 
@@ -616,7 +616,7 @@ accessibility:
   skip_to_content: "Chuyển đến nội dung"
 ```
 
-- [ ] **Step 3: Run the helper and shell tests and verify red**
+- [x] **Step 3: Run the helper and shell tests and verify red**
 
 Run:
 
@@ -626,7 +626,7 @@ bin/rails test test/helpers/theme_helper_test.rb test/integration/public_shell_t
 
 Expected: FAIL because `ThemeHelper::ACCENT_PRESETS`, `accent_preset`, and the semantic shell do not exist.
 
-- [ ] **Step 4: Add equivalent locale paths, accessibility copy, and the theme helper**
+- [x] **Step 4: Add equivalent locale paths, accessibility copy, and the theme helper**
 
 Add the three `accessibility.skip_to_content` snippets from Step 2 to their respective locale files.
 
@@ -669,7 +669,7 @@ end
 
 The script contains no interpolated or user-provided data. Keep it in `<head>` before CSS rather than moving it to an external deferred module.
 
-- [ ] **Step 5: Replace the generated layout with the semantic document shell**
+- [x] **Step 5: Replace the generated layout with the semantic document shell**
 
 Replace `app/views/layouts/application.html.erb` with:
 
@@ -699,7 +699,7 @@ Replace `app/views/layouts/application.html.erb` with:
 </html>
 ```
 
-- [ ] **Step 6: Add the accessible public header**
+- [x] **Step 6: Add the accessible public header**
 
 Create `app/views/shared/_header.html.erb`:
 
@@ -765,7 +765,7 @@ Create `app/views/shared/_header.html.erb`:
 </header>
 ```
 
-- [ ] **Step 7: Add the compact public footer**
+- [x] **Step 7: Add the compact public footer**
 
 Create `app/views/shared/_footer.html.erb`:
 
@@ -778,7 +778,7 @@ Create `app/views/shared/_footer.html.erb`:
 </footer>
 ```
 
-- [ ] **Step 8: Replace the Tailwind entrypoint with complete mobile-first tokens and shell styles**
+- [x] **Step 8: Replace the Tailwind entrypoint with complete mobile-first tokens and shell styles**
 
 Replace `app/assets/tailwind/application.css` with the following. Everything after the `@import` lives inside `@layer base { ... }`: Tailwind v4 preflight ships a layered `[hidden] { display: none !important }` rule, and layered `!important` beats unlayered `!important`, so unlayered shell CSS would break the desktop navigation override.
 
@@ -1135,7 +1135,7 @@ h1 {
 }
 ```
 
-- [ ] **Step 9: Run static shell tests and verify green**
+- [x] **Step 9: Run static shell tests and verify green**
 
 Run:
 
@@ -1145,7 +1145,7 @@ bin/rails test test/helpers/theme_helper_test.rb test/integration/public_shell_t
 
 Expected: 14 tests pass with 0 failures and 0 errors.
 
-- [ ] **Step 10: Compile CSS and commit the static shell**
+- [x] **Step 10: Compile CSS and commit the static shell**
 
 Run:
 
@@ -1178,7 +1178,7 @@ git commit -m "feat: build responsive public shell"
 - Consumes: the header's `menu`/`theme` Stimulus data attributes, generated automatic Stimulus controller loading, CSS theme tokens, Capybara, Selenium, and `localStorage`.
 - Produces: `menu#toggle`, Escape-to-close behavior, `theme#toggle`, `localStorage["portfolio-theme"]`, and synchronized `aria-expanded`/`aria-pressed` state.
 
-- [ ] **Step 1: Add the missing Rails system-test base and write failing browser tests**
+- [x] **Step 1: Add the missing Rails system-test base and write failing browser tests**
 
 The generated baseline includes Capybara and Selenium but omitted the system-test base. Create `test/application_system_test_case.rb`:
 
@@ -1257,7 +1257,7 @@ class PublicShellTest < ApplicationSystemTestCase
 end
 ```
 
-- [ ] **Step 2: Run the system test and verify red**
+- [x] **Step 2: Run the system test and verify red**
 
 Run:
 
@@ -1267,7 +1267,7 @@ bin/rails test:system test/system/public_shell_test.rb
 
 Expected: FAIL because the mobile menu remains hidden and the theme control does not expose `aria-pressed` or persist a selection; it must not fail with a missing system-test base.
 
-- [ ] **Step 3: Implement the minimal mobile menu controller**
+- [x] **Step 3: Implement the minimal mobile menu controller**
 
 Create `app/javascript/controllers/menu_controller.js`:
 
@@ -1316,7 +1316,7 @@ export default class extends Controller {
 }
 ```
 
-- [ ] **Step 4: Implement the minimal persistent theme controller**
+- [x] **Step 4: Implement the minimal persistent theme controller**
 
 Create `app/javascript/controllers/theme_controller.js`:
 
@@ -1378,7 +1378,7 @@ export default class extends Controller {
 
 Do not add manual controller registration: the generated `app/javascript/controllers/index.js` already calls `eagerLoadControllersFrom("controllers", application)`.
 
-- [ ] **Step 5: Run the focused system and request tests**
+- [x] **Step 5: Run the focused system and request tests**
 
 Run:
 
@@ -1389,7 +1389,7 @@ bin/rails test test/integration/public_localization_test.rb test/integration/pub
 
 Expected: the system file reports 3 tests with 0 failures and 0 errors; the request/helper command reports 14 tests with 0 failures and 0 errors.
 
-- [ ] **Step 6: Commit the interactions**
+- [x] **Step 6: Commit the interactions**
 
 ```bash
 git add app/javascript/controllers/menu_controller.js app/javascript/controllers/theme_controller.js test/application_system_test_case.rb test/system/public_shell_test.rb
@@ -1410,7 +1410,7 @@ git commit -m "feat: add menu and theme interactions"
 - Consumes: Tasks 1–4.
 - Produces: accepted and tagged `portfolio-v4-phase-1` foundation for Phase 2.
 
-- [ ] **Step 1: Run the complete automated acceptance suite**
+- [x] **Step 1: Run the complete automated acceptance suite**
 
 Run:
 
@@ -1422,7 +1422,7 @@ bin/rubocop
 
 Expected: every command exits 0; both test suites report 0 failures and 0 errors; RuboCop reports no offenses.
 
-- [ ] **Step 2: Verify routes and version constraints**
+- [x] **Step 2: Verify routes and version constraints**
 
 Run:
 
@@ -1433,7 +1433,7 @@ bin/rails routes | grep -E 'localized_(root|projects|blog|about|resume|contact)'
 
 Expected: the first command prints `versions accepted`; the second lists all six route helpers with paths under `/:locale`.
 
-- [ ] **Step 3: Demonstrate HTTP locale precedence and unsupported-locale handling**
+- [x] **Step 3: Demonstrate HTTP locale precedence and unsupported-locale handling**
 
 Start the app in one terminal:
 
@@ -1453,7 +1453,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/de/about
 
 Expected: locations end in `/en` and `/vi`, in that order; the final command prints `404`.
 
-- [ ] **Step 4: Demonstrate all five server-selected accents**
+- [x] **Step 4: Demonstrate all five server-selected accents**
 
 Stop `bin/dev`, then run each command long enough to inspect the `<html data-accent>` value at `http://localhost:3000/en`:
 
@@ -1481,7 +1481,7 @@ With `bin/dev` running, verify in a browser:
 
 Expected: all seven observations pass in light and dark modes.
 
-- [ ] **Step 6: Confirm scope and immutable inputs**
+- [x] **Step 6: Confirm scope and immutable inputs**
 
 Run:
 
