@@ -4,7 +4,7 @@
 
 **Goal:** Build a bootable Rails shell whose locale routing, responsive public navigation, theme override, and five accent presets are ready for all later portfolio features.
 
-**Architecture:** Generate one server-rendered Rails monolith at the repository root and keep Phase 1 state-free except for a locale cookie and browser-local theme override. A single `PublicController` owns locale negotiation and shell pages; ERB renders semantic navigation, Stimulus adds only menu/theme behavior, and CSS custom properties provide the mobile-first theme/accent contract.
+**Architecture:** Continue from the generated server-rendered Rails monolith at the repository root and keep Phase 1 state-free except for a locale cookie and browser-local theme override. A single `PublicController` owns locale negotiation and shell pages; ERB renders semantic navigation, Stimulus adds only menu/theme behavior, and CSS custom properties provide the mobile-first theme/accent contract.
 
 **Tech Stack:** Ruby 4.0.6, Rails 8.1.x, Hotwire (Turbo and Stimulus), Tailwind CSS, SQLite, Importmap, Minitest, Capybara, Selenium
 
@@ -25,15 +25,15 @@
 - Primary SQLite data and every Active Storage asset receive encrypted off-site backups with 7 daily, 4 weekly, and 6 monthly restore points.
 - Use Rails defaults and the standard library before adding dependencies. Do not add `commonmarker` or `rotp` in this phase.
 - Use Minitest and Capybara. Every behavior task follows red-green-refactor and ends with a focused test run and commit.
-- Use Ruby exactly `4.0.6` and Rails `~> 8.1.0`; the resolved Rails version must have major/minor `8.1`.
+- Use Ruby exactly `4.0.6`; retain the generated Rails 8.1 constraint and require the resolved Rails version to have major/minor `8.1`.
 - Do not change the approved spec, the parent implementation plan, or anything under `tmp/`.
 
 ---
 
 ## Assumptions, boundaries, and risks
 
-- Execution starts in a clean worktree at the repository root, which contains planning documents but no Rails application. `rails new . --skip-git` must preserve the existing Git repository and documents.
-- Ruby 4.0.6 and a Chrome-compatible browser are installed before execution. Stop at the preflight check if Ruby differs; do not generate a lockfile with another Ruby.
+- Execution starts from scaffold commit `1df2b54`, with a clean worktree at the repository root. The Rails application already exists; do not rerun `rails new`.
+- The committed baseline has `.ruby-version` set to `ruby-4.0.6`, Rails `8.1.3.1`, SQLite, Tailwind, Turbo, Stimulus, Importmap, Minitest, Capybara, and Selenium. Ruby 4.0.6 and a Chrome-compatible browser must remain available.
 - Tailwind comes only from the Rails 8.1 generator (`tailwindcss-rails`); there is no Node, npm, or third-party component library.
 - Phase 1 exposes top-level shell pages only: localized home, projects, blog, about, résumé, and contact. Content detail routes and résumé download are Phase 2 work because they require persisted records or attachments.
 - Until the persisted `Profile` exists, `ThemeHelper#accent_preset` reads the optional server value `SITE_ACCENT` and safely defaults invalid or missing values to `lime`. Later work may replace that lookup, but must preserve the `<html data-accent="brown|green|lime|orange|yellow">` contract.
@@ -42,29 +42,29 @@
 
 ## Exact file map
 
-| Path                                                                                                                | Change          | Responsibility                                                                                     |
-| ------------------------------------------------------------------------------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------- |
-| `.ruby-version`                                                                                                     | Generate/modify | Pin Ruby 4.0.6.                                                                                    |
-| `Gemfile`, `Gemfile.lock`                                                                                           | Generate/modify | Pin Rails 8.1.x and retain only generated Rails dependencies.                                      |
-| Rails-generated root, `app/`, `bin/`, `config/`, `db/`, `lib/`, `public/`, `storage/`, `test/`, and `vendor/` files | Generate        | Standard Rails 8.1 SQLite/Tailwind/Hotwire application baseline.                                   |
-| `config/application.rb`                                                                                             | Modify          | Restrict I18n to `en`, `fr`, and `vi`, default to English, and disable fallback.                   |
-| `config/routes.rb`                                                                                                  | Modify          | Root negotiation route and six explicit locale-scoped shell routes.                                |
-| `app/controllers/public_controller.rb`                                                                              | Create          | Locale cookie, `Accept-Language` negotiation, `I18n.with_locale`, URL defaults, and shell actions. |
-| `app/views/public/page.html.erb`                                                                                    | Create          | Shared localized shell-page heading and introduction.                                              |
-| `config/locales/en.yml`                                                                                             | Modify          | Complete English shell copy.                                                                       |
-| `config/locales/fr.yml`, `config/locales/vi.yml`                                                                    | Create          | Complete French and Vietnamese shell copy with no fallback.                                        |
-| `test/integration/public_localization_test.rb`                                                                      | Create          | Locale precedence, scoped routes, cookie persistence, and 404 coverage.                            |
-| `app/helpers/application_helper.rb`                                                                                 | Modify          | Equivalent shell-page path generation for the language switcher.                                   |
-| `app/helpers/theme_helper.rb`                                                                                       | Create          | Accent allowlist and safe pre-paint theme bootstrap.                                               |
-| `app/views/layouts/application.html.erb`                                                                            | Modify          | Semantic document shell and ordered theme bootstrap/assets.                                        |
-| `app/views/shared/_header.html.erb`                                                                                 | Create          | Site mark, primary navigation, locale switcher, menu button, and theme button.                     |
-| `app/views/shared/_footer.html.erb`                                                                                 | Create          | Compact localized footer navigation.                                                               |
-| `app/assets/tailwind/application.css`                                                                               | Modify          | Semantic light/dark/accent tokens and mobile-first responsive shell.                               |
-| `test/helpers/theme_helper_test.rb`                                                                                 | Create          | Accent allowlist/default and bootstrap-script contract.                                            |
-| `test/integration/public_shell_test.rb`                                                                             | Create          | Static semantic, translated, and bootstrap-order contract.                                         |
-| `app/javascript/controllers/menu_controller.js`                                                                     | Create          | Accessible mobile menu open/close and Escape handling.                                             |
-| `app/javascript/controllers/theme_controller.js`                                                                    | Create          | Effective theme detection, override persistence, and accessible state.                             |
-| `test/system/public_shell_test.rb`                                                                                  | Create          | Real-browser locale, menu, theme persistence, viewport, and overflow checks.                       |
+| Path                                                                                                                | Change   | Responsibility                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------- |
+| `.ruby-version`, `Gemfile`, `Gemfile.lock`                                                                          | Verify   | Keep the committed Ruby 4.0.6 and Rails 8.1 baseline unchanged.                                    |
+| Rails-generated root, `app/`, `bin/`, `config/`, `db/`, `lib/`, `public/`, `storage/`, `test/`, and `vendor/` files | Existing | Standard Rails 8.1 SQLite/Tailwind/Hotwire application baseline from commit `1df2b54`.             |
+| `config/application.rb`                                                                                             | Modify   | Restrict I18n to `en`, `fr`, and `vi`, default to English, and disable fallback.                   |
+| `config/routes.rb`                                                                                                  | Modify   | Root negotiation route and six explicit locale-scoped shell routes.                                |
+| `app/controllers/public_controller.rb`                                                                              | Create   | Locale cookie, `Accept-Language` negotiation, `I18n.with_locale`, URL defaults, and shell actions. |
+| `app/views/public/page.html.erb`                                                                                    | Create   | Shared localized shell-page heading and introduction.                                              |
+| `config/locales/en.yml`                                                                                             | Modify   | Complete English shell copy.                                                                       |
+| `config/locales/fr.yml`, `config/locales/vi.yml`                                                                    | Create   | Complete French and Vietnamese shell copy with no fallback.                                        |
+| `test/integration/public_localization_test.rb`                                                                      | Create   | Locale precedence, scoped routes, cookie persistence, and 404 coverage.                            |
+| `app/helpers/application_helper.rb`                                                                                 | Modify   | Equivalent shell-page path generation for the language switcher.                                   |
+| `app/helpers/theme_helper.rb`                                                                                       | Create   | Accent allowlist and safe pre-paint theme bootstrap.                                               |
+| `app/views/layouts/application.html.erb`                                                                            | Modify   | Semantic document shell and ordered theme bootstrap/assets.                                        |
+| `app/views/shared/_header.html.erb`                                                                                 | Create   | Site mark, primary navigation, locale switcher, menu button, and theme button.                     |
+| `app/views/shared/_footer.html.erb`                                                                                 | Create   | Compact localized footer navigation.                                                               |
+| `app/assets/tailwind/application.css`                                                                               | Modify   | Semantic light/dark/accent tokens and mobile-first responsive shell.                               |
+| `test/helpers/theme_helper_test.rb`                                                                                 | Create   | Accent allowlist/default and bootstrap-script contract.                                            |
+| `test/integration/public_shell_test.rb`                                                                             | Create   | Static semantic, translated, and bootstrap-order contract.                                         |
+| `app/javascript/controllers/menu_controller.js`                                                                     | Create   | Accessible mobile menu open/close and Escape handling.                                             |
+| `app/javascript/controllers/theme_controller.js`                                                                    | Create   | Effective theme detection, override persistence, and accessible state.                             |
+| `test/application_system_test_case.rb`                                                                              | Create   | Shared Rails system-test driver configuration missing from the generated baseline.                 |
+| `test/system/public_shell_test.rb`                                                                                  | Create   | Real-browser locale, menu, theme persistence, viewport, and overflow checks.                       |
 
 Do not create a database model, migration, admin namespace, content detail route, résumé download, custom Tailwind configuration, or new dependency in this phase.
 
@@ -84,106 +84,9 @@ Do not create a database model, migration, admin namespace, content detail route
 
 ---
 
-### Task 1: Generate and pin the Rails 8.1 application baseline
+## Completed baseline — do not execute again
 
-**Files:**
-
-- Generate: standard Rails application files at repository root
-- Modify: `.ruby-version`
-- Modify: `Gemfile`
-- Generate: `Gemfile.lock`
-
-**Interfaces:**
-
-- Consumes: Ruby 4.0.6 installed on `PATH`; existing Git repository and planning documents.
-- Produces: a bootable Rails 8.1.x application using SQLite, Tailwind, Turbo, Stimulus, Importmap, Minitest, and Capybara.
-
-- [ ] **Step 1: Verify the required Ruby before generating files**
-
-Run:
-
-```bash
-ruby -v
-```
-
-Expected: output starts with `ruby 4.0.6`. If it does not, stop before generating or bundling.
-
-- [ ] **Step 2: Install and verify the allowed Rails release line**
-
-Run:
-
-```bash
-gem install rails --version '~> 8.1.0' --no-document
-rails --version
-```
-
-Expected: installation succeeds and the second command prints `Rails 8.1.x`.
-
-- [ ] **Step 3: Generate the application without replacing Git metadata**
-
-Run:
-
-```bash
-rails new . --force --skip-git --database=sqlite3 --css=tailwind
-```
-
-Expected: Rails generates the application at the repository root, installs the bundle, and does not alter `.git/`, `docs/superpowers/specs/2026-09-02-portfolio-v4-design.md`, `docs/superpowers/plans/2026-09-02-portfolio-v4-implementation.md`, or `tmp/`.
-
-- [ ] **Step 4: Make the version pins exact**
-
-Replace `.ruby-version` with:
-
-```text
-4.0.6
-```
-
-Ensure the top of `Gemfile` contains these lines, replacing the generator's Ruby and Rails declarations rather than adding duplicates:
-
-```ruby
-source "https://rubygems.org"
-
-ruby "4.0.6"
-gem "rails", "~> 8.1.0"
-```
-
-Keep every other generated dependency unchanged, then run:
-
-```bash
-bundle install
-```
-
-Expected: `Gemfile.lock` resolves Ruby 4.0.6 and a Rails 8.1.x release without adding `commonmarker`, `rotp`, or any JavaScript package manager files.
-
-- [ ] **Step 5: Prepare SQLite and verify the generated baseline**
-
-Run:
-
-```bash
-bin/rails db:prepare
-bin/rails runner 'puts "Ruby #{RUBY_VERSION}; Rails #{Rails.version}; #{ActiveRecord::Base.connection.adapter_name}"'
-bin/rails test
-```
-
-Expected: the runner prints `Ruby 4.0.6; Rails 8.1.x; SQLite`; the generated test suite exits 0 with 0 failures and 0 errors.
-
-- [ ] **Step 6: Confirm protected planning inputs are unchanged**
-
-Run:
-
-```bash
-git diff --exit-code -- docs/superpowers/specs/2026-09-02-portfolio-v4-design.md docs/superpowers/plans/2026-09-02-portfolio-v4-implementation.md tmp
-```
-
-Expected: no output and exit status 0.
-
-- [ ] **Step 7: Commit the generated baseline**
-
-```bash
-git add -A -- . ':(exclude)docs' ':(exclude)tmp'
-git commit -m "chore: scaffold Rails 8.1 portfolio"
-```
-
-Expected: one commit containing only the generated Rails application and version pins.
+Commit `1df2b54` already generated and committed the Rails application. The review verified Ruby `4.0.6`, Rails `8.1.3.1`, SQLite, a clean worktree, and a passing generated `bin/rails test` run. Start implementation at Task 2; rerunning the generator would overwrite the reviewed baseline.
 
 ---
 
@@ -202,7 +105,7 @@ Expected: one commit containing only the generated Rails application and version
 
 **Interfaces:**
 
-- Consumes: generated `ApplicationController`, Rails I18n, signed browser cookies, and the six route helpers defined here.
+- Consumes: generated `ApplicationController`, Rails I18n, browser cookies, and the six route helpers defined here.
 - Produces: `PublicController#current_locale`, locale-preserving URL defaults, `portfolio_locale`, six localized shell routes, and complete shell translations.
 
 - [ ] **Step 1: Write the failing locale integration tests**
@@ -225,6 +128,12 @@ class PublicLocalizationTest < ActionDispatch::IntegrationTest
     assert_redirected_to localized_root_path(locale: "fr")
   end
 
+  test "root ignores invalid quality values" do
+    get root_path, headers: { "Accept-Language" => "vi;q=9, fr;q=0.8" }
+
+    assert_redirected_to localized_root_path(locale: "fr")
+  end
+
   test "saved locale wins over Accept-Language" do
     get localized_about_path(locale: "vi")
     assert_response :success
@@ -233,6 +142,14 @@ class PublicLocalizationTest < ActionDispatch::IntegrationTest
     get root_path, headers: { "Accept-Language" => "fr" }
 
     assert_redirected_to localized_root_path(locale: "vi")
+  end
+
+  test "unsupported saved locale is ignored" do
+    cookies[:portfolio_locale] = "de"
+
+    get root_path, headers: { "Accept-Language" => "fr" }
+
+    assert_redirected_to localized_root_path(locale: "fr")
   end
 
   test "every shell page renders in each explicit locale" do
@@ -297,6 +214,7 @@ Replace `config/routes.rb` with:
 
 ```ruby
 Rails.application.routes.draw do
+  get "up" => "rails/health#show", as: :rails_health_check
   root "public#root"
 
   scope "/:locale", locale: /en|fr|vi/ do
@@ -374,7 +292,7 @@ class PublicController < ApplicationController
 
         quality_parameter = parameters.find { |parameter| parameter.strip.start_with?("q=") }
         quality = quality_parameter ? Float(quality_parameter.split("=", 2).last, exception: false).to_f : 1.0
-        next unless quality.positive?
+        next unless quality.positive? && quality <= 1.0
 
         [locale, quality, index]
       end
@@ -575,7 +493,7 @@ bin/rails test test/integration/public_localization_test.rb
 bin/rails test
 ```
 
-Expected: both commands exit 0; the focused file reports 6 tests with 0 failures and 0 errors.
+Expected: both commands exit 0; the focused file reports 8 tests with 0 failures and 0 errors.
 
 - [ ] **Step 9: Commit strict localization**
 
@@ -612,6 +530,8 @@ Create `test/helpers/theme_helper_test.rb`:
 require "test_helper"
 
 class ThemeHelperTest < ActionView::TestCase
+  def content_security_policy_nonce = "test-nonce"
+
   test "accepts exactly the five accent presets" do
     assert_equal %w[brown green lime orange yellow], ThemeHelper::ACCENT_PRESETS
 
@@ -714,20 +634,13 @@ Replace `app/helpers/application_helper.rb` with:
 
 ```ruby
 module ApplicationHelper
-  PUBLIC_PAGE_PATHS = {
-    home: :localized_root_path,
-    projects: :localized_projects_path,
-    blog: :localized_blog_path,
-    about: :localized_about_path,
-    resume: :localized_resume_path,
-    contact: :localized_contact_path
-  }.freeze
-
   def locale_switch_path(locale)
-    public_send(PUBLIC_PAGE_PATHS.fetch(action_name.to_sym), locale: locale)
+    url_for(only_path: true, locale: locale)
   end
 end
 ```
+
+Rails merges the current route parameters, so this keeps each fixed shell page equivalent without maintaining a second route map.
 
 Create `app/helpers/theme_helper.rb`:
 
@@ -773,7 +686,7 @@ Replace `app/views/layouts/application.html.erb` with:
 
     <%= theme_bootstrap_script %>
     <%= yield :head %>
-    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
@@ -1045,7 +958,10 @@ button {
 }
 
 .site-mark {
+  display: inline-flex;
   width: fit-content;
+  min-height: 2.75rem;
+  align-items: center;
   font-family: var(--font-display);
   font-size: 1.125rem;
   font-weight: 900;
@@ -1225,7 +1141,7 @@ Run:
 bin/rails test test/helpers/theme_helper_test.rb test/integration/public_shell_test.rb test/integration/public_localization_test.rb
 ```
 
-Expected: 12 tests pass with 0 failures and 0 errors.
+Expected: 14 tests pass with 0 failures and 0 errors.
 
 - [ ] **Step 10: Compile CSS and commit the static shell**
 
@@ -1250,16 +1166,27 @@ git commit -m "feat: build responsive public shell"
 
 **Files:**
 
+- Create: `test/application_system_test_case.rb`
 - Create: `test/system/public_shell_test.rb`
 - Create: `app/javascript/controllers/menu_controller.js`
 - Create: `app/javascript/controllers/theme_controller.js`
 
 **Interfaces:**
 
-- Consumes: the header's `menu`/`theme` Stimulus data attributes, generated automatic Stimulus controller loading, CSS theme tokens, and `localStorage`.
+- Consumes: the header's `menu`/`theme` Stimulus data attributes, generated automatic Stimulus controller loading, CSS theme tokens, Capybara, Selenium, and `localStorage`.
 - Produces: `menu#toggle`, Escape-to-close behavior, `theme#toggle`, `localStorage["portfolio-theme"]`, and synchronized `aria-expanded`/`aria-pressed` state.
 
-- [ ] **Step 1: Write failing real-browser shell tests**
+- [ ] **Step 1: Add the missing Rails system-test base and write failing browser tests**
+
+The generated baseline includes Capybara and Selenium but omitted the system-test base. Create `test/application_system_test_case.rb`:
+
+```ruby
+require "test_helper"
+
+class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
+  driven_by :selenium, using: :headless_chrome, screen_size: [1400, 1400]
+end
+```
 
 Create `test/system/public_shell_test.rb`:
 
@@ -1298,6 +1225,7 @@ class PublicShellTest < ApplicationSystemTestCase
     find("body").send_keys(:escape)
     assert_selector "#primary-navigation", visible: :hidden
     assert_equal "false", menu_button["aria-expanded"]
+    assert page.active_element.matches_selector?(".menu-button")
     assert page.evaluate_script("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
 
     page.current_window.resize_to(1280, 900)
@@ -1332,10 +1260,10 @@ end
 Run:
 
 ```bash
-bin/rails test:system TEST=test/system/public_shell_test.rb
+bin/rails test:system test/system/public_shell_test.rb
 ```
 
-Expected: FAIL because the mobile menu remains hidden and the theme control does not expose `aria-pressed` or persist a selection.
+Expected: FAIL because the mobile menu remains hidden and the theme control does not expose `aria-pressed` or persist a selection; it must not fail with a missing system-test base.
 
 - [ ] **Step 3: Implement the minimal mobile menu controller**
 
@@ -1453,16 +1381,16 @@ Do not add manual controller registration: the generated `app/javascript/control
 Run:
 
 ```bash
-bin/rails test:system TEST=test/system/public_shell_test.rb
+bin/rails test:system test/system/public_shell_test.rb
 bin/rails test test/integration/public_localization_test.rb test/integration/public_shell_test.rb test/helpers/theme_helper_test.rb
 ```
 
-Expected: the system file reports 3 tests with 0 failures and 0 errors; the request/helper command reports 12 tests with 0 failures and 0 errors.
+Expected: the system file reports 3 tests with 0 failures and 0 errors; the request/helper command reports 14 tests with 0 failures and 0 errors.
 
 - [ ] **Step 6: Commit the interactions**
 
 ```bash
-git add app/javascript/controllers/menu_controller.js app/javascript/controllers/theme_controller.js test/system/public_shell_test.rb
+git add app/javascript/controllers/menu_controller.js app/javascript/controllers/theme_controller.js test/application_system_test_case.rb test/system/public_shell_test.rb
 git commit -m "feat: add menu and theme interactions"
 ```
 
