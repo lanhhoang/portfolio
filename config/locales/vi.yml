@@ -1,0 +1,51 @@
+vi:
+  site:
+    name: "Portfolio"
+  navigation:
+    label: "Điều hướng chính"
+    work: "Dự án"
+    journal: "Nhật ký"
+    about: "Giới thiệu"
+    resume: "Hồ sơ"
+    contact: "Liên hệ"
+  locales:
+    label: "Chọn ngôn ngữ"
+    en: "English"
+    fr: "Français"
+    vi: "Tiếng Việt"
+  menu:
+    open: "Mở trình đơn"
+    close: "Đóng trình đơn"
+  theme:
+    toggle: "Đổi giao diện màu"
+    switch_to_light: "Chuyển sang giao diện sáng"
+    switch_to_dark: "Chuyển sang giao diện tối"
+  pages:
+    home:
+      eyebrow: "Portfolio"
+      title: "Ý tưởng. Giao diện. Tác động."
+      introduction: "Nơi tập trung các dự án tiêu biểu, bài viết kỹ thuật và cách kết nối."
+    projects:
+      eyebrow: "Dự án tiêu biểu"
+      title: "Dự án"
+      introduction: "Các dự án tiêu biểu, kết quả và quyết định kỹ thuật."
+    blog:
+      eyebrow: "Bài viết kỹ thuật"
+      title: "Nhật ký"
+      introduction: "Bài viết kỹ thuật, ghi chú thực tiễn và bài học kỹ nghệ."
+    about:
+      eyebrow: "Hồ sơ cá nhân"
+      title: "Giới thiệu"
+      introduction: "Tiểu sử, kinh nghiệm, kỹ năng và hồ sơ bên ngoài."
+    resume:
+      eyebrow: "Kinh nghiệm"
+      title: "Hồ sơ"
+      introduction: "Kinh nghiệm theo ngôn ngữ cùng bản hồ sơ tải trực tiếp."
+    contact:
+      eyebrow: "Bắt đầu trò chuyện"
+      title: "Liên hệ"
+      introduction: "Một cách trực tiếp và an toàn để bắt đầu trò chuyện."
+  footer:
+    rights: "Được xây dựng cẩn thận."
+  accessibility:
+    skip_to_content: "Chuyển đến nội dung"

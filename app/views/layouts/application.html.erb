@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="<%= current_locale %>" data-accent="<%= accent_preset %>">
+  <head>
+    <title><%= content_for(:title) || t("site.name") %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Portfolio">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= theme_bootstrap_script %>
+    <%= yield :head %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main-content"><%= t("accessibility.skip_to_content") %></a>
+    <%= render "shared/header" %>
+    <%= yield %>
+    <%= render "shared/footer" %>
+  </body>
+</html>
