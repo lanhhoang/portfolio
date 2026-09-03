@@ -780,11 +780,12 @@ Create `app/views/shared/_footer.html.erb`:
 
 - [ ] **Step 8: Replace the Tailwind entrypoint with complete mobile-first tokens and shell styles**
 
-Replace `app/assets/tailwind/application.css` with:
+Replace `app/assets/tailwind/application.css` with the following. Everything after the `@import` lives inside `@layer base { ... }`: Tailwind v4 preflight ships a layered `[hidden] { display: none !important }` rule, and layered `!important` beats unlayered `!important`, so unlayered shell CSS would break the desktop navigation override.
 
 ```css
 @import "tailwindcss";
 
+@layer base {
 :root {
   color-scheme: light;
   --background: #f3f0e8;
@@ -1130,6 +1131,7 @@ h1 {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
 }
 ```
 
