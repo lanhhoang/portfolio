@@ -43,8 +43,8 @@
 | Area                  | Responsibility                                                              | Primary paths                                                                                                                                                              |
 | --------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Application shell     | locale routing, theme bootstrap, navigation, mobile-first tokens            | `config/routes.rb`, `app/controllers/public_controller.rb`, `app/views/layouts/application.html.erb`, `app/assets/tailwind/application.css`, `app/javascript/controllers/` |
-| Content domain        | shared records, locale records, Markdown rendering, publication rules       | `app/models/`, `app/services/markdown_renderer.rb`, `db/migrate/`, `db/seeds.rb`                                                                                           |
-| Public delivery       | homepage, projects, journal, about, résumé, search, locale switching        | `app/controllers/public/`, `app/views/public/`, `app/queries/`                                                                                                             |
+| Content domain        | shared records, locale records, Markdown rendering, publication rules       | `app/models/`, `db/migrate/`, `db/seeds.rb`                                                                                                                                |
+| Public delivery       | homepage, projects, journal, about, résumé, search, locale switching        | `app/controllers/public/`, `app/views/public/`                                                                                                                             |
 | Admin security        | password, TOTP, recovery, sessions, reset                                   | `app/controllers/admin/`, `app/models/admin_user.rb`, `app/models/admin_session.rb`, `lib/tasks/admin.rake`                                                                |
 | Admin CMS             | dashboard, forms, previews, uploads, translation actions                    | `app/controllers/admin/`, `app/views/admin/`, `app/javascript/controllers/admin/`                                                                                          |
 | Scheduling            | due-content scan and recurring Solid Queue configuration                    | `app/jobs/publish_due_translations_job.rb`, `config/recurring.yml`                                                                                                         |
@@ -104,7 +104,7 @@
 
 - Install Active Storage and add shared plus normalized translation tables.
 - Add `commonmarker` and a single sanitized Markdown renderer.
-- Implement publication scopes, locale-specific slug constraints, English-required validation, attachments, and tags.
+- Implement publication scopes, locale-specific slug constraints, English-required validation, MIME/extension/size attachment validation, and tags restricted to projects/posts.
 - Build public homepage, project, journal, about, and résumé controllers/views.
 - Add locale-aware SQLite search and tag filtering.
 - Add development seeds that demonstrate all record types without personal data.
@@ -112,8 +112,9 @@
 **Interfaces produced:**
 
 - `MarkdownRenderer.call(markdown) -> String`.
+- `SearchText.normalize(value) -> String`, used for persisted Unicode case-folded search text and incoming queries.
 - `ProjectTranslation.publicly_visible(locale:)` and `PostTranslation.publicly_visible(locale:)`.
-- `PublicContentSearch.new(scope:, locale:, query:, tag_slug:).results`.
+- `ProjectTranslation.filtered(locale:, query:, tag_slug:)` and `PostTranslation.filtered(locale:, query:, tag_slug:)`.
 - `Profile.current` and `Resume.current` singleton accessors.
 - Active Storage attachment names fixed by the content model.
 
@@ -121,7 +122,7 @@
 
 - Each public page reads from SQLite and renders only the active locale.
 - English is mandatory; French/Vietnamese records can be absent.
-- Search escapes wildcard input and never crosses locale/publication boundaries.
+- Search escapes wildcard input, matches Unicode capitalization and normalization variants without removing accents, and never crosses locale/publication boundaries.
 - Missing attachments have intentional text-first fallbacks.
 - `bin/rails test` passes with model, request, and query coverage.
 
@@ -165,7 +166,7 @@
 
 - Build the admin dashboard and CRUD controllers/views for every content type.
 - Use translation tabs with completion/publication indicators and stable localized slugs.
-- Add shared image and locale-specific PDF upload controls with type/size validation.
+- Add shared image and locale-specific PDF upload controls with MIME type, filename extension, and size validation.
 - Add a Turbo Frame Markdown preview endpoint.
 - Add safe destructive confirmations and validation-preserving forms.
 - Add accent selection limited to the five enum values.

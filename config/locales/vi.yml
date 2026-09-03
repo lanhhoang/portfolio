@@ -45,7 +45,36 @@ vi:
       eyebrow: "Bắt đầu trò chuyện"
       title: "Liên hệ"
       introduction: "Một cách trực tiếp và an toàn để bắt đầu trò chuyện."
+  public:
+    home:
+      selected_work: "Dự án nổi bật"
+      recent_writing: "Bài viết gần đây"
+      contact: "Liên hệ"
+    search:
+      label: "Tìm kiếm"
+      submit: "Áp dụng"
+    tags:
+      label: "Thẻ"
+      all: "Tất cả thẻ"
+    projects:
+      title: "Dự án"
+      empty: "Không có dự án đã xuất bản phù hợp với bộ lọc."
+      gallery_alt: "%{title}, hình %{number}"
+      links: "Liên kết dự án"
+      live: "Xem dự án"
+      source: "Xem mã nguồn"
+    posts:
+      title: "Nhật ký"
+      empty: "Không có bài viết đã xuất bản phù hợp với bộ lọc."
+    resume:
+      updated: "Cập nhật %{date}"
+      download: "Tải PDF"
+      pdf_unavailable: "Bản PDF chưa có sẵn."
+
   footer:
     rights: "Được xây dựng cẩn thận."
   accessibility:
     skip_to_content: "Chuyển đến nội dung"
+  date:
+    formats:
+      long: "%-d tháng %-m, %Y"

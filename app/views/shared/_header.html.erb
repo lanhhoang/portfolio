@@ -25,22 +25,27 @@
       data-menu-target="panel"
       hidden>
       <% [
-        ["projects", t("navigation.work"), localized_projects_path(locale: current_locale)],
-        ["blog", t("navigation.journal"), localized_blog_path(locale: current_locale)],
-        ["about", t("navigation.about"), localized_about_path(locale: current_locale)],
-        ["resume", t("navigation.resume"), localized_resume_path(locale: current_locale)],
-        ["contact", t("navigation.contact"), localized_contact_path(locale: current_locale)]
-      ].each do |target_action, label, path| %>
-        <%= link_to label, path, aria: { current: ("page" if action_name == target_action) } %>
+        ["public/projects", nil, t("navigation.work"), localized_projects_path(locale: current_locale)],
+        ["public/posts", nil, t("navigation.journal"), localized_blog_path(locale: current_locale)],
+        ["public/profiles", nil, t("navigation.about"), localized_about_path(locale: current_locale)],
+        ["public/resumes", nil, t("navigation.resume"), localized_resume_path(locale: current_locale)],
+        ["public", "contact", t("navigation.contact"), localized_contact_path(locale: current_locale)]
+      ].each do |target_controller, target_action, label, path| %>
+        <%= link_to label, path, aria: { current: ("page" if controller_path == target_controller && (target_action.nil? || action_name == target_action)) } %>
       <% end %>
     </nav>
 
     <nav class="locale-switcher" aria-label="<%= t("locales.label") %>">
       <% PublicController::SUPPORTED_LOCALES.each do |locale| %>
-        <%= link_to t("locales.#{locale}"), locale_switch_path(locale),
-          lang: locale,
-          hreflang: locale,
-          aria: { current: ("true" if locale == current_locale) } %>
+        <% switch_path = locale_switch_path(locale) %>
+        <% if switch_path %>
+          <%= link_to t("locales.#{locale}"), switch_path,
+            lang: locale,
+            hreflang: locale,
+            aria: { current: ("true" if locale == current_locale) } %>
+        <% else %>
+          <span lang="<%= locale %>" aria-disabled="true"><%= t("locales.#{locale}") %></span>
+        <% end %>
       <% end %>
     </nav>
 

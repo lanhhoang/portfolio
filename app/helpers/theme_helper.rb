@@ -1,6 +1,10 @@
 module ThemeHelper
   ACCENT_PRESETS = %w[brown green lime orange yellow].freeze
 
+  def site_accent
+    Profile.find_by(singleton_guard: 1)&.accent || "lime"
+  end
+
   def accent_preset(candidate = ENV["SITE_ACCENT"])
     candidate.to_s.presence_in(ACCENT_PRESETS) || "lime"
   end

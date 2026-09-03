@@ -1,0 +1,31 @@
+<main id="main-content" class="site-container page-shell">
+  <article class="space-y-8">
+    <header class="space-y-3">
+      <p class="text-sm uppercase"><%= @translation.project.role %></p>
+      <h1 class="text-4xl font-bold"><%= @translation.title %></h1>
+      <p class="max-w-prose text-lg"><%= @translation.summary %></p>
+      <%= render "public/shared/tags", taggable: @translation.project %>
+    </header>
+
+    <% if @translation.project.cover_image.attached? %>
+      <%= image_tag @translation.project.cover_image, alt: @translation.title, class: "max-w-full" %>
+    <% end %>
+
+    <div class="rich-text"><%= sanitize @translation.body_html %></div>
+
+    <% if @translation.project.gallery_images.attached? %>
+      <ul class="grid gap-4 md:grid-cols-2">
+        <% @translation.project.gallery_images.each_with_index do |image, index| %>
+          <li><%= image_tag image, alt: t("public.projects.gallery_alt", title: @translation.title, number: index + 1), loading: "lazy", class: "max-w-full" %></li>
+        <% end %>
+      </ul>
+    <% end %>
+
+    <% if @translation.project.live_url.present? || @translation.project.source_url.present? %>
+      <nav aria-label="<%= t("public.projects.links") %>" class="flex gap-4">
+        <%= link_to t("public.projects.live"), @translation.project.live_url, rel: "noopener" if @translation.project.live_url.present? %>
+        <%= link_to t("public.projects.source"), @translation.project.source_url, rel: "noopener" if @translation.project.source_url.present? %>
+      </nav>
+    <% end %>
+  </article>
+</main>

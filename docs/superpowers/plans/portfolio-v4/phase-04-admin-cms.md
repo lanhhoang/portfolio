@@ -30,7 +30,7 @@
 
 ## Scope Boundary and Consumed Interfaces
 
-Phase 1 supplies Tailwind, Turbo, Stimulus, semantic theme/accent tokens, and the responsive layouts. Phase 2 supplies these exact domain interfaces: `MarkdownRenderer.call(markdown) -> String`, `Profile.current`, `Resume.current`, `Project#cover_image`, `Project#gallery_images`, `Post#cover_image`, `Profile#portrait`, `ResumeTranslation#pdf`, `Project#tags`, `Post#tags`, and translation associations named `translations`. It also supplies attachment content-type/size validations and localized slug uniqueness. Phase 3 supplies `Admin::BaseController#require_admin!`, `Current.admin_user`, the protected admin layout, `sign_in_as_admin`/`sign_out_admin` for request tests, and `sign_in_owner` for system tests.
+Phase 1 supplies Tailwind, Turbo, Stimulus, semantic theme/accent tokens, and the responsive layouts. Phase 2 supplies these exact domain interfaces: `MarkdownRenderer.call(markdown) -> String`, nullable `Profile.current`, nullable `Resume.current`, `Project#cover_image`, `Project#gallery_images`, `Post#cover_image`, `Profile#portrait`, `ResumeTranslation#pdf`, `Project#tags`, `Post#tags`, and translation associations named `translations`. It also supplies attachment MIME-type/filename-extension/size validations and localized slug uniqueness. Phase 3 supplies `Admin::BaseController#require_admin!`, `Current.admin_user`, the protected admin layout, `sign_in_as_admin`/`sign_out_admin` for request tests, and `sign_in_owner` for system tests.
 
 Use the Phase 2 column names below; do not add a corrective schema migration in this phase:
 
@@ -575,7 +575,7 @@ Project, post, and profile Markdown field partials in later tasks wrap their tex
 
 - [ ] **Step 4: Run the preview tests**
 
-Run: `bin/rails test test/requests/admin/markdown_previews_test.rb test/services/markdown_renderer_test.rb`
+Run: `bin/rails test test/requests/admin/markdown_previews_test.rb test/models/markdown_renderer_test.rb`
 
 Expected: PASS, including sanitization inherited from Phase 2.
 
@@ -988,12 +988,12 @@ git commit -m "feat(admin): manage localized tags"
 
 **Interfaces:**
 
-- Consumes: `Profile.current`, nested translations, portrait validation, fixed accent enum, theme `<html data-accent>` contract.
+- Consumes: nullable `Profile.current`, nested translations, portrait MIME/extension/size validation, fixed accent enum, theme `<html data-accent>` contract.
 - Produces: singleton profile editor and portrait purge route.
 
 - [ ] **Step 1: Write failing request tests**
 
-Test update of `public_contact_email`, the three `social_links` keys, `accent`, portrait, and all three translations in one request. Assert blank social values are removed from the stored JSON. Test invalid accent and invalid portrait return 422 while preserving `headline` and `biography_markdown`. Test the portrait purge route. Test unauthenticated edit redirects.
+Test the editor against an empty database first: GET renders, the first PATCH creates the singleton plus its English translation, and a second PATCH updates the same row. Test `public_contact_email`, the three `social_links` keys, `accent`, portrait, and all three translations in one request. Assert blank social values are removed from the stored JSON. Test invalid email, invalid HTTP(S) social URL, invalid accent, and invalid portrait MIME/extension/size return 422 while preserving `headline` and `biography_markdown`. Test the portrait purge route only after the singleton exists. Test unauthenticated edit redirects.
 
 Use this representative update:
 
@@ -1020,7 +1020,8 @@ Expected: FAIL because `Admin::ProfilesController` is absent.
 
 ```ruby
 class Admin::ProfilesController < Admin::BaseController
-  before_action :set_profile
+  before_action :set_profile, only: %i[edit update]
+  before_action :find_profile, only: :portrait
 
   def edit
     prepare_translations(@profile)
@@ -1044,7 +1045,8 @@ class Admin::ProfilesController < Admin::BaseController
 
   private
 
-  def set_profile = @profile = Profile.current
+  def set_profile = @profile = Profile.current || Profile.new(singleton_guard: 1)
+  def find_profile = @profile = Profile.current || raise(ActiveRecord::RecordNotFound)
 
   def profile_params
     params.require(:profile).permit(
@@ -1056,7 +1058,7 @@ class Admin::ProfilesController < Admin::BaseController
 end
 ```
 
-Form shared fields are contact email; labeled URL inputs for GitHub, LinkedIn, and website; portrait; and exactly five accent radios generated from `Profile::ACCENTS`. Show each radio's preset name and semantic accent swatch; no free-form color input. Translation fields are display name, headline, introduction, availability label, and biography Markdown with the Task 4 preview wrapper. Portrait removal requires confirmation.
+Use `form_with model: @profile, url: admin_profile_path, method: :patch` so the same singleton route handles an unsaved first record and later updates. Form shared fields are contact email; labeled URL inputs for GitHub, LinkedIn, and website; portrait; and exactly five accent radios generated from `Profile::ACCENTS`. Show each radio's preset name and semantic accent swatch; no free-form color input. Translation fields are display name, headline, introduction, availability label, and biography Markdown with the Task 4 preview wrapper. Portrait removal requires confirmation.
 
 - [ ] **Step 4: Run profile plus public accent regression tests**
 
@@ -1084,12 +1086,12 @@ git commit -m "feat(admin): manage profile and site accent"
 
 **Interfaces:**
 
-- Consumes: `Resume.current`, nested translations, `ResumeTranslation#pdf`, and Phase 2 PDF validation.
+- Consumes: nullable `Resume.current`, nested translations, `ResumeTranslation#pdf`, and Phase 2 PDF MIME/extension/size validation.
 - Produces: résumé metadata/editor and ownership-scoped localized PDF purge.
 
 - [ ] **Step 1: Write failing request tests**
 
-Test one update with `updated_on`, English and French text, and a distinct valid PDF on each translation. Assert English is required, optional blank Vietnamese is rejected rather than persisted, non-PDF/oversized files return 422 with text retained, and removing French PDF cannot remove English PDF or a PDF belonging to another résumé translation. Test unauthenticated access.
+Test the editor against an empty database first: GET renders, the first PATCH creates the singleton plus its English translation, and a second PATCH updates the same row. Test one update with `updated_on`, English and French text, and a distinct valid PDF on each translation. Assert English is required, optional blank Vietnamese is rejected rather than persisted, and invalid PDF MIME, extension, or size returns 422 with text retained. Test removal only after the singleton exists, including that removing French PDF cannot remove English PDF or another translation's PDF. Test unauthenticated access.
 
 The nested upload parameter is exact:
 
@@ -1111,7 +1113,8 @@ Expected: FAIL because `Admin::ResumesController` is absent.
 
 ```ruby
 class Admin::ResumesController < Admin::BaseController
-  before_action :set_resume
+  before_action :set_resume, only: %i[edit update]
+  before_action :find_resume, only: :pdf
 
   def edit
     prepare_translations(@resume)
@@ -1134,7 +1137,8 @@ class Admin::ResumesController < Admin::BaseController
 
   private
 
-  def set_resume = @resume = Resume.current
+  def set_resume = @resume = Resume.current || Resume.new(singleton_guard: 1)
+  def find_resume = @resume = Resume.current || raise(ActiveRecord::RecordNotFound)
 
   def resume_params
     params.require(:resume).permit(
@@ -1145,7 +1149,7 @@ class Admin::ResumesController < Admin::BaseController
 end
 ```
 
-The form uses a date input for `updated_on`; each locale panel contains title, description, and `file_field :pdf, accept: "application/pdf,.pdf"`. Show filename and byte size when attached. PDF removal uses `translation_pdf_admin_resume_path(translation_id: form.object.id)`, DELETE, and text “Remove the French PDF?” based on the tab locale. Do not build a media library.
+Use `form_with model: @resume, url: admin_resume_path, method: :patch` so the singleton route also creates the first row. The form uses a date input for `updated_on`; each locale panel contains title, description, and `file_field :pdf, accept: "application/pdf,.pdf"`. Show filename and byte size when attached. PDF removal uses `translation_pdf_admin_resume_path(translation_id: form.object.id)`, DELETE, and text “Remove the French PDF?” based on the tab locale. Do not build a media library.
 
 - [ ] **Step 4: Run résumé and public download regressions**
 
@@ -1234,7 +1238,7 @@ class AdminManagesContentTest < ApplicationSystemTestCase
 end
 ```
 
-The Phase 2 seed/profile setup must ensure `Profile.current`, `Resume.current`, and their English translations exist. The system helper performs the actual Phase 3 password and TOTP flow; do not disable authentication in system tests.
+Create `Profile.current`, `Resume.current`, and their English translations in the system-test setup; development seeds are not a production precondition. The request tests for Tasks 7 and 8 must separately prove the first authenticated PATCH creates each missing singleton. The system helper performs the actual Phase 3 password and TOTP flow; do not disable authentication in system tests.
 
 - [ ] **Step 2: Run and observe the first failure**
 

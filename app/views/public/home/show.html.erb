@@ -1,0 +1,52 @@
+<main id="main-content" class="site-container page-shell space-y-16">
+  <% if @profile_translation %>
+    <section aria-labelledby="home-heading" class="space-y-6">
+      <p class="text-sm uppercase"><%= @profile_translation.availability_label %></p>
+      <h1 id="home-heading" class="text-5xl font-bold"><%= @profile_translation.headline %></h1>
+      <p class="max-w-prose text-lg"><%= @profile_translation.introduction %></p>
+      <% if @profile.portrait.attached? %>
+        <%= image_tag @profile.portrait, alt: @profile_translation.display_name, class: "max-w-full" %>
+      <% end %>
+    </section>
+  <% end %>
+
+  <section aria-labelledby="selected-work-heading" class="space-y-6">
+    <h2 id="selected-work-heading" class="text-sm uppercase"><%= t("public.home.selected_work") %></h2>
+    <% if @projects.any? %>
+      <div class="grid gap-8 md:grid-cols-2">
+        <% @projects.each do |translation| %>
+          <article class="space-y-3">
+            <% if translation.project.cover_image.attached? %>
+              <%= image_tag translation.project.cover_image, alt: translation.title, loading: "lazy", class: "max-w-full" %>
+            <% end %>
+            <h2 class="text-2xl font-bold"><%= link_to translation.title, localized_project_path(locale: current_locale, slug: translation.slug) %></h2>
+            <p><%= translation.summary %></p>
+          </article>
+        <% end %>
+      </div>
+    <% else %>
+      <p><%= t("public.projects.empty") %></p>
+    <% end %>
+  </section>
+
+  <section aria-labelledby="recent-writing-heading" class="space-y-6">
+    <h2 id="recent-writing-heading" class="text-sm uppercase"><%= t("public.home.recent_writing") %></h2>
+    <% if @posts.any? %>
+      <ol class="space-y-4">
+        <% @posts.each do |translation| %>
+          <li>
+            <h2 class="text-xl font-bold"><%= link_to translation.title, localized_post_path(locale: current_locale, slug: translation.slug) %></h2>
+            <p><%= translation.excerpt %></p>
+          </li>
+        <% end %>
+      </ol>
+    <% else %>
+      <p><%= t("public.posts.empty") %></p>
+    <% end %>
+  </section>
+
+  <section aria-labelledby="contact-heading" class="space-y-4">
+    <h2 id="contact-heading" class="text-sm uppercase"><%= t("public.home.contact") %></h2>
+    <%= link_to t("navigation.contact"), localized_contact_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %>
+  </section>
+</main>

@@ -1,0 +1,16 @@
+<main id="main-content" class="site-container page-shell">
+  <article class="space-y-8">
+    <header class="space-y-3">
+      <p><%= l(@translation.published_at.to_date, format: :long) %></p>
+      <h1 class="text-4xl font-bold"><%= @translation.title %></h1>
+      <p class="max-w-prose text-lg"><%= @translation.excerpt %></p>
+      <%= render "public/shared/tags", taggable: @translation.post %>
+    </header>
+
+    <% if @translation.post.cover_image.attached? %>
+      <%= image_tag @translation.post.cover_image, alt: @translation.title, class: "max-w-full" %>
+    <% end %>
+
+    <div class="rich-text"><%= sanitize @translation.body_html %></div>
+  </article>
+</main>

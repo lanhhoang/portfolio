@@ -45,7 +45,50 @@ fr:
       eyebrow: "Échangeons"
       title: "Contact"
       introduction: "Un moyen direct et sécurisé de commencer une conversation."
+  public:
+    home:
+      selected_work: "Projets sélectionnés"
+      recent_writing: "Articles récents"
+      contact: "Prendre contact"
+    search:
+      label: "Rechercher"
+      submit: "Appliquer"
+    tags:
+      label: "Étiquettes"
+      all: "Toutes les étiquettes"
+    projects:
+      title: "Projets"
+      empty: "Aucun projet publié ne correspond à ces filtres."
+      gallery_alt: "%{title}, image %{number}"
+      links: "Liens du projet"
+      live: "Voir le projet"
+      source: "Voir le code source"
+    posts:
+      title: "Journal"
+      empty: "Aucun article publié ne correspond à ces filtres."
+    resume:
+      updated: "Mis à jour le %{date}"
+      download: "Télécharger le PDF"
+      pdf_unavailable: "Le PDF n’est pas encore disponible."
+
   footer:
     rights: "Conçu avec soin."
   accessibility:
     skip_to_content: "Aller au contenu"
+  date:
+    formats:
+      long: "%-d %B %Y"
+    month_names:
+      -
+      - "janvier"
+      - "février"
+      - "mars"
+      - "avril"
+      - "mai"
+      - "juin"
+      - "juillet"
+      - "août"
+      - "septembre"
+      - "octobre"
+      - "novembre"
+      - "décembre"

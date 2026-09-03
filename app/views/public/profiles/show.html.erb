@@ -1,0 +1,24 @@
+<main id="main-content" class="site-container page-shell">
+  <article class="space-y-8">
+    <header class="space-y-3">
+      <p class="text-sm uppercase"><%= @translation.availability_label %></p>
+      <h1 class="text-4xl font-bold"><%= @translation.display_name %></h1>
+      <p class="max-w-prose text-lg"><%= @translation.introduction %></p>
+    </header>
+
+    <% if @profile.portrait.attached? %>
+      <%= image_tag @profile.portrait, alt: @translation.display_name, class: "max-w-full" %>
+    <% end %>
+
+    <div class="rich-text"><%= sanitize @translation.biography_html %></div>
+
+    <% if @profile.social_links.any? %>
+      <ul class="flex flex-wrap gap-4">
+        <% @profile.social_links.sort.each do |label, url| %>
+          <li><%= link_to label, url, rel: "me noopener" %></li>
+        <% end %>
+      </ul>
+    <% end %>
+    <%= mail_to @profile.public_contact_email %>
+  </article>
+</main>

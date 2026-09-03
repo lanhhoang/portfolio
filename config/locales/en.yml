@@ -45,7 +45,36 @@ en:
       eyebrow: "Start a conversation"
       title: "Contact"
       introduction: "A direct and secure way to start a conversation."
+  public:
+    home:
+      selected_work: "Selected work"
+      recent_writing: "Recent writing"
+      contact: "Get in touch"
+    search:
+      label: "Search"
+      submit: "Apply"
+    tags:
+      label: "Tags"
+      all: "All tags"
+    projects:
+      title: "Work"
+      empty: "No published projects match these filters."
+      gallery_alt: "%{title}, image %{number}"
+      links: "Project links"
+      live: "Visit project"
+      source: "View source"
+    posts:
+      title: "Journal"
+      empty: "No published posts match these filters."
+    resume:
+      updated: "Updated %{date}"
+      download: "Download PDF"
+      pdf_unavailable: "The PDF is not available yet."
+
   footer:
     rights: "Built with care."
   accessibility:
     skip_to_content: "Skip to content"
+  date:
+    formats:
+      long: "%B %-d, %Y"

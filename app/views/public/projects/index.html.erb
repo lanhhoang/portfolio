@@ -1,0 +1,33 @@
+<main id="main-content" class="site-container page-shell space-y-8">
+  <header>
+    <p class="text-sm uppercase"><%= t("navigation.work") %></p>
+    <h1 class="text-4xl font-bold"><%= t("public.projects.title") %></h1>
+  </header>
+
+  <%= form_with url: localized_projects_path(locale: current_locale), method: :get, class: "grid gap-4", html: { role: "search" } do |form| %>
+    <%= form.label :q, t("public.search.label") %>
+    <%= form.search_field :q, value: params[:q], class: "min-h-11" %>
+    <%= form.label :tag, t("public.tags.label") %>
+    <%= form.select :tag,
+      options_for_select([[t("public.tags.all"), ""]] + @tag_translations.map { |tag| [tag.name, tag.slug] }, params[:tag]),
+      {}, class: "min-h-11" %>
+    <%= form.submit t("public.search.submit"), class: "min-h-11" %>
+  <% end %>
+
+  <% if @translations.any? %>
+    <div class="grid gap-8 md:grid-cols-2">
+      <% @translations.each do |translation| %>
+        <article class="space-y-3">
+          <% if translation.project.cover_image.attached? %>
+            <%= image_tag translation.project.cover_image, alt: translation.title, loading: "lazy", class: "max-w-full" %>
+          <% end %>
+          <h2 class="text-2xl font-bold"><%= link_to translation.title, localized_project_path(locale: current_locale, slug: translation.slug) %></h2>
+          <p><%= translation.summary %></p>
+          <%= render "public/shared/tags", taggable: translation.project %>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <p><%= t("public.projects.empty") %></p>
+  <% end %>
+</main>
