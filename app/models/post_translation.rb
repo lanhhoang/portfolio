@@ -44,6 +44,6 @@ class PostTranslation < ApplicationRecord
   end
 
   def refresh_search_text
-    self.search_text = SearchText.normalize([title, excerpt, body_markdown].join(" "))
+    self.search_text = SearchText.normalize([ title, excerpt, body_markdown ].join(" "))
   end
 end

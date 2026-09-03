@@ -1,6 +1,27 @@
 require "test_helper"
 
 class PublicLocalizationTest < ActionDispatch::IntegrationTest
+  setup do
+    profile = Profile.new(public_contact_email: "owner@example.test")
+    {
+      "en" => [ "Demo Owner", "About" ],
+      "fr" => [ "Propriétaire démo", "À propos" ],
+      "vi" => [ "Chủ sở hữu mẫu", "Giới thiệu" ]
+    }.each do |locale, (display_name, headline)|
+      profile.translations.build(
+        locale: locale, display_name: display_name, headline: headline,
+        introduction: "A demonstration profile.", biography_markdown: "Biography",
+        availability_label: "Available"
+      )
+    end
+    profile.save!
+
+    resume = Resume.new(updated_on: Date.new(2026, 9, 2))
+    %w[en fr vi].each do |locale|
+      resume.translations.build(locale: locale, title: "Résumé", description: "Demonstration résumé")
+    end
+    resume.save!
+  end
   test "root falls back to English" do
     get root_path
 
@@ -56,13 +77,13 @@ class PublicLocalizationTest < ActionDispatch::IntegrationTest
 
   test "fixed copy comes from the active locale without fallback" do
     {
-      "en" => "About",
-      "fr" => "À propos",
-      "vi" => "Giới thiệu"
-    }.each do |locale, heading|
+      "en" => "Demo Owner",
+      "fr" => "Propriétaire démo",
+      "vi" => "Chủ sở hữu mẫu"
+    }.each do |locale, display_name|
       get localized_about_path(locale: locale)
 
-      assert_select "h1", text: heading
+      assert_select "h1", text: display_name
     end
   end
 

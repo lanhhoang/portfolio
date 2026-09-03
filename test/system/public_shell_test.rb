@@ -50,7 +50,9 @@ class PublicShellTest < ApplicationSystemTestCase
   test "theme override is accessible and persists across pages" do
     visit localized_root_path(locale: "en")
     page.execute_script('localStorage.removeItem("portfolio-theme")')
-    visit localized_root_path(locale: "en")
+    visit localized_projects_path(locale: "en")
+    page.execute_script('localStorage.removeItem("portfolio-theme")')
+    visit localized_projects_path(locale: "en")
 
     assert_selector "[data-theme-target='toggle'][aria-pressed]"
     toggle = find("[data-theme-target='toggle']")
@@ -61,7 +63,7 @@ class PublicShellTest < ApplicationSystemTestCase
     assert_includes %w[light dark], selected_theme
     assert_equal selected_theme, page.evaluate_script("document.documentElement.dataset.theme")
 
-    visit localized_about_path(locale: "en")
+    visit localized_projects_path(locale: "en")
     assert_equal selected_theme, page.evaluate_script("document.documentElement.dataset.theme")
     assert_equal((selected_theme == "dark").to_s, find("[data-theme-target='toggle']")["aria-pressed"])
   end

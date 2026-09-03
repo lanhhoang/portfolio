@@ -26,7 +26,7 @@ class PublicContentTest < ActiveSupport::TestCase
     )
 
     assert project.save
-    assert_equal ["en"], project.translations.pluck(:locale)
+    assert_equal [ "en" ], project.translations.pluck(:locale)
   end
 
   test "translation locale and slug pairs are unique" do
@@ -48,14 +48,14 @@ class PublicContentTest < ActiveSupport::TestCase
     visible = build_project(slug: "visible", state: "published", published_at: 1.day.ago)
     draft = build_project(slug: "draft", state: "draft")
     future = build_project(slug: "future", state: "published", published_at: 1.day.from_now)
-    [visible, draft, future].each(&:save!)
+    [ visible, draft, future ].each(&:save!)
     visible.translations.create!(
       locale: "fr", title: "Visible", slug: "visible-fr", summary: "Résumé",
       body_markdown: "Corps", state: "published", published_at: 1.day.ago
     )
 
-    assert_equal ["visible"], ProjectTranslation.publicly_visible(locale: "en").pluck(:slug)
-    assert_equal ["visible-fr"], ProjectTranslation.publicly_visible(locale: "fr").pluck(:slug)
+    assert_equal [ "visible" ], ProjectTranslation.publicly_visible(locale: "en").pluck(:slug)
+    assert_equal [ "visible-fr" ], ProjectTranslation.publicly_visible(locale: "fr").pluck(:slug)
   end
 
   test "profile and resume singleton rows are database constrained and exposed through current" do

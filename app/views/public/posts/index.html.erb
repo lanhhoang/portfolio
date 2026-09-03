@@ -1,0 +1,33 @@
+<main id="main-content" class="site-container page-shell space-y-8">
+  <header>
+    <p class="text-sm uppercase"><%= t("navigation.journal") %></p>
+    <h1 class="text-4xl font-bold"><%= t("public.posts.title") %></h1>
+  </header>
+
+  <%= form_with url: localized_blog_path(locale: current_locale), method: :get, class: "grid gap-4", role: "search" do |form| %>
+    <%= form.label :q, t("public.search.label") %>
+    <%= form.search_field :q, value: params[:q], class: "min-h-11" %>
+    <%= form.label :tag, t("public.tags.label") %>
+    <%= form.select :tag,
+      options_for_select([[t("public.tags.all"), ""]] + @tag_translations.map { |tag| [tag.name, tag.slug] }, params[:tag]),
+      {}, class: "min-h-11" %>
+    <%= form.submit t("public.search.submit"), class: "min-h-11" %>
+  <% end %>
+
+  <% if @translations.any? %>
+    <ol class="space-y-8">
+      <% @translations.each do |translation| %>
+        <li>
+          <article class="space-y-3">
+            <p><%= l(translation.published_at.to_date, format: :long) %></p>
+            <h2 class="text-2xl font-bold"><%= link_to translation.title, localized_post_path(locale: current_locale, slug: translation.slug) %></h2>
+            <p><%= translation.excerpt %></p>
+            <%= render "public/shared/tags", taggable: translation.post %>
+          </article>
+        </li>
+      <% end %>
+    </ol>
+  <% else %>
+    <p><%= t("public.posts.empty") %></p>
+  <% end %>
+</main>

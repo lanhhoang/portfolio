@@ -14,7 +14,7 @@ class SearchTextTest < ActiveSupport::TestCase
 
     results = ProjectTranslation.filtered(locale: "en", query: "SQLite", tag_slug: nil)
 
-    assert_equal [matching], results.to_a
+    assert_equal [ matching ], results.to_a
     assert_not_includes results, french
   end
 
@@ -24,7 +24,7 @@ class SearchTextTest < ActiveSupport::TestCase
 
     results = PostTranslation.filtered(locale: "en", query: "%_", tag_slug: "")
 
-    assert_equal [literal], results.to_a
+    assert_equal [ literal ], results.to_a
   end
 
   test "search case-folds Unicode but keeps accents significant" do
@@ -34,8 +34,8 @@ class SearchTextTest < ActiveSupport::TestCase
     decomposed = ProjectTranslation.filtered(locale: "en", query: "syste\u0300me", tag_slug: nil)
     unaccented = ProjectTranslation.filtered(locale: "en", query: "systeme", tag_slug: nil)
 
-    assert_equal [accented], uppercase.to_a
-    assert_equal [accented], decomposed.to_a
+    assert_equal [ accented ], uppercase.to_a
+    assert_equal [ accented ], decomposed.to_a
     assert_empty unaccented
   end
 
@@ -51,7 +51,7 @@ class SearchTextTest < ActiveSupport::TestCase
     english = ProjectTranslation.filtered(locale: "en", query: nil, tag_slug: "ruby")
     wrong_locale = ProjectTranslation.filtered(locale: "en", query: nil, tag_slug: "rubis")
 
-    assert_equal [tagged], english.to_a
+    assert_equal [ tagged ], english.to_a
     assert_empty wrong_locale
     assert_not_includes english, untagged
   end

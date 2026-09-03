@@ -1,0 +1,12 @@
+<main id="main-content" class="site-container page-shell">
+  <article class="space-y-6">
+    <h1 class="text-4xl font-bold"><%= @translation.title %></h1>
+    <p class="max-w-prose"><%= @translation.description %></p>
+    <p><%= t("public.resume.updated", date: l(@resume.updated_on, format: :long)) %></p>
+    <% if @translation.pdf.attached? %>
+      <%= link_to t("public.resume.download"), localized_resume_download_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %>
+    <% else %>
+      <p><%= t("public.resume.pdf_unavailable") %></p>
+    <% end %>
+  </article>
+</main>

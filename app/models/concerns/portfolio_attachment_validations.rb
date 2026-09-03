@@ -9,7 +9,7 @@ module PortfolioAttachmentValidations
     def validates_portfolio_attachment(name, content_types:, extensions:, max_size:, type_message:)
       validate do
         attachment = public_send(name)
-        blobs = attachment.respond_to?(:blobs) ? attachment.blobs : [attachment.blob].compact
+        blobs = attachment.respond_to?(:blobs) ? attachment.blobs : [ attachment.blob ].compact
 
         blobs.each do |blob|
           errors.add(name, type_message) unless blob.content_type.in?(content_types)
