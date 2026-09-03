@@ -134,6 +134,16 @@ class PublicContentTest < ActiveSupport::TestCase
     assert project.errors[:source_url].any?
   end
 
+  test "Markdown HTML is refreshed before translated content is saved" do
+    project = build_project(slug: "rendered")
+    project.translations.first.body_markdown = "**Safe** <script>alert(1)</script>"
+    project.save!
+
+    translation = project.translations.first.reload
+    assert_includes translation.body_html, "<strong>Safe</strong>"
+    assert_not_includes translation.body_html, "<script"
+  end
+
   private
 
   def build_project(slug:, state: "draft", published_at: nil)
