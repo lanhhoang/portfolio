@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+@layer base {
 :root {
   color-scheme: light;
   --background: #f3f0e8;
@@ -345,4 +346,5 @@ h1 {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
 }
