@@ -43,8 +43,8 @@
 | Area                  | Responsibility                                                              | Primary paths                                                                                                                                                              |
 | --------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Application shell     | locale routing, theme bootstrap, navigation, mobile-first tokens            | `config/routes.rb`, `app/controllers/public_controller.rb`, `app/views/layouts/application.html.erb`, `app/assets/tailwind/application.css`, `app/javascript/controllers/` |
-| Content domain        | shared records, locale records, Markdown rendering, publication rules       | `app/models/`, `app/services/markdown_renderer.rb`, `db/migrate/`, `db/seeds.rb`                                                                                           |
-| Public delivery       | homepage, projects, journal, about, résumé, search, locale switching        | `app/controllers/public/`, `app/views/public/`, `app/queries/`                                                                                                             |
+| Content domain        | shared records, locale records, Markdown rendering, publication rules       | `app/models/`, `db/migrate/`, `db/seeds.rb`                                                                                                                                |
+| Public delivery       | homepage, projects, journal, about, résumé, search, locale switching        | `app/controllers/public/`, `app/views/public/`                                                                                                                             |
 | Admin security        | password, TOTP, recovery, sessions, reset                                   | `app/controllers/admin/`, `app/models/admin_user.rb`, `app/models/admin_session.rb`, `lib/tasks/admin.rake`                                                                |
 | Admin CMS             | dashboard, forms, previews, uploads, translation actions                    | `app/controllers/admin/`, `app/views/admin/`, `app/javascript/controllers/admin/`                                                                                          |
 | Scheduling            | due-content scan and recurring Solid Queue configuration                    | `app/jobs/publish_due_translations_job.rb`, `config/recurring.yml`                                                                                                         |
@@ -114,7 +114,7 @@
 - `MarkdownRenderer.call(markdown) -> String`.
 - `SearchText.normalize(value) -> String`, used for persisted Unicode case-folded search text and incoming queries.
 - `ProjectTranslation.publicly_visible(locale:)` and `PostTranslation.publicly_visible(locale:)`.
-- `PublicContentSearch.new(scope:, locale:, query:, tag_slug:).results`.
+- `ProjectTranslation.filtered(locale:, query:, tag_slug:)` and `PostTranslation.filtered(locale:, query:, tag_slug:)`.
 - `Profile.current` and `Resume.current` singleton accessors.
 - Active Storage attachment names fixed by the content model.
 

@@ -950,7 +950,7 @@ There must be no remaining direct `image_tag` call for a public Active Storage c
 Run:
 
 ```bash
-bin/rails test test/helpers/responsive_image_helper_test.rb test/requests/public_content_test.rb
+bin/rails test test/helpers/responsive_image_helper_test.rb test/integration/public_content_test.rb
 ```
 
 Expected: PASS; missing-image records still render their existing text fallback.

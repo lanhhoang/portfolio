@@ -575,7 +575,7 @@ Project, post, and profile Markdown field partials in later tasks wrap their tex
 
 - [ ] **Step 4: Run the preview tests**
 
-Run: `bin/rails test test/requests/admin/markdown_previews_test.rb test/services/markdown_renderer_test.rb`
+Run: `bin/rails test test/requests/admin/markdown_previews_test.rb test/models/markdown_renderer_test.rb`
 
 Expected: PASS, including sanitization inherited from Phase 2.
 
