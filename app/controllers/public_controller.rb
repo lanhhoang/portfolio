@@ -59,9 +59,9 @@ class PublicController < ApplicationController
         quality = quality_parameter ? Float(quality_parameter.split("=", 2).last, exception: false).to_f : 1.0
         next unless quality.positive? && quality <= 1.0
 
-        [locale, quality, index]
+        [ locale, quality, index ]
       end
-      .max_by { |_locale, quality, index| [quality, -index] }
+      .max_by { |_locale, quality, index| [ quality, -index ] }
       &.first
   end
 end

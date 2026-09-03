@@ -1,7 +1,7 @@
 require "application_system_test_case"
 
 class PublicShellTest < ApplicationSystemTestCase
-  driven_by :selenium, using: :headless_chrome, screen_size: [320, 800]
+  driven_by :selenium, using: :headless_chrome, screen_size: [ 320, 800 ]
 
   test "locale choice survives navigation and a root reload" do
     visit localized_root_path(locale: "en")
