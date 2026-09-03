@@ -47,3 +47,5 @@ vi:
       introduction: "Một cách trực tiếp và an toàn để bắt đầu trò chuyện."
   footer:
     rights: "Được xây dựng cẩn thận."
+  accessibility:
+    skip_to_content: "Chuyển đến nội dung"

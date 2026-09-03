@@ -1,0 +1,58 @@
+<header
+  class="site-header"
+  data-controller="menu"
+  data-menu-open-label-value="<%= t("menu.open") %>"
+  data-menu-close-label-value="<%= t("menu.close") %>">
+  <div class="site-container header-grid">
+    <%= link_to localized_root_path(locale: current_locale), class: "site-mark", aria: { label: t("site.name") } do %>
+      <span aria-hidden="true">P/04</span>
+    <% end %>
+
+    <button
+      class="menu-button"
+      type="button"
+      aria-controls="primary-navigation"
+      aria-expanded="false"
+      data-menu-target="button"
+      data-action="menu#toggle">
+      <span data-menu-target="label"><%= t("menu.open") %></span>
+    </button>
+
+    <nav
+      id="primary-navigation"
+      class="primary-navigation"
+      aria-label="<%= t("navigation.label") %>"
+      data-menu-target="panel"
+      hidden>
+      <% [
+        ["projects", t("navigation.work"), localized_projects_path(locale: current_locale)],
+        ["blog", t("navigation.journal"), localized_blog_path(locale: current_locale)],
+        ["about", t("navigation.about"), localized_about_path(locale: current_locale)],
+        ["resume", t("navigation.resume"), localized_resume_path(locale: current_locale)],
+        ["contact", t("navigation.contact"), localized_contact_path(locale: current_locale)]
+      ].each do |target_action, label, path| %>
+        <%= link_to label, path, aria: { current: ("page" if action_name == target_action) } %>
+      <% end %>
+    </nav>
+
+    <nav class="locale-switcher" aria-label="<%= t("locales.label") %>">
+      <% PublicController::SUPPORTED_LOCALES.each do |locale| %>
+        <%= link_to t("locales.#{locale}"), locale_switch_path(locale),
+          lang: locale,
+          hreflang: locale,
+          aria: { current: ("true" if locale == current_locale) } %>
+      <% end %>
+    </nav>
+
+    <button
+      class="theme-button"
+      type="button"
+      data-controller="theme"
+      data-theme-target="toggle"
+      data-theme-light-label-value="<%= t("theme.switch_to_light") %>"
+      data-theme-dark-label-value="<%= t("theme.switch_to_dark") %>"      data-action="theme#toggle"
+      aria-label="<%= t("theme.toggle") %>">
+      <%= t("theme.toggle") %>
+    </button>
+  </div>
+</header>

@@ -47,3 +47,5 @@ en:
       introduction: "A direct and secure way to start a conversation."
   footer:
     rights: "Built with care."
+  accessibility:
+    skip_to_content: "Skip to content"

@@ -47,3 +47,5 @@ fr:
       introduction: "Un moyen direct et sécurisé de commencer une conversation."
   footer:
     rights: "Conçu avec soin."
+  accessibility:
+    skip_to_content: "Aller au contenu"
