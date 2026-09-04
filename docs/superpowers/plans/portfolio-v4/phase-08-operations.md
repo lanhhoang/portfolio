@@ -216,7 +216,7 @@ config.action_mailer.smtp_settings = {
 }
 ```
 
-Confirm Phase 6's mailer reads `ENV.fetch("MAILER_FROM", "portfolio@example.test")` for its sender and `Profile.current.public_contact_email` for its recipient. Production always supplies `MAILER_FROM`; the test default never ships as a usable sender.
+Confirm Phase 3's admin password-reset mailer and Phase 6's contact mailer both read `ENV.fetch("MAILER_FROM", "portfolio@example.test")` for their sender; the contact mailer uses `Profile.current.public_contact_email` for its recipient. Production always supplies `MAILER_FROM`; the test default never ships as a usable sender.
 
 - [ ] **Step 5: Enable Solid Queue in the sole Puma process**
 
