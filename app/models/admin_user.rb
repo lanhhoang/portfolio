@@ -17,6 +17,23 @@ class AdminUser < ApplicationRecord
   validates :singleton_guard, inclusion: { in: [1] }
 
   class << self
+    def provision(email:, password:)
+      transaction do
+        user = lock.first || new
+        user.assign_attributes(
+          email: email,
+          password: password,
+          password_confirmation: password,
+          totp_secret: ROTP::Base32.random,
+          last_totp_at: nil
+        )
+        user.save!
+        recovery_codes = user.replace_recovery_codes
+        user.admin_sessions.delete_all
+        [user, recovery_codes]
+      end
+    end
+
     def generate_recovery_code
       SecureRandom.hex(RECOVERY_CODE_BYTES).upcase.scan(/.{4}/).join("-")
     end
