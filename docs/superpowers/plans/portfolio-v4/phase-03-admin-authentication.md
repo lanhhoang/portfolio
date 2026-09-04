@@ -403,7 +403,7 @@ class AdminUser < ApplicationRecord
     format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :password, length: { minimum: 14 }, if: -> { password.present? }
   validates :totp_secret, presence: true
-  validates :singleton_guard, inclusion: { in: [1] }
+  validates :singleton_guard, inclusion: { in: [ 1 ] }
 
   class << self
     def generate_recovery_code
@@ -1092,7 +1092,7 @@ class Admin::TotpChallengesController < Admin::AuthenticationController
   def create
     user = Current.admin_session.admin_user
 
-    if user.verify_totp(params.expect(totp: [:code])[:code])
+    if user.verify_totp(params.expect(totp: [ :code ])[:code])
       start_new_admin_session_for(user, state: :verified)
       redirect_to admin_root_path, notice: "Signed in."
     else
@@ -1121,7 +1121,7 @@ class Admin::RecoveryChallengesController < Admin::AuthenticationController
   def create
     user = Current.admin_session.admin_user
 
-    if user.consume_recovery_code(params.expect(recovery: [:code])[:code])
+    if user.consume_recovery_code(params.expect(recovery: [ :code ])[:code])
       start_new_admin_session_for(user, state: :verified)
       redirect_to admin_root_path, notice: "Signed in. Generate replacement recovery codes after access is restored."
     else
@@ -1377,14 +1377,14 @@ class Admin::PasswordResetsTest < ActionDispatch::IntegrationTest
   end
 
   test "known and unknown emails receive the same generic response" do
-    assert_enqueued_email_with AdminPasswordMailer, :reset, args: [@user] do
+    assert_enqueued_email_with AdminPasswordMailer, :reset, args: [ @user ] do
       post admin_password_reset_path, params: { password_reset: { email: @user.email } }
     end
-    known = [response.status, response.location, flash[:notice]]
+    known = [ response.status, response.location, flash[:notice] ]
 
     clear_enqueued_jobs
     post admin_password_reset_path, params: { password_reset: { email: "missing@example.com" } }
-    unknown = [response.status, response.location, flash[:notice]]
+    unknown = [ response.status, response.location, flash[:notice] ]
 
     assert_equal known, unknown
     assert_equal "If that email is the owner account, a reset link has been sent.", flash[:notice]
@@ -1478,8 +1478,8 @@ class AdminPasswordMailerTest < ActionMailer::TestCase
     text_body = mail.text_part.body.decoded
     token = text_body.match(/Enter this one-time reset code:\s*\n([^\s]+)/).captures.first
 
-    assert_equal [user.email], mail.to
-    assert_equal [ENV.fetch("MAILER_FROM", "portfolio@example.test")], mail.from
+    assert_equal [ user.email ], mail.to
+    assert_equal [ ENV.fetch("MAILER_FROM", "portfolio@example.test") ], mail.from
     assert_equal "Reset your portfolio admin password", mail.subject
     assert_match edit_admin_password_reset_url, text_body
     assert_match edit_admin_password_reset_url, mail.html_part.body.decoded
@@ -1531,7 +1531,7 @@ class Admin::PasswordResetsController < Admin::AuthenticationController
   end
 
   def create
-    email = params.expect(password_reset: [:email])[:email]
+    email = params.expect(password_reset: [ :email ])[:email]
     if (user = AdminUser.find_by(email: email))
       AdminPasswordMailer.reset(user).deliver_later
     end
