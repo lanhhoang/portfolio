@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_03_182247) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_031146) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -37,6 +37,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_182247) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "admin_users", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email", null: false
+    t.datetime "last_totp_at"
+    t.string "password_digest", null: false
+    t.json "recovery_code_digests", default: [], null: false
+    t.integer "singleton_guard", default: 1, null: false
+    t.text "totp_secret", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_admin_users_on_email", unique: true
+    t.index ["singleton_guard"], name: "index_admin_users_on_singleton_guard", unique: true
+    t.check_constraint "singleton_guard = 1", name: "admin_users_single_owner"
   end
 
   create_table "post_translations", force: :cascade do |t|
