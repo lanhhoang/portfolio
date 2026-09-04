@@ -9,6 +9,11 @@ class ProfileTranslation < ApplicationRecord
   validates :display_name, :headline, :introduction, :biography_markdown,
     :availability_label, presence: true
 
+  def complete?
+    display_name.present? && headline.present? && introduction.present? &&
+      biography_markdown.present? && availability_label.present?
+  end
+
   private
 
   def render_biography_html

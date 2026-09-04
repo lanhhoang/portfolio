@@ -12,4 +12,8 @@ class ResumeTranslation < ApplicationRecord
 
   validates :locale, inclusion: { in: %w[en fr vi] }, uniqueness: { scope: :resume_id }
   validates :title, :description, presence: true
+
+  def complete?
+    title.present? && description.present?
+  end
 end

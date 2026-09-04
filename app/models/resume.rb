@@ -4,6 +4,12 @@ class Resume < ApplicationRecord
   has_many :translations, class_name: "ResumeTranslation",
     inverse_of: :resume, dependent: :destroy, autosave: true
 
+  accepts_nested_attributes_for :translations, allow_destroy: true,
+    reject_if: ->(attributes) {
+      attributes["locale"] != "en" && attributes["id"].blank? &&
+        attributes.values_at("title", "description").all?(&:blank?)
+    }
+
   validates :updated_on, presence: true
   validate :english_translation_present
 

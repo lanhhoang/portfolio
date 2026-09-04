@@ -5,6 +5,12 @@ class Tag < ApplicationRecord
     inverse_of: :tag, dependent: :destroy, autosave: true
   has_many :taggings, dependent: :destroy
 
+  accepts_nested_attributes_for :translations, allow_destroy: true,
+    reject_if: ->(attributes) {
+      attributes["locale"] != "en" && attributes["id"].blank? &&
+        attributes.values_at("name", "slug").all?(&:blank?)
+    }
+
   validate :english_translation_present
 
   private

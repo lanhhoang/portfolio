@@ -18,6 +18,12 @@ class Project < ApplicationRecord
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
 
+  accepts_nested_attributes_for :translations, allow_destroy: true,
+    reject_if: ->(attributes) {
+      attributes["locale"] != "en" && attributes["id"].blank? &&
+        attributes.values_at("title", "slug", "summary", "body_markdown").all?(&:blank?)
+    }
+
   validates :role, presence: true
   validates :featured_position, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validate :links_are_http_urls

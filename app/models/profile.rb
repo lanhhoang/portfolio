@@ -13,6 +13,14 @@ class Profile < ApplicationRecord
   has_many :translations, class_name: "ProfileTranslation",
     inverse_of: :profile, dependent: :destroy, autosave: true
 
+  accepts_nested_attributes_for :translations, allow_destroy: true,
+    reject_if: ->(attributes) {
+      attributes["locale"] != "en" && attributes["id"].blank? &&
+        attributes.values_at(
+          "display_name", "headline", "introduction", "biography_markdown", "availability_label"
+        ).all?(&:blank?)
+    }
+
   validates :public_contact_email, presence: true,
     format: { with: URI::MailTo::EMAIL_REGEXP }
   validate :social_links_are_http_urls
