@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_031146) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_04_031518) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -37,6 +37,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_031146) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "admin_sessions", force: :cascade do |t|
+    t.integer "admin_user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.string "state", null: false
+    t.datetime "updated_at", null: false
+    t.index ["admin_user_id"], name: "index_admin_sessions_on_admin_user_id"
+    t.index ["expires_at"], name: "index_admin_sessions_on_expires_at"
+    t.check_constraint "state IN ('pending_totp', 'verified')", name: "admin_sessions_valid_state"
   end
 
   create_table "admin_users", force: :cascade do |t|
@@ -189,6 +200,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_031146) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "admin_sessions", "admin_users"
   add_foreign_key "post_translations", "posts"
   add_foreign_key "profile_translations", "profiles"
   add_foreign_key "project_translations", "projects"
