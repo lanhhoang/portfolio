@@ -1,0 +1,29 @@
+<%# locals: (form:, record:, fields_partial:) %>
+<div data-controller="locale-tabs" class="grid gap-4">
+  <div role="tablist" class="flex gap-2">
+    <% Admin::ContentHelper::LOCALE_NAMES.each do |locale, name| %>
+      <% translation = record.translations.find { |item| item.locale == locale } %>
+      <% next unless translation %>
+      <% panel_id = "#{record.model_name.element}_#{locale}_panel" %>
+      <%= content_tag :button, name, type: "button", id: panel_id.gsub("panel", "tab"),
+        role: "tab", "aria-controls": panel_id, class: "admin-action",
+        data: { locale_tabs_target: "tab", action: "click->locale-tabs#choose keydown->locale-tabs#move" },
+        aria: { selected: locale == "en" ? "true" : "false" } do %>
+        <%= name %>
+        <span class="ml-1 text-xs opacity-70"><%= translation.complete? ? "✓" : "○" %></span>
+      <% end %>
+    <% end %>
+  </div>
+  <% Admin::ContentHelper::LOCALE_NAMES.each do |locale, _name| %>
+    <% translation = record.translations.find { |item| item.locale == locale } %>
+    <% next unless translation %>
+    <% panel_id = "#{record.model_name.element}_#{locale}_panel" %>
+    <%= content_tag :div, id: panel_id, role: "tabpanel",
+      "aria-labelledby": panel_id.gsub("panel", "tab"),
+      data: { locale_tabs_target: "panel" } do %>
+      <%= form.fields_for :translations, translation do |translation_form| %>
+        <%= render fields_partial, form: translation_form, translation: translation %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

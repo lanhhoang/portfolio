@@ -1,0 +1,13 @@
+<%# locals: (form:, translation:) %>
+<%= form.hidden_field :id if translation.persisted? %>
+<%= form.hidden_field :locale unless translation.persisted? %>
+<span class="text-sm opacity-70" data-testid="<%= translation.locale %>-complete">
+  <%= translation.complete? ? "Complete" : "Incomplete" %>
+</span>
+<% if translation_state_label(translation) %>
+  <span class="text-sm opacity-70"><%= translation_state_label(translation) %></span>
+<% end %>
+<% if translation.persisted? && translation.locale != "en" %>
+  <%= form.label :_destroy, "Remove this translation" %>
+  <%= form.check_box :_destroy %>
+<% end %>
