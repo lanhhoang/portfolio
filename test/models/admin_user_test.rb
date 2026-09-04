@@ -5,15 +5,16 @@ class AdminUserTest < ActiveSupport::TestCase
 
   test "normalizes email and authenticates a fourteen character password" do
     user = admin_users(:owner)
-    user.update!(email: "  OWNER@Example.COM ")
+    password = "12345678901234"
+    user.update!(email: "  OWNER@Example.COM ", password: password, password_confirmation: password)
 
     assert_equal "owner@example.com", user.email
-    assert_equal user, AdminUser.authenticate_by(email: "owner@example.com", password: TEST_PASSWORD)
-    assert_not_equal TEST_PASSWORD, user.password_digest
+    assert_equal user, AdminUser.authenticate_by(email: "owner@example.com", password: password)
+    assert_not_equal password, user.password_digest
   end
 
   test "rejects short passwords and a second owner" do
-    short = AdminUser.new(email: "other@example.com", password: "too short", totp_secret: TEST_TOTP_SECRET)
+    short = AdminUser.new(email: "other@example.com", password: "1234567890123", totp_secret: TEST_TOTP_SECRET)
 
     assert_not short.valid?
     assert_includes short.errors[:password], "is too short (minimum is 14 characters)"
@@ -25,7 +26,7 @@ class AdminUserTest < ActiveSupport::TestCase
   test "stores the TOTP secret as ciphertext" do
     user = admin_users(:owner)
     stored = AdminUser.connection.select_value(
-      AdminUser.sanitize_sql_array(["SELECT totp_secret FROM admin_users WHERE id = ?", user.id])
+      AdminUser.sanitize_sql_array([ "SELECT totp_secret FROM admin_users WHERE id = ?", user.id ])
     )
 
     assert_equal TEST_TOTP_SECRET, user.reload.totp_secret

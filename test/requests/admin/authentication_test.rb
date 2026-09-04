@@ -172,9 +172,11 @@ class Admin::AuthenticationTest < ActionDispatch::IntegrationTest
   test "HTTPS auth cookie is secure strict and HTTP only" do
     https!
     post admin_session_path, params: { admin_login: { email: @user.email, password: TEST_PASSWORD } }
-    # reset_session emits a second Set-Cookie header, so the header arrives as an Array;
-    # Rails writes boolean flag names in lowercase, so compare case-insensitively
-    set_cookie = Array(response.headers["Set-Cookie"]).join("\n").downcase
+    # reset_session emits a second Set-Cookie header, so inspect only the admin cookie.
+    # Rails writes boolean flag names in lowercase, so compare case-insensitively.
+    set_cookie = Array(response.headers["Set-Cookie"])
+      .find { |cookie| cookie.start_with?("admin_session=") }
+      .to_s.downcase
 
     assert_includes set_cookie, "admin_session="
     assert_includes set_cookie, "path=/admin"
