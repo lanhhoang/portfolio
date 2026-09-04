@@ -13,7 +13,7 @@ class Admin::RecoveryChallengesController < Admin::AuthenticationController
   def create
     user = Current.admin_session.admin_user
 
-    if user.consume_recovery_code(params.expect(recovery: [:code])[:code])
+    if user.consume_recovery_code(params.expect(recovery: [ :code ])[:code])
       start_new_admin_session_for(user, state: :verified)
       redirect_to admin_root_path, notice: "Signed in. Generate replacement recovery codes after access is restored."
     else

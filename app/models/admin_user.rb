@@ -14,7 +14,7 @@ class AdminUser < ApplicationRecord
     format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :password, length: { minimum: 14 }, if: -> { password.present? }
   validates :totp_secret, presence: true
-  validates :singleton_guard, inclusion: { in: [1] }
+  validates :singleton_guard, inclusion: { in: [ 1 ] }
 
   class << self
     def provision(email:, password:)
@@ -30,7 +30,7 @@ class AdminUser < ApplicationRecord
         user.save!
         recovery_codes = user.replace_recovery_codes
         user.admin_sessions.delete_all
-        [user, recovery_codes]
+        [ user, recovery_codes ]
       end
     end
 

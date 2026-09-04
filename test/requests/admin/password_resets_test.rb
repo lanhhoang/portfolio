@@ -17,14 +17,14 @@ class Admin::PasswordResetsTest < ActionDispatch::IntegrationTest
   end
 
   test "known and unknown emails receive the same generic response" do
-    assert_enqueued_email_with AdminPasswordMailer, :reset, args: [@user] do
+    assert_enqueued_email_with AdminPasswordMailer, :reset, args: [ @user ] do
       post admin_password_reset_path, params: { password_reset: { email: @user.email } }
     end
-    known = [response.status, response.location, flash[:notice]]
+    known = [ response.status, response.location, flash[:notice] ]
 
     clear_enqueued_jobs
     post admin_password_reset_path, params: { password_reset: { email: "missing@example.com" } }
-    unknown = [response.status, response.location, flash[:notice]]
+    unknown = [ response.status, response.location, flash[:notice] ]
 
     assert_equal known, unknown
     assert_equal "If that email is the owner account, a reset link has been sent.", flash[:notice]

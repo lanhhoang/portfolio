@@ -13,7 +13,7 @@ class Admin::TotpChallengesController < Admin::AuthenticationController
   def create
     user = Current.admin_session.admin_user
 
-    if user.verify_totp(params.expect(totp: [:code])[:code])
+    if user.verify_totp(params.expect(totp: [ :code ])[:code])
       start_new_admin_session_for(user, state: :verified)
       redirect_to admin_root_path, notice: "Signed in."
     else

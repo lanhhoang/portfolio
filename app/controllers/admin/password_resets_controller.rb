@@ -8,7 +8,7 @@ class Admin::PasswordResetsController < Admin::AuthenticationController
   end
 
   def create
-    email = params.expect(password_reset: [:email])[:email]
+    email = params.expect(password_reset: [ :email ])[:email]
     if (user = AdminUser.find_by(email: email))
       AdminPasswordMailer.reset(user).deliver_later
     end

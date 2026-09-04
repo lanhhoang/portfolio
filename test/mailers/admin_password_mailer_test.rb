@@ -12,8 +12,8 @@ class AdminPasswordMailerTest < ActionMailer::TestCase
     text_body = mail.text_part.body.decoded
     token = text_body.match(/Enter this one-time reset code:\s*\n([^\s]+)/).captures.first
 
-    assert_equal [user.email], mail.to
-    assert_equal [ENV.fetch("MAILER_FROM", "portfolio@example.test")], mail.from
+    assert_equal [ user.email ], mail.to
+    assert_equal [ ENV.fetch("MAILER_FROM", "portfolio@example.test") ], mail.from
     assert_equal "Reset your portfolio admin password", mail.subject
     assert_match edit_admin_password_reset_url, text_body
     assert_match edit_admin_password_reset_url, mail.html_part.body.decoded
