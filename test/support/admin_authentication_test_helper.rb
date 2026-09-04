@@ -3,6 +3,9 @@ module AdminAuthenticationTestHelper
   TEST_TOTP_SECRET = "JBSWY3DPEHPK3PXP"
 
   def sign_in_as_admin
+    # ponytail: sessions rate_limit (5/15min) counts every test sign-in; clear the
+    # per-process cache instead of weakening the production limit.
+    Rails.cache.clear
     user = admin_users(:owner)
     post admin_session_path, params: {
       admin_login: { email: user.email, password: TEST_PASSWORD }

@@ -1,0 +1,26 @@
+<h1 class="mb-6 text-2xl font-semibold">Edit project</h1>
+<%= render "form", project: @project %>
+
+<% if @project.cover_image.attached? %>
+  <section class="admin-card mt-6">
+    <p class="mb-2 text-sm opacity-70">Cover image: <%= @project.cover_image.filename %></p>
+    <%= button_to "Remove cover image", admin_project_cover_image_path(@project), method: :delete,
+      class: "admin-action",
+      form: { data: { turbo_confirm: "Remove the cover image?" } } %>
+  </section>
+<% end %>
+
+<% if @project.gallery_images.attached? %>
+  <section class="admin-card mt-6">
+    <ul class="grid gap-3">
+      <% @project.gallery_images.each do |image| %>
+        <li class="flex items-center justify-between gap-4">
+          <span><%= image.filename %></span>
+          <%= button_to "Remove gallery image", admin_project_gallery_image_path(@project, image), method: :delete,
+            class: "admin-action",
+            form: { data: { turbo_confirm: "Remove this gallery image?" } } %>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>
