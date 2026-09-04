@@ -1,0 +1,16 @@
+<%= render "admin/shared/translation_controls", form:, translation: form.object %>
+<div>
+  <%= form.label :title %>
+  <%= form.text_field :title %>
+</div>
+<div>
+  <%= form.label :description %>
+  <%= form.text_area :description, rows: 3 %>
+</div>
+<div>
+  <%= form.label :pdf, "PDF" %>
+  <%= form.file_field :pdf, accept: "application/pdf,.pdf" %>
+  <% if form.object.pdf.attached? %>
+    <p class="text-sm opacity-70"><%= form.object.pdf.filename %> (<%= number_to_human_size(form.object.pdf.byte_size) %>)</p>
+  <% end %>
+</div>

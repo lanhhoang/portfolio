@@ -1,0 +1,11 @@
+<h1 class="mb-6 text-2xl font-semibold">Edit résumé</h1>
+<%= render "form", resume: @resume %>
+
+<% @resume.translations.select { |translation| translation.persisted? && translation.pdf.attached? }.each do |translation| %>
+  <section class="admin-card mt-6">
+    <p class="mb-2 text-sm opacity-70"><%= Admin::ContentHelper::LOCALE_NAMES.fetch(translation.locale) %>: <%= translation.pdf.filename %> (<%= number_to_human_size(translation.pdf.byte_size) %>)</p>
+    <%= button_to "Remove the #{Admin::ContentHelper::LOCALE_NAMES.fetch(translation.locale)} PDF", admin_resume_pdf_path(translation), method: :delete,
+      class: "admin-action",
+      form: { data: { turbo_confirm: "Remove this localized PDF?" } } %>
+  </section>
+<% end %>
