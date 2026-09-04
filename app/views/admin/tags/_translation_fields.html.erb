@@ -1,0 +1,10 @@
+<%= render "admin/shared/translation_controls", form:, translation: form.object %>
+<div>
+  <%= form.label :name %>
+  <%= form.text_field :name %>
+</div>
+<div>
+  <%= form.label :slug, "Slug" %>
+  <%= form.text_field :slug %>
+  <p class="text-sm opacity-70">Generated from the name when first saved; later name changes do not change it.</p>
+</div>
