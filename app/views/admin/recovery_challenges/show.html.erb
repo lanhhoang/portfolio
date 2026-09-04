@@ -1,0 +1,14 @@
+<% content_for :title, "Use recovery code — Portfolio admin" %>
+<h1 id="admin-auth-heading" class="text-3xl font-bold">Recovery code</h1>
+<p class="mt-2 text-sm">Each recovery code works once. Enter one code saved during owner setup.</p>
+
+<%= form_with url: admin_recovery_challenge_path, scope: :recovery, class: "mt-8 space-y-5" do |form| %>
+  <div>
+    <%= form.label :code, "Recovery code", class: "block font-medium" %>
+    <%= form.text_field :code, required: true, autofocus: true, autocomplete: "off",
+      class: "mt-2 min-h-11 w-full rounded border bg-transparent px-3 py-2 font-mono uppercase" %>
+  </div>
+  <%= form.submit "Use recovery code", class: "min-h-11 w-full rounded bg-[var(--accent)] px-4 py-2 font-semibold text-[var(--accent-foreground)]" %>
+<% end %>
+
+<p class="mt-6"><%= link_to "Use an authenticator code", admin_totp_challenge_path, class: "underline" %></p>
