@@ -1,0 +1,31 @@
+<% content_for :title, "Choose new password — Portfolio admin" %>
+<h1 id="admin-auth-heading" class="text-3xl font-bold">Choose a new password</h1>
+<p class="mt-2 text-sm">Use at least 14 characters. Existing admin sessions will be signed out.</p>
+
+<% if @admin_user.errors.any? %>
+  <div role="alert" class="mt-6 rounded border border-red-600 p-3">
+    <p class="font-semibold">Password could not be reset:</p>
+    <ul class="mt-2 list-disc pl-5">
+      <% @admin_user.errors.full_messages.each do |message| %><li><%= message %></li><% end %>
+    </ul>
+  </div>
+<% end %>
+
+<%= form_with url: admin_password_reset_path, scope: :admin_password_reset, method: :patch, class: "mt-8 space-y-5" do |form| %>
+  <div>
+    <%= label_tag :token, "Reset code", class: "block font-medium" %>
+    <%= text_field_tag :token, @token, required: true, autocomplete: "off",
+      class: "mt-2 min-h-11 w-full rounded border bg-transparent px-3 py-2 font-mono" %>
+  </div>
+  <div>
+    <%= form.label :password, "New password", class: "block font-medium" %>
+    <%= form.password_field :password, required: true, minlength: 14, autocomplete: "new-password",
+      class: "mt-2 min-h-11 w-full rounded border bg-transparent px-3 py-2" %>
+  </div>
+  <div>
+    <%= form.label :password_confirmation, "Confirm new password", class: "block font-medium" %>
+    <%= form.password_field :password_confirmation, required: true, minlength: 14, autocomplete: "new-password",
+      class: "mt-2 min-h-11 w-full rounded border bg-transparent px-3 py-2" %>
+  </div>
+  <%= form.submit "Reset password", class: "min-h-11 w-full rounded bg-[var(--accent)] px-4 py-2 font-semibold text-[var(--accent-foreground)]" %>
+<% end %>

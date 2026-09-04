@@ -28,6 +28,15 @@ class AdminUser < ApplicationRecord
     end
   end
 
+  def reset_password(attributes)
+    transaction do
+      next false unless update(attributes)
+
+      admin_sessions.delete_all
+      true
+    end
+  end
+
   def verify_totp(code)
     normalized = code.to_s.delete(" \t-")
     return false unless normalized.match?(/\A\d{6}\z/)

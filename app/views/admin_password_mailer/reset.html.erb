@@ -1,0 +1,5 @@
+<p>A password reset was requested for the portfolio admin.</p>
+<p><%= link_to "Open the password reset page within 30 minutes", @reset_url %></p>
+<p>Enter this one-time reset code:</p>
+<p><code><%= @token %></code></p>
+<p>If you did not request this, ignore this email. Your password and second factor have not changed.</p>
