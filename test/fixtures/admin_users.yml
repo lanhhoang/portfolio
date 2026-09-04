@@ -1,0 +1,6 @@
+owner:
+  email: owner@example.com
+  password_digest: <%= BCrypt::Password.create("correct horse battery staple", cost: BCrypt::Engine::MIN_COST) %>
+  totp_secret: JBSWY3DPEHPK3PXP
+  recovery_code_digests: []
+  singleton_guard: 1

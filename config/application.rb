@@ -11,6 +11,11 @@ module Portfolio
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.1
 
+    config.action_dispatch.default_headers.merge!(
+      "Permissions-Policy" => "camera=(), microphone=(), geolocation=()",
+      "X-Frame-Options" => "DENY"
+    )
+
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.

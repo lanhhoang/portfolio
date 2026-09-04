@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en" data-accent="lime">
+  <head>
+    <title><%= content_for(:title) || "Portfolio admin" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= theme_bootstrap_script %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+  <body class="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+    <header class="border-b">
+      <div class="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+        <%= link_to "Portfolio admin", admin_root_path, class: "font-semibold" %>
+        <%= button_to "Sign out", admin_session_path, method: :delete,
+          class: "min-h-11 rounded border px-4 py-2 font-medium" %>
+      </div>
+    </header>
+    <main class="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+      <% if notice.present? %><p role="status" class="mb-4 rounded border p-3"><%= notice %></p><% end %>
+      <% if alert.present? %><p role="alert" class="mb-4 rounded border border-red-600 p-3"><%= alert %></p><% end %>
+      <%= yield %>
+    </main>
+  </body>
+</html>

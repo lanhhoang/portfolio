@@ -1,0 +1,18 @@
+<% content_for :title, "Verify sign in — Portfolio admin" %>
+<h1 id="admin-auth-heading" class="text-3xl font-bold">Verification code</h1>
+<p class="mt-2 text-sm">Enter the current six-digit code from your authenticator.</p>
+
+<%= form_with url: admin_totp_challenge_path, scope: :totp, class: "mt-8 space-y-5" do |form| %>
+  <div>
+    <%= form.label :code, "Six-digit code", class: "block font-medium" %>
+    <%= form.text_field :code, required: true, autofocus: true, autocomplete: "one-time-code",
+      inputmode: "numeric", pattern: "[0-9]{6}", maxlength: 6,
+      class: "mt-2 min-h-11 w-full rounded border bg-transparent px-3 py-2 text-lg tracking-widest" %>
+  </div>
+  <%= form.submit "Verify", class: "min-h-11 w-full rounded bg-[var(--accent)] px-4 py-2 font-semibold text-[var(--accent-foreground)]" %>
+<% end %>
+
+<div class="mt-6 flex flex-wrap gap-4">
+  <%= link_to "Use a recovery code", admin_recovery_challenge_path, class: "underline" %>
+  <%= button_to "Cancel sign in", admin_session_path, method: :delete, class: "underline" %>
+</div>

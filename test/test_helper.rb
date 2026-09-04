@@ -13,3 +13,13 @@ module ActiveSupport
     # Add more helper methods to be used by all tests here...
   end
 end
+
+Dir[Rails.root.join("test/support/**/*.rb")].sort.each { |file| require file }
+
+class ActiveSupport::TestCase
+  include AdminAuthenticationTestHelper
+end
+
+class ActionDispatch::IntegrationTest
+  include AdminAuthenticationTestHelper
+end

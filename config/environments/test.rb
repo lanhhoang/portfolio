@@ -18,9 +18,11 @@ Rails.application.configure do
   # Configure public file server for tests with cache-control for performance.
   config.public_file_server.headers = { "cache-control" => "public, max-age=3600" }
 
+  # Make controller rate_limit counters inspectable and clearable between tests.
+  config.cache_store = :memory_store
+
   # Show full error reports.
   config.consider_all_requests_local = true
-  config.cache_store = :null_store
 
   # Render exception templates for rescuable exceptions and raise for other exceptions.
   config.action_dispatch.show_exceptions = :rescuable
@@ -31,13 +33,16 @@ Rails.application.configure do
   # Store uploaded files on the local file system in a temporary directory.
   config.active_storage.service = :test
 
+  # Encrypt encrypted-attribute fixtures so plaintext never touches the test database.
+  config.active_record.encryption.encrypt_fixtures = true
+
   # Tell Action Mailer not to deliver emails to the real world.
   # The :test delivery method accumulates sent emails in the
   # ActionMailer::Base.deliveries array.
   config.action_mailer.delivery_method = :test
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "example.com" }
+  config.action_mailer.default_url_options = { host: "example.com", protocol: "http" }
 
   # Print deprecation notices to the stderr.
   config.active_support.deprecation = :stderr

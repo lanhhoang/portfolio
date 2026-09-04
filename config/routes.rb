@@ -13,4 +13,12 @@ Rails.application.routes.draw do
     get "resume/download", to: "public/resume_downloads#show", as: :localized_resume_download
     get "contact", to: "public#contact", as: :localized_contact
   end
+
+  namespace :admin do
+    root "dashboard#show"
+    resource :session, only: %i[new create destroy]
+    resource :totp_challenge, only: %i[show create]
+    resource :recovery_challenge, only: %i[show create]
+    resource :password_reset, only: %i[new create edit update]
+  end
 end
