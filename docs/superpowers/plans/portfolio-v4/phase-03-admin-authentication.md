@@ -4,7 +4,7 @@
 
 **Goal:** Give the single portfolio owner password-plus-TOTP authentication, one-use recovery codes, expiring rotated database sessions, generic password reset, and a protected mobile-first `/admin` shell.
 
-**Architecture:** `AdminUser` owns the password digest, an Active Record-encrypted TOTP secret, recovery-code digests, and replay state. `AdminSession` stores only a digest of a random bearer token and moves from a ten-minute `pending_totp` record to a new twelve-hour `verified` record after TOTP or recovery succeeds; controllers share this through `Current` and `Admin::Authentication`. Rails 8.1's native secure-password reset token, controller rate limiting, cookies, CSRF protection, Action Mailer, and Active Record Encryption are used; reset tokens are minted while queued mail is rendered so no bearer token is serialized into Solid Queue, and `rotp` is the only new application dependency.
+**Architecture:** `AdminUser` owns credentials and the transactional provisioning/password-reset workflows. `AdminSession` is a database record whose ID is carried in Rails' signed cookie jar; a ten-minute `pending_totp` record is destroyed and replaced by a twelve-hour `verified` record after TOTP or recovery succeeds. Controllers stay HTTP-focused through `Current` and `Admin::Authentication`, while Rails 8.1 supplies secure-password reset tokens, `params.expect`, controller rate limiting, signed cookies, CSRF protection, Action Mailer, encrypted fixtures, and Active Record Encryption; reset tokens are minted while queued mail is rendered so no reset bearer is serialized into Solid Queue, and `rotp` is the only new application dependency.
 
 **Tech Stack:** Ruby 4.0.6, Rails 8.1.x, SQLite, Active Record Encryption, `bcrypt`, ROTP 6.3.x, Action Mailer, Active Job, Hotwire, Tailwind CSS, Minitest, Capybara
 
@@ -26,6 +26,8 @@
 - Production remains one application container on one small Ubuntu server; do not add Redis, a separate API, SPA, CMS, search service, CDN, or observability platform.
 - Primary SQLite data and every Active Storage asset receive encrypted off-site backups with 7 daily, 4 weekly, and 6 monthly restore points.
 - Use Rails defaults and the standard library before adding dependencies. The only planned application gems beyond generated Rails defaults are `commonmarker` and `rotp`.
+- Keep authentication controllers on CRUD actions and HTTP concerns. Credential provisioning, password reset, TOTP/recovery transitions, and session expiration belong to `AdminUser` or `AdminSession`; do not add service objects.
+- Use Rails' signed cookie jar for the database session ID, `params.expect` for required structured form input, and encrypted Rails fixtures for the shared test owner.
 - Use Minitest and Capybara. Every behavior task follows red-green-refactor and ends with a focused test run and commit.
 - In this agent environment, invoke Bundler with `mise exec -- bundle ...` and Rails with `mise exec -- ruby bin/rails ...` so `.ruby-version` resolves to Ruby 4.0.6; the deployment-facing command remains plain `bin/rails admin:create` inside the application image or an activated developer shell.
 
@@ -38,7 +40,7 @@
 - TOTP uses SHA-1, six digits, a 30-second interval, and permits one interval of clock drift in either direction. `last_totp_at` makes each accepted time step one-use.
 - Each credential rotation creates ten 80-bit recovery codes. Only keyed SHA-256 digests are persisted; matching and deletion happen under a row lock.
 - Password-stage sessions expire after 10 minutes. Fully verified sessions expire after 12 hours. Expiration is absolute rather than sliding.
-- The cookie name is `admin_session`, its path is `/admin`, and it is `HttpOnly`, `SameSite=Strict`, and `Secure` in production or on HTTPS requests.
+- The cookie name is `admin_session`, its signed value is the `AdminSession` ID, its path is `/admin`, and it is `HttpOnly`, `SameSite=Strict`, and `Secure` in production or on HTTPS requests. The database record and Rails signature are both required for authentication.
 - Password reset tokens use Rails 8.1's native `has_secure_password reset_token:` support, expire 30 minutes after the queued email is rendered, and become invalid when the password digest changes. A successful password update and revocation of every `AdminSession` happen in one transaction and do not disable TOTP.
 - Reset tokens are copied from email into a POSTed form field; they never appear in a request URL, browser history, referrer, Rails request line, or reverse-proxy access log.
 - Attempt limits are: five password attempts per IP per 15 minutes, five TOTP attempts per IP per 10 minutes, five recovery attempts per IP per 10 minutes, and three reset requests per IP per hour.
@@ -48,11 +50,13 @@
 ## Parent Interfaces Preserved
 
 - `Current.admin_user` returns the owner only for a live `verified` `AdminSession`; it returns `nil` during the password-only stage.
-- `Admin::BaseController#require_admin!` guards every dashboard and later CMS controller.
+- `Admin::BaseController#require_admin!` guards every dashboard and later CMS controller. Keep this established cross-phase bang method unchanged; new internal methods do not use unpaired bangs.
 - `AdminUser#verify_totp(code) -> Boolean` accepts a fresh TOTP step and rejects malformed, invalid, or replayed codes.
 - `AdminUser#consume_recovery_code(code) -> Boolean` atomically consumes one matching code.
-- `AdminSession` authenticates the `admin_session` cookie without storing its bearer secret in SQLite.
+- `AdminSession.active.find_by(id:)` resumes the signed `admin_session` cookie only while its database record is unexpired.
 - `ADMIN_EMAIL=... ADMIN_PASSWORD=... bin/rails admin:create` is the deployment interface. There is no registration route.
+
+The repository already uses database foreign keys for local SQLite associations, so `admin_sessions.admin_user_id` follows that project convention. The 37signals no-foreign-key choice solves import, export, and sharding constraints this single-owner application does not have.
 
 ## File Map
 
@@ -63,9 +67,9 @@
 | `config/initializers/filter_parameter_logging.rb`                                                    | Filter passwords, reset tokens, and the actual nested TOTP/recovery parameter scopes.       |
 | `config/initializers/content_security_policy.rb`                                                     | Same-origin CSP with per-request script nonces.                                             |
 | `db/migrate/*_create_admin_users.rb`                                                                 | Single-owner credentials, encrypted-secret storage, recovery digests, and replay timestamp. |
-| `db/migrate/*_create_admin_sessions.rb`                                                              | Pending/verified session token digests and absolute expiry.                                 |
-| `app/models/admin_user.rb`                                                                           | Password, TOTP, recovery-code rotation/consumption, and expiring password-reset token.      |
-| `app/models/admin_session.rb`                                                                        | Issue, authenticate, expire, and digest opaque cookie tokens.                               |
+| `db/migrate/*_create_admin_sessions.rb`                                                              | Pending/verified session records and absolute expiry.                                       |
+| `app/models/admin_user.rb`                                                                           | Password, TOTP, recovery codes, provisioning, atomic reset, and expiring reset token.       |
+| `app/models/admin_session.rb`                                                                        | Pending/verified database sessions with absolute expiration.                                |
 | `app/models/current.rb`                                                                              | Request-local verified owner/session interface.                                             |
 | `app/controllers/concerns/admin/authentication.rb`                                                   | Resume, rotate, set, and clear the admin cookie/session.                                    |
 | `app/controllers/admin/authentication_controller.rb`                                                 | Shared unprotected admin-auth base and authentication layout.                               |
@@ -81,7 +85,8 @@
 | `app/views/admin/**`                                                                                 | Password, second-factor, recovery, reset, and dashboard HTML forms/pages.                   |
 | `config/routes.rb`                                                                                   | Singular auth/reset resources and protected `/admin` root; no registration resource.        |
 | `lib/tasks/admin.rake`                                                                               | Non-interactive owner creation/credential reset.                                            |
-| `test/support/admin_authentication_test_helper.rb`                                                   | One concrete owner factory used by model/request/system tests.                              |
+| `test/fixtures/admin_users.yml`                                                                      | Rails-encrypted owner fixture shared by authentication tests.                               |
+| `test/support/admin_authentication_test_helper.rb`                                                   | Request/system sign-in helpers built on the owner fixture.                                  |
 | `test/models/admin_user_test.rb`, `test/models/admin_session_test.rb`, `test/models/current_test.rb` | Credential and session invariants.                                                          |
 | `test/requests/admin/authentication_test.rb`, `test/requests/admin/password_resets_test.rb`          | Authorization, rotation, throttling, generic responses, reset expiry, and cookie flags.     |
 | `test/mailers/admin_password_mailer_test.rb`                                                         | Reset mail content and URL.                                                                 |
@@ -100,7 +105,9 @@
 - Modify: `config/initializers/filter_parameter_logging.rb`
 - Create: `db/migrate/*_create_admin_users.rb`
 - Create: `app/models/admin_user.rb`
+- Create: `test/fixtures/admin_users.yml`
 - Create: `test/support/admin_authentication_test_helper.rb`
+- Modify: `config/environments/test.rb`
 - Modify: `test/test_helper.rb`
 - Modify: `test/application_system_test_case.rb`
 - Create: `test/models/admin_user_test.rb`
@@ -109,7 +116,7 @@
 **Interfaces:**
 
 - Consumes: Rails' `has_secure_password`, Active Record Encryption, `Rails.application.key_generator`, and the Phase 1 test harness.
-- Produces: `AdminUser#verify_totp(code) -> Boolean`, `AdminUser#consume_recovery_code(code) -> Boolean`, `AdminUser#replace_recovery_codes! -> Array<String>`, `AdminUser#totp_provisioning_uri -> String`, `AdminUser#password_reset_token -> String`, and `AdminUser.find_by_password_reset_token(token) -> AdminUser?`.
+- Produces: `AdminUser#verify_totp(code) -> Boolean`, `AdminUser#consume_recovery_code(code) -> Boolean`, `AdminUser#replace_recovery_codes -> Array<String>`, `AdminUser#totp_provisioning_uri -> String`, `AdminUser#password_reset_token -> String`, and `AdminUser.find_by_password_reset_token(token) -> AdminUser?`.
 
 - [ ] **Step 1: Add dependencies and install them**
 
@@ -128,7 +135,7 @@ mise exec -- bundle install
 
 Expected: `bundle check` prints `The Gemfile's dependencies are satisfied`; `Gemfile.lock` contains `bcrypt` and `rotp`.
 
-- [ ] **Step 2: Generate and write the migration and test helper**
+- [ ] **Step 2: Generate the migration and add the encrypted owner fixture/helpers**
 
 Generate a migration version newer than the existing Phase 2 migrations:
 
@@ -158,6 +165,25 @@ class CreateAdminUsers < ActiveRecord::Migration[8.1]
 end
 ```
 
+Enable Rails' native encrypted-fixture support inside the `Rails.application.configure` block in `config/environments/test.rb`:
+
+```ruby
+config.active_record.encryption.encrypt_fixtures = true
+```
+
+Create `test/fixtures/admin_users.yml`:
+
+```yaml
+owner:
+  email: owner@example.com
+  password_digest: <%= BCrypt::Password.create("correct horse battery staple", cost: BCrypt::Engine::MIN_COST) %>
+  totp_secret: JBSWY3DPEHPK3PXP
+  recovery_code_digests: []
+  singleton_guard: 1
+```
+
+Rails encrypts `totp_secret` while loading this fixture; plaintext is never inserted into the test database.
+
 Create `test/support/admin_authentication_test_helper.rb`:
 
 ```ruby
@@ -165,17 +191,8 @@ module AdminAuthenticationTestHelper
   TEST_PASSWORD = "correct horse battery staple"
   TEST_TOTP_SECRET = "JBSWY3DPEHPK3PXP"
 
-  def create_admin_user(email: "owner@example.com", password: TEST_PASSWORD)
-    AdminUser.create!(
-      email: email,
-      password: password,
-      password_confirmation: password,
-      totp_secret: TEST_TOTP_SECRET
-    )
-  end
-
   def sign_in_as_admin
-    user = AdminUser.first || create_admin_user
+    user = admin_users(:owner)
     post admin_session_path, params: {
       admin_login: { email: user.email, password: TEST_PASSWORD }
     }
@@ -190,7 +207,7 @@ module AdminAuthenticationTestHelper
   end
 
   def sign_in_owner
-    user = AdminUser.first || create_admin_user
+    user = admin_users(:owner)
     visit new_admin_session_path
     fill_in "Email", with: user.email
     fill_in "Password", with: TEST_PASSWORD
@@ -237,7 +254,8 @@ class AdminUserTest < ActiveSupport::TestCase
   include ActiveSupport::Testing::TimeHelpers
 
   test "normalizes email and authenticates a fourteen character password" do
-    user = create_admin_user(email: "  OWNER@Example.COM ")
+    user = admin_users(:owner)
+    user.update!(email: "  OWNER@Example.COM ")
 
     assert_equal "owner@example.com", user.email
     assert_equal user, AdminUser.authenticate_by(email: "owner@example.com", password: TEST_PASSWORD)
@@ -245,7 +263,6 @@ class AdminUserTest < ActiveSupport::TestCase
   end
 
   test "rejects short passwords and a second owner" do
-    create_admin_user
     short = AdminUser.new(email: "other@example.com", password: "too short", totp_secret: TEST_TOTP_SECRET)
 
     assert_not short.valid?
@@ -256,7 +273,7 @@ class AdminUserTest < ActiveSupport::TestCase
   end
 
   test "stores the TOTP secret as ciphertext" do
-    user = create_admin_user
+    user = admin_users(:owner)
     stored = AdminUser.connection.select_value(
       AdminUser.sanitize_sql_array(["SELECT totp_secret FROM admin_users WHERE id = ?", user.id])
     )
@@ -268,7 +285,7 @@ class AdminUserTest < ActiveSupport::TestCase
 
   test "accepts a current TOTP once and rejects replay" do
     travel_to Time.zone.parse("2026-09-02 12:00:00 UTC") do
-      user = create_admin_user
+      user = admin_users(:owner)
       code = ROTP::TOTP.new(TEST_TOTP_SECRET).at(Time.current)
 
       assert_equal true, user.verify_totp(code)
@@ -278,7 +295,7 @@ class AdminUserTest < ActiveSupport::TestCase
 
   test "accepts one interval of TOTP clock drift and rejects malformed input" do
     travel_to Time.zone.parse("2026-09-02 12:00:00 UTC") do
-      user = create_admin_user
+      user = admin_users(:owner)
       totp = ROTP::TOTP.new(TEST_TOTP_SECRET)
       previous_code = totp.at(30.seconds.ago)
       too_old_code = totp.at(60.seconds.ago)
@@ -291,8 +308,8 @@ class AdminUserTest < ActiveSupport::TestCase
   end
 
   test "recovery codes are high entropy digests and each code works once" do
-    user = create_admin_user
-    codes = user.replace_recovery_codes!
+    user = admin_users(:owner)
+    codes = user.replace_recovery_codes
     stored = user.reload.recovery_code_digests.to_json
 
     assert_equal 10, codes.length
@@ -306,7 +323,7 @@ class AdminUserTest < ActiveSupport::TestCase
   end
 
   test "password reset token expires and changing the password invalidates it" do
-    user = create_admin_user
+    user = admin_users(:owner)
     token = user.password_reset_token
 
     assert_equal user, AdminUser.find_by_password_reset_token(token)
@@ -337,19 +354,25 @@ Expected: migration succeeds, then tests fail because `AdminUser` and its creden
 Create `config/initializers/active_record_encryption.rb`:
 
 ```ruby
-Rails.application.config.active_record.encryption.tap do |encryption|
-  if Rails.env.production?
-    encryption.primary_key = ENV.fetch("ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY")
-    encryption.deterministic_key = ENV.fetch("ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY")
-    encryption.key_derivation_salt = ENV.fetch("ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT")
-  else
-    generator = ActiveSupport::KeyGenerator.new(Rails.application.secret_key_base)
-    encryption.primary_key = generator.generate_key("active-record-encryption-primary", 32)
-    encryption.deterministic_key = generator.generate_key("active-record-encryption-deterministic", 32)
-    encryption.key_derivation_salt = generator.generate_key("active-record-encryption-salt", 32)
-  end
+keys = if Rails.env.production?
+  {
+    primary_key: ENV.fetch("ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"),
+    deterministic_key: ENV.fetch("ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"),
+    key_derivation_salt: ENV.fetch("ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT")
+  }
+else
+  generator = ActiveSupport::KeyGenerator.new(Rails.application.secret_key_base)
+  {
+    primary_key: generator.generate_key("active-record-encryption-primary", 32),
+    deterministic_key: generator.generate_key("active-record-encryption-deterministic", 32),
+    key_derivation_salt: generator.generate_key("active-record-encryption-salt", 32)
+  }
 end
+
+ActiveRecord::Encryption.configure(**keys)
 ```
+
+Call `ActiveRecord::Encryption.configure` directly here. Assigning only to `Rails.application.config.active_record.encryption` from an application initializer is too late because the Active Record railtie has already copied that configuration into the encryption context.
 
 The generated filter list already covers password keys through `:passw`, reset tokens through `:token`, and TOTP keys through `:otp`. Add only the missing recovery-code scope:
 
@@ -382,6 +405,18 @@ class AdminUser < ApplicationRecord
   validates :totp_secret, presence: true
   validates :singleton_guard, inclusion: { in: [1] }
 
+  class << self
+    def generate_recovery_code
+      SecureRandom.hex(RECOVERY_CODE_BYTES).upcase.scan(/.{4}/).join("-")
+    end
+
+    def digest_recovery_code(code)
+      normalized = code.to_s.upcase.delete(" \t-")
+      key = Rails.application.key_generator.generate_key("admin-recovery-codes", 32)
+      OpenSSL::HMAC.hexdigest("SHA256", key, normalized)
+    end
+  end
+
   def verify_totp(code)
     normalized = code.to_s.delete(" \t-")
     return false unless normalized.match?(/\A\d{6}\z/)
@@ -401,7 +436,7 @@ class AdminUser < ApplicationRecord
     end
   end
 
-  def replace_recovery_codes!
+  def replace_recovery_codes
     codes = Array.new(RECOVERY_CODE_COUNT) { self.class.generate_recovery_code }
     update!(recovery_code_digests: codes.map { |code| self.class.digest_recovery_code(code) })
     codes
@@ -428,18 +463,6 @@ class AdminUser < ApplicationRecord
     totp.provisioning_uri(email)
   end
 
-  class << self
-    def generate_recovery_code
-      SecureRandom.hex(RECOVERY_CODE_BYTES).upcase.scan(/.{4}/).join("-")
-    end
-
-    def digest_recovery_code(code)
-      normalized = code.to_s.upcase.delete(" \t-")
-      key = Rails.application.key_generator.generate_key("admin-recovery-codes", 32)
-      OpenSSL::HMAC.hexdigest("SHA256", key, normalized)
-    end
-  end
-
   private
 
   def totp
@@ -462,13 +485,13 @@ Expected: seven tests pass; the runner exits zero without output.
 - [ ] **Step 8: Commit the credential model**
 
 ```bash
-git add Gemfile Gemfile.lock config/initializers/active_record_encryption.rb config/initializers/filter_parameter_logging.rb db/migrate/*_create_admin_users.rb db/schema.rb app/models/admin_user.rb test/test_helper.rb test/application_system_test_case.rb test/support/admin_authentication_test_helper.rb test/models/admin_user_test.rb
+git add Gemfile Gemfile.lock config/environments/test.rb config/initializers/active_record_encryption.rb config/initializers/filter_parameter_logging.rb db/migrate/*_create_admin_users.rb db/schema.rb app/models/admin_user.rb test/fixtures/admin_users.yml test/test_helper.rb test/application_system_test_case.rb test/support/admin_authentication_test_helper.rb test/models/admin_user_test.rb
 git commit -m "feat: add encrypted owner credentials"
 ```
 
 ---
 
-### Task 2: Add digested, expiring, rotatable admin sessions
+### Task 2: Add expiring database-backed admin sessions
 
 **Files:**
 
@@ -481,8 +504,8 @@ git commit -m "feat: add encrypted owner credentials"
 
 **Interfaces:**
 
-- Consumes: persisted `AdminUser` and `ActiveSupport::SecurityUtils`.
-- Produces: `AdminSession.issue_for(admin_user, state:) -> [AdminSession, String]`, `AdminSession.authenticate(cookie_value) -> AdminSession?`, `AdminSession::COOKIE_NAME`, and verified-only `Current.admin_user`.
+- Consumes: persisted `AdminUser` and Rails' signed cookie/session primitives.
+- Produces: `AdminSession.active`, `AdminSession::COOKIE_NAME`, association-based pending/verified session creation, and verified-only `Current.admin_user`.
 
 - [ ] **Step 1: Generate and write the session migration**
 
@@ -499,14 +522,11 @@ class CreateAdminSessions < ActiveRecord::Migration[8.1]
   def change
     create_table :admin_sessions do |t|
       t.references :admin_user, null: false, foreign_key: true
-      t.string :token_id, null: false
-      t.string :token_digest, null: false
       t.string :state, null: false
       t.datetime :expires_at, null: false
       t.timestamps
     end
 
-    add_index :admin_sessions, :token_id, unique: true
     add_index :admin_sessions, :expires_at
     add_check_constraint :admin_sessions,
       "state IN ('pending_totp', 'verified')",
@@ -525,41 +545,27 @@ require "test_helper"
 class AdminSessionTest < ActiveSupport::TestCase
   include ActiveSupport::Testing::TimeHelpers
 
-  setup { @user = create_admin_user }
+  setup { @user = admin_users(:owner) }
 
-  test "issues a pending token without persisting its bearer secret" do
-    record, cookie = AdminSession.issue_for(@user, state: :pending_totp)
-    token_id, bearer = cookie.split(".", 2)
+  test "pending sessions expire after ten minutes" do
+    record = @user.admin_sessions.create!(state: :pending_totp)
 
-    assert_equal record.token_id, token_id
     assert_equal 10.minutes.from_now.to_i, record.expires_at.to_i
-    assert_not_equal bearer, record.token_digest
-    assert_not_includes record.attributes_before_type_cast.to_json, bearer
-    assert_equal record, AdminSession.authenticate(cookie)
+    assert_includes AdminSession.active, record
   end
 
-  test "issues a verified token for twelve hours" do
-    record, cookie = AdminSession.issue_for(@user, state: :verified)
+  test "verified sessions expire after twelve hours" do
+    record = @user.admin_sessions.create!(state: :verified)
 
     assert_predicate record, :verified?
     assert_equal 12.hours.from_now.to_i, record.expires_at.to_i
-    assert_equal record, AdminSession.authenticate(cookie)
   end
 
-  test "rejects malformed and tampered cookies" do
-    _record, cookie = AdminSession.issue_for(@user, state: :verified)
-
-    assert_nil AdminSession.authenticate(nil)
-    assert_nil AdminSession.authenticate("not-a-token")
-    assert_nil AdminSession.authenticate("#{cookie}changed")
-  end
-
-  test "destroys and rejects expired sessions" do
-    record, cookie = AdminSession.issue_for(@user, state: :pending_totp)
+  test "active excludes expired sessions" do
+    record = @user.admin_sessions.create!(state: :pending_totp)
 
     travel 11.minutes
-    assert_nil AdminSession.authenticate(cookie)
-    assert_not AdminSession.exists?(record.id)
+    assert_not_includes AdminSession.active, record
   end
 end
 ```
@@ -573,9 +579,9 @@ class CurrentTest < ActiveSupport::TestCase
   teardown { Current.reset }
 
   test "exposes admin_user only after second factor verification" do
-    user = create_admin_user
-    pending, = AdminSession.issue_for(user, state: :pending_totp)
-    verified, = AdminSession.issue_for(user, state: :verified)
+    user = admin_users(:owner)
+    pending = user.admin_sessions.create!(state: :pending_totp)
+    verified = user.admin_sessions.create!(state: :verified)
 
     Current.admin_session = pending
     assert_nil Current.admin_user
@@ -597,7 +603,7 @@ mise exec -- ruby bin/rails test test/models/admin_session_test.rb test/models/c
 
 Expected: tests fail because `AdminSession` and `Current.admin_session` do not exist.
 
-- [ ] **Step 4: Implement session issuance and authentication**
+- [ ] **Step 4: Implement session state and absolute expiration**
 
 Create `app/models/admin_session.rb`:
 
@@ -606,55 +612,21 @@ class AdminSession < ApplicationRecord
   COOKIE_NAME = :admin_session
   PENDING_LIFETIME = 10.minutes
   VERIFIED_LIFETIME = 12.hours
-  BEARER_BYTES = 32
 
   belongs_to :admin_user
 
   enum :state, { pending_totp: "pending_totp", verified: "verified" }, validate: true
 
-  validates :token_id, presence: true, uniqueness: true
-  validates :token_digest, presence: true
   validates :expires_at, presence: true
 
-  scope :expired, -> { where(expires_at: ..Time.current) }
+  scope :active, -> { where("expires_at > ?", Time.current) }
 
-  class << self
-    def issue_for(admin_user, state:)
-      bearer = SecureRandom.urlsafe_base64(BEARER_BYTES)
-      lifetime = state.to_s == "verified" ? VERIFIED_LIFETIME : PENDING_LIFETIME
-      record = create!(
-        admin_user: admin_user,
-        token_id: SecureRandom.uuid,
-        token_digest: digest(bearer),
-        state: state,
-        expires_at: lifetime.from_now
-      )
-      [record, "#{record.token_id}.#{bearer}"]
-    end
+  before_validation :set_expiration, on: :create
 
-    def authenticate(cookie_value)
-      token_id, separator, bearer = cookie_value.to_s.partition(".")
-      return nil if separator.empty? || token_id.empty? || bearer.empty?
+  private
 
-      record = includes(:admin_user).find_by(token_id: token_id)
-      return nil unless record
-
-      if record.expires_at <= Time.current
-        record.destroy!
-        return nil
-      end
-
-      candidate = digest(bearer)
-      return nil unless ActiveSupport::SecurityUtils.secure_compare(candidate, record.token_digest)
-
-      record
-    end
-
-    private
-
-    def digest(bearer)
-      Digest::SHA256.hexdigest(bearer)
-    end
+  def set_expiration
+    self.expires_at ||= (verified? ? VERIFIED_LIFETIME : PENDING_LIFETIME).from_now
   end
 end
 ```
@@ -671,16 +643,16 @@ class Current < ActiveSupport::CurrentAttributes
 end
 ```
 
-- [ ] **Step 5: Run tests and verify token secrecy in SQLite**
+- [ ] **Step 5: Run tests and inspect the session schema**
 
 Run:
 
 ```bash
 mise exec -- ruby bin/rails test test/models/admin_session_test.rb test/models/current_test.rb
-mise exec -- ruby bin/rails runner 'u = AdminUser.first || abort("create the Task 1 test owner first"); s, token = AdminSession.issue_for(u, state: :verified); abort("bearer persisted") if s.attributes_before_type_cast.to_json.include?(token.split(".", 2).last); s.destroy!'
+mise exec -- ruby bin/rails runner 'columns = AdminSession.column_names; abort("custom bearer columns remain") if columns.intersect?(%w[token_id token_digest])'
 ```
 
-Expected: five tests pass; the runner exits zero without `bearer persisted`.
+Expected: four tests pass; the runner exits zero without output.
 
 - [ ] **Step 6: Commit session primitives**
 
@@ -714,8 +686,8 @@ git commit -m "feat: add expiring admin sessions"
 
 **Interfaces:**
 
-- Consumes: `AdminUser.authenticate_by`, TOTP/recovery methods, `AdminSession.issue_for/authenticate`, and the Phase 1 application layout/theme assets.
-- Produces: `Current.admin_user`, cookie-token authentication, `Admin::BaseController#require_admin!`, protected `admin_root_path`, and reusable admin layouts for Phase 4.
+- Consumes: `AdminUser.authenticate_by`, TOTP/recovery methods, `AdminSession.active`, Rails' signed cookie jar, and the Phase 1 application layout/theme assets.
+- Produces: `Current.admin_user`, signed-cookie database-session authentication, `Admin::BaseController#require_admin!`, protected `admin_root_path`, and reusable admin layouts for Phase 4.
 
 - [ ] **Step 1: Add only the Phase 3 admin routes**
 
@@ -751,8 +723,8 @@ class Admin::AuthenticationTest < ActionDispatch::IntegrationTest
 
   setup do
     Rails.cache.clear
-    @user = create_admin_user
-    @recovery_codes = @user.replace_recovery_codes!
+    @user = admin_users(:owner)
+    @recovery_codes = @user.replace_recovery_codes
   end
 
   teardown do
@@ -775,7 +747,7 @@ class Admin::AuthenticationTest < ActionDispatch::IntegrationTest
   test "shared request helper completes both authentication stages" do
     sign_in_as_admin
 
-    assert_predicate AdminSession.authenticate(cookies[AdminSession::COOKIE_NAME]), :verified?
+    assert_predicate AdminSession.find(signed_admin_session_id), :verified?
     get admin_root_path
     assert_response :success
   end
@@ -792,10 +764,10 @@ class Admin::AuthenticationTest < ActionDispatch::IntegrationTest
     assert_equal "Email, password, or verification code is invalid.", flash[:alert]
   end
 
-  test "fresh TOTP rotates pending token into verified token" do
+  test "fresh TOTP rotates the pending session into a verified session" do
     post admin_session_path, params: { admin_login: { email: @user.email, password: TEST_PASSWORD } }
     pending_cookie = cookies[AdminSession::COOKIE_NAME]
-    pending = AdminSession.authenticate(pending_cookie)
+    pending = AdminSession.find(signed_admin_session_id)
     assert_predicate pending, :pending_totp?
 
     code = ROTP::TOTP.new(TEST_TOTP_SECRET).at(Time.current)
@@ -803,9 +775,10 @@ class Admin::AuthenticationTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to admin_root_path
     verified_cookie = cookies[AdminSession::COOKIE_NAME]
+    verified = AdminSession.find(signed_admin_session_id)
     assert_not_equal pending_cookie, verified_cookie
-    assert_nil AdminSession.authenticate(pending_cookie)
-    assert_predicate AdminSession.authenticate(verified_cookie), :verified?
+    assert_not AdminSession.exists?(pending.id)
+    assert_predicate verified, :verified?
 
     get admin_root_path
     assert_response :success
@@ -822,7 +795,7 @@ class Admin::AuthenticationTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_equal "Email, password, or verification code is invalid.", flash[:alert]
-    assert_predicate AdminSession.authenticate(cookies[AdminSession::COOKIE_NAME]), :pending_totp?
+    assert_predicate AdminSession.find(signed_admin_session_id), :pending_totp?
   end
 
   test "recovery code is one-use and rotates into a verified session" do
@@ -830,7 +803,7 @@ class Admin::AuthenticationTest < ActionDispatch::IntegrationTest
     post admin_recovery_challenge_path, params: { recovery: { code: @recovery_codes.first } }
 
     assert_redirected_to admin_root_path
-    assert_predicate AdminSession.authenticate(cookies[AdminSession::COOKIE_NAME]), :verified?
+    assert_predicate AdminSession.find(signed_admin_session_id), :verified?
     assert_equal 9, @user.reload.recovery_code_digests.length
 
     delete admin_session_path
@@ -841,14 +814,32 @@ class Admin::AuthenticationTest < ActionDispatch::IntegrationTest
 
   test "logout destroys the database session and cookie" do
     sign_in_with_totp
-    cookie = cookies[AdminSession::COOKIE_NAME]
+    session_id = signed_admin_session_id
 
     delete admin_session_path
 
+    assert_response :see_other
     assert_redirected_to new_admin_session_path
-    assert_nil AdminSession.authenticate(cookie)
+    assert_not AdminSession.exists?(session_id)
     get admin_root_path
     assert_redirected_to new_admin_session_path
+  end
+
+  test "tampered signed cookie fails closed" do
+    sign_in_with_totp
+    cookies[AdminSession::COOKIE_NAME] = "#{cookies[AdminSession::COOKIE_NAME]}tampered"
+
+    get admin_root_path
+
+    assert_redirected_to new_admin_session_path
+  end
+
+  test "malformed scoped parameters return bad request without creating a session" do
+    assert_no_difference -> { AdminSession.count } do
+      post admin_session_path, params: { admin_login: "not-an-object" }
+    end
+
+    assert_response :bad_request
   end
 
   test "expired pending and verified sessions fail closed" do
@@ -918,6 +909,12 @@ class Admin::AuthenticationTest < ActionDispatch::IntegrationTest
 
   private
 
+  def signed_admin_session_id
+    ActionDispatch::TestRequest.create.cookie_jar.tap do |cookie_jar|
+      cookie_jar[AdminSession::COOKIE_NAME] = cookies[AdminSession::COOKIE_NAME]
+    end.signed[AdminSession::COOKIE_NAME]
+  end
+
   def sign_in_with_password
     post admin_session_path, params: { admin_login: { email: @user.email, password: TEST_PASSWORD } }
   end
@@ -957,7 +954,8 @@ module Admin::Authentication
 
   def resume_admin_session
     raw_cookie = cookies[AdminSession::COOKIE_NAME]
-    Current.admin_session = AdminSession.authenticate(raw_cookie)
+    session_id = cookies.signed[AdminSession::COOKIE_NAME]
+    Current.admin_session = AdminSession.active.includes(:admin_user).find_by(id: session_id)
     delete_admin_cookie if raw_cookie.present? && Current.admin_session.nil?
   end
 
@@ -965,15 +963,15 @@ module Admin::Authentication
     Current.admin_user
   end
 
-  def rotate_admin_session!(admin_user, state:)
+  def start_new_admin_session_for(admin_user, state:)
     Current.admin_session&.destroy!
     Current.admin_session = nil
     delete_admin_cookie
     reset_session
 
-    record, token = AdminSession.issue_for(admin_user, state: state)
-    cookies[AdminSession::COOKIE_NAME] = {
-      value: token,
+    record = admin_user.admin_sessions.create!(state: state)
+    cookies.signed[AdminSession::COOKIE_NAME] = {
+      value: record.id,
       expires: record.expires_at,
       httponly: true,
       secure: Rails.env.production? || request.ssl?,
@@ -983,7 +981,7 @@ module Admin::Authentication
     Current.admin_session = record
   end
 
-  def clear_admin_session!
+  def terminate_admin_session
     Current.admin_session&.destroy!
     Current.admin_session = nil
     delete_admin_cookie
@@ -1011,7 +1009,7 @@ class Admin::AuthenticationController < ApplicationController
 
   private
 
-  def require_pending_session!
+  def require_pending_session
     return if Current.admin_session&.pending_totp?
 
     redirect_to new_admin_session_path, alert: "Sign in to continue."
@@ -1058,14 +1056,10 @@ class Admin::SessionsController < Admin::AuthenticationController
   end
 
   def create
-    credentials = params.require(:admin_login).permit(:email, :password)
-    user = AdminUser.authenticate_by(
-      email: credentials[:email].to_s.strip.downcase,
-      password: credentials[:password].to_s
-    )
+    user = AdminUser.authenticate_by(params.expect(admin_login: %i[email password]))
 
     if user
-      rotate_admin_session!(user, state: :pending_totp)
+      start_new_admin_session_for(user, state: :pending_totp)
       redirect_to admin_totp_challenge_path
     else
       flash.now[:alert] = "Email, password, or verification code is invalid."
@@ -1074,8 +1068,8 @@ class Admin::SessionsController < Admin::AuthenticationController
   end
 
   def destroy
-    clear_admin_session!
-    redirect_to new_admin_session_path, notice: "Signed out."
+    terminate_admin_session
+    redirect_to new_admin_session_path, notice: "Signed out.", status: :see_other
   end
 end
 ```
@@ -1084,7 +1078,7 @@ Create `app/controllers/admin/totp_challenges_controller.rb`:
 
 ```ruby
 class Admin::TotpChallengesController < Admin::AuthenticationController
-  before_action :require_pending_session!
+  before_action :require_pending_session
   rate_limit to: 5, within: 10.minutes, only: :create,
     by: -> { request.remote_ip },
     with: -> {
@@ -1098,8 +1092,8 @@ class Admin::TotpChallengesController < Admin::AuthenticationController
   def create
     user = Current.admin_session.admin_user
 
-    if user.verify_totp(params.dig(:totp, :code))
-      rotate_admin_session!(user, state: :verified)
+    if user.verify_totp(params.expect(totp: [:code])[:code])
+      start_new_admin_session_for(user, state: :verified)
       redirect_to admin_root_path, notice: "Signed in."
     else
       flash.now[:alert] = "Email, password, or verification code is invalid."
@@ -1113,7 +1107,7 @@ Create `app/controllers/admin/recovery_challenges_controller.rb`:
 
 ```ruby
 class Admin::RecoveryChallengesController < Admin::AuthenticationController
-  before_action :require_pending_session!
+  before_action :require_pending_session
   rate_limit to: 5, within: 10.minutes, only: :create,
     by: -> { request.remote_ip },
     with: -> {
@@ -1127,8 +1121,8 @@ class Admin::RecoveryChallengesController < Admin::AuthenticationController
   def create
     user = Current.admin_session.admin_user
 
-    if user.consume_recovery_code(params.dig(:recovery, :code))
-      rotate_admin_session!(user, state: :verified)
+    if user.consume_recovery_code(params.expect(recovery: [:code])[:code])
+      start_new_admin_session_for(user, state: :verified)
       redirect_to admin_root_path, notice: "Signed in. Generate replacement recovery codes after access is restored."
     else
       flash.now[:alert] = "Email, password, or verification code is invalid."
@@ -1317,6 +1311,7 @@ git commit -m "feat: require password and second factor for admin"
 
 **Files:**
 
+- Modify: `app/models/admin_user.rb`
 - Create: `app/controllers/admin/password_resets_controller.rb`
 - Create: `app/mailers/admin_password_mailer.rb`
 - Create: `app/views/admin/password_resets/new.html.erb`
@@ -1332,7 +1327,7 @@ git commit -m "feat: require password and second factor for admin"
 **Interfaces:**
 
 - Consumes: singular password-reset routes from Task 3, `AdminUser#password_reset_token`, `AdminUser.find_by_password_reset_token(token)`, Action Mailer, and Active Job.
-- Produces: generic reset request behavior, `AdminPasswordMailer#reset(admin_user)`, a token-protected transactional password update, and all-session revocation after reset.
+- Produces: generic reset request behavior, `AdminUser#reset_password(attributes) -> Boolean`, `AdminPasswordMailer#reset(admin_user)`, a token-protected transactional password update, and all-session revocation after reset.
 
 - [ ] **Step 1: Configure absolute mail URLs**
 
@@ -1373,7 +1368,7 @@ class Admin::PasswordResetsTest < ActionDispatch::IntegrationTest
   setup do
     Rails.cache.clear
     clear_enqueued_jobs
-    @user = create_admin_user
+    @user = admin_users(:owner)
   end
 
   teardown do
@@ -1410,7 +1405,7 @@ class Admin::PasswordResetsTest < ActionDispatch::IntegrationTest
   end
 
   test "valid reset changes password revokes sessions and invalidates token" do
-    session_record, = AdminSession.issue_for(@user, state: :verified)
+    session_record = @user.admin_sessions.create!(state: :verified)
     token = @user.password_reset_token
 
     patch admin_password_reset_path, params: {
@@ -1478,7 +1473,7 @@ require "test_helper"
 
 class AdminPasswordMailerTest < ActionMailer::TestCase
   test "reset addresses only the owner and mints a usable expiring token while rendering" do
-    user = create_admin_user
+    user = admin_users(:owner)
     mail = AdminPasswordMailer.reset(user)
     text_body = mail.text_part.body.decoded
     token = text_body.match(/Enter this one-time reset code:\s*\n([^\s]+)/).captures.first
@@ -1508,7 +1503,20 @@ mise exec -- ruby bin/rails test test/requests/admin/password_resets_test.rb tes
 
 Expected: controller/mailer constant errors.
 
-- [ ] **Step 4: Implement generic reset request and token update**
+- [ ] **Step 4: Implement the transactional password reset and its HTTP flow**
+
+Add this public method to `AdminUser` immediately before `#verify_totp`:
+
+```ruby
+def reset_password(attributes)
+  transaction do
+    next false unless update(attributes)
+
+    admin_sessions.delete_all
+    true
+  end
+end
+```
 
 Create `app/controllers/admin/password_resets_controller.rb`:
 
@@ -1523,7 +1531,7 @@ class Admin::PasswordResetsController < Admin::AuthenticationController
   end
 
   def create
-    email = params.dig(:password_reset, :email).to_s.strip.downcase
+    email = params.expect(password_reset: [:email])[:email]
     if (user = AdminUser.find_by(email: email))
       AdminPasswordMailer.reset(user).deliver_later
     end
@@ -1539,8 +1547,7 @@ class Admin::PasswordResetsController < Admin::AuthenticationController
     @token = params[:token].to_s
     return redirect_for_invalid_token unless (@admin_user = reset_user(@token))
 
-    password_params = params.require(:admin_password_reset).permit(:password, :password_confirmation)
-    if reset_password(password_params)
+    if @admin_user.reset_password(password_params)
       redirect_to new_admin_session_path, notice: "Password reset. Sign in with your new password and verification code."
     else
       render :edit, status: :unprocessable_entity
@@ -1553,13 +1560,8 @@ class Admin::PasswordResetsController < Admin::AuthenticationController
     AdminUser.find_by_password_reset_token(token)
   end
 
-  def reset_password(password_params)
-    @admin_user.transaction do
-      next false unless @admin_user.update(password_params)
-
-      @admin_user.admin_sessions.delete_all
-      true
-    end
+  def password_params
+    params.expect(admin_password_reset: %i[password password_confirmation])
   end
 
   def redirect_for_invalid_token
@@ -1567,6 +1569,8 @@ class Admin::PasswordResetsController < Admin::AuthenticationController
   end
 end
 ```
+
+The reset token intentionally uses `params[:token]`: a missing token follows the same safe invalid-token redirect as an altered or expired token, while every required structured form payload uses `params.expect`.
 
 - [ ] **Step 5: Implement reset email and forms**
 
@@ -1679,7 +1683,7 @@ Expected: all reset, mailer, authentication, rotation, and throttling tests pass
 - [ ] **Step 7: Commit password reset**
 
 ```bash
-git add app/controllers/admin/password_resets_controller.rb app/mailers/admin_password_mailer.rb app/views/admin/password_resets/new.html.erb app/views/admin/password_resets/edit.html.erb app/views/admin_password_mailer/reset.html.erb app/views/admin_password_mailer/reset.text.erb config/environments/development.rb config/environments/test.rb config/environments/production.rb test/requests/admin/password_resets_test.rb test/mailers/admin_password_mailer_test.rb
+git add app/models/admin_user.rb app/controllers/admin/password_resets_controller.rb app/mailers/admin_password_mailer.rb app/views/admin/password_resets/new.html.erb app/views/admin/password_resets/edit.html.erb app/views/admin_password_mailer/reset.html.erb app/views/admin_password_mailer/reset.text.erb config/environments/development.rb config/environments/test.rb config/environments/production.rb test/requests/admin/password_resets_test.rb test/mailers/admin_password_mailer_test.rb
 git commit -m "feat: add generic expiring admin password reset"
 ```
 
@@ -1689,13 +1693,14 @@ git commit -m "feat: add generic expiring admin password reset"
 
 **Files:**
 
+- Modify: `app/models/admin_user.rb`
 - Create: `lib/tasks/admin.rake`
 - Create: `test/tasks/admin_create_test.rb`
 
 **Interfaces:**
 
-- Consumes: `AdminUser`, ROTP, and environment variables.
-- Produces: `ADMIN_EMAIL=... ADMIN_PASSWORD=... bin/rails admin:create`, idempotent single-owner creation/reset, enrollment URI, ten plaintext recovery codes, and session revocation.
+- Consumes: the `AdminUser` credential/session associations and environment variables.
+- Produces: `AdminUser.provision(email:, password:) -> [AdminUser, Array<String>]`, `ADMIN_EMAIL=... ADMIN_PASSWORD=... bin/rails admin:create`, idempotent single-owner creation/reset, enrollment URI, ten plaintext recovery codes, and session revocation.
 
 - [ ] **Step 1: Write failing task tests**
 
@@ -1761,8 +1766,13 @@ class AdminCreateTest < ActiveSupport::TestCase
   end
 
   test "rerun resets credentials without adding an owner and revokes sessions" do
-    existing = create_admin_user
-    session_record, = AdminSession.issue_for(existing, state: :verified)
+    existing = AdminUser.create!(
+      email: "owner@example.com",
+      password: TEST_PASSWORD,
+      password_confirmation: TEST_PASSWORD,
+      totp_secret: TEST_TOTP_SECRET
+    )
+    session_record = existing.admin_sessions.create!(state: :verified)
     old_secret = existing.totp_secret
     ENV["ADMIN_EMAIL"] = "new-owner@example.com"
     ENV["ADMIN_PASSWORD"] = "replacement correct horse battery"
@@ -1791,7 +1801,28 @@ mise exec -- ruby bin/rails test test/tasks/admin_create_test.rb
 
 Expected: tests fail because the `admin:create` Rake task is undefined.
 
-- [ ] **Step 3: Implement the task**
+- [ ] **Step 3: Implement model-owned provisioning and the thin task**
+
+Add `.provision` as the first method inside `AdminUser`'s existing `class << self` block:
+
+```ruby
+def provision(email:, password:)
+  transaction do
+    user = lock.first || new
+    user.assign_attributes(
+      email: email,
+      password: password,
+      password_confirmation: password,
+      totp_secret: ROTP::Base32.random,
+      last_totp_at: nil
+    )
+    user.save!
+    recovery_codes = user.replace_recovery_codes
+    user.admin_sessions.delete_all
+    [user, recovery_codes]
+  end
+end
+```
 
 Create `lib/tasks/admin.rake`:
 
@@ -1805,22 +1836,7 @@ namespace :admin do
     raise ArgumentError, "ADMIN_EMAIL must be a valid email address" unless email.match?(URI::MailTo::EMAIL_REGEXP)
     raise ArgumentError, "ADMIN_PASSWORD must be at least 14 characters" if password.length < 14
 
-    user = nil
-    recovery_codes = nil
-
-    AdminUser.transaction do
-      user = AdminUser.lock.first || AdminUser.new
-      user.assign_attributes(
-        email: email,
-        password: password,
-        password_confirmation: password,
-        totp_secret: ROTP::Base32.random
-      )
-      user.last_totp_at = nil
-      user.save!
-      recovery_codes = user.replace_recovery_codes!
-      user.admin_sessions.delete_all
-    end
+    user, recovery_codes = AdminUser.provision(email: email, password: password)
 
     puts "Owner credentials rotated. Save this output now; recovery codes are not recoverable."
     puts "TOTP provisioning URI:"
@@ -1850,7 +1866,7 @@ mise exec -- ruby bin/rails runner 'AdminUser.delete_all'
 - [ ] **Step 5: Commit owner provisioning**
 
 ```bash
-git add lib/tasks/admin.rake test/tasks/admin_create_test.rb
+git add app/models/admin_user.rb lib/tasks/admin.rake test/tasks/admin_create_test.rb
 git commit -m "feat: add admin credential provisioning task"
 ```
 
@@ -1967,8 +1983,8 @@ class AdminAuthenticationTest < ApplicationSystemTestCase
   include ActiveJob::TestHelper
 
   setup do
-    @user = create_admin_user
-    @recovery_codes = @user.replace_recovery_codes!
+    @user = admin_users(:owner)
+    @recovery_codes = @user.replace_recovery_codes
   end
 
   test "owner signs in with password and TOTP then signs out" do
@@ -2077,7 +2093,7 @@ Verify in a private browser window:
 7. Four reset submissions in one hour enqueue no fourth email and show the same generic response.
 8. A reset code fails after 30 minutes; a successful reset revokes a previously open session and still requires TOTP.
 9. Browser storage shows `admin_session` scoped to `/admin`, `HttpOnly`, `SameSite=Strict`, and `Secure` over HTTPS/production.
-10. Password, reset token, TOTP secret/code, recovery code, and session bearer do not appear in Rails parameter logs or SQLite plaintext columns.
+10. Password, reset token, TOTP secret/code, and recovery code do not appear in Rails parameter logs or SQLite plaintext columns; the signed session cookie contains only Rails' authenticated representation of the database session ID.
 11. At 320 CSS pixels and 200% zoom, every auth action remains visible, keyboard reachable, and free of horizontal overflow.
 
 Stop the server and remove the disposable owner:
@@ -2108,7 +2124,7 @@ Expected: `git status --short` is empty before tagging. Create the tag only afte
 ## Phase 3 Completion Gate
 
 - [ ] Password alone never grants `/admin`; only a live `verified` `AdminSession` makes `Current.admin_user` non-nil.
-- [ ] TOTP ciphertext, password digest, recovery digests, and session-token digest are the only persisted credential forms.
+- [ ] TOTP ciphertext, password digest, recovery digests, and ordinary `AdminSession` records are the only persisted authentication state; cookie integrity comes from Rails' signed cookie jar.
 - [ ] TOTP replay, recovery-code replay, tampered cookies, expired sessions, and expired/altered reset tokens fail closed.
 - [ ] Session identifiers rotate between password and second-factor stages, and reset/provisioning revoke all sessions.
 - [ ] Login, TOTP, recovery, and reset requests hit their exact throttle limits.
