@@ -1,4 +1,4 @@
-keys = if Rails.env.production?
+keys = if Rails.env.production? && !ENV["SECRET_KEY_BASE_DUMMY"].present?
   {
     primary_key: ENV.fetch("ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"),
     deterministic_key: ENV.fetch("ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"),
