@@ -1,0 +1,47 @@
+<%# locals: (translation:, publication_path:) %>
+
+<section id="<%= dom_id(translation, :publication) %>" class="admin-card mt-6 grid gap-4"
+  aria-label="<%= translation.locale.upcase %> publication">
+  <h2 class="text-xl font-semibold"><%= translation.title %> (<%= translation.locale.upcase %>)</h2>
+  <p><strong>Status:</strong> <%= translation.state.humanize %></p>
+
+  <% if translation.scheduled_at %>
+    <p>
+      Scheduled for
+      <time datetime="<%= translation.scheduled_at.iso8601 %>" data-controller="local-time">
+        <%= translation.scheduled_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>
+      </time>
+    </p>
+  <% end %>
+
+  <% unless translation.publishable? %>
+    <p role="status">Publish the English translation before publishing this locale.</p>
+  <% end %>
+
+  <div class="flex flex-wrap gap-3">
+    <% unless translation.published? %>
+      <%= button_to "Publish now", publication_path,
+        disabled: !translation.publishable?, class: "admin-action" %>
+    <% end %>
+    <% unless translation.draft? %>
+      <%= button_to translation.scheduled? ? "Return to draft" : "Unpublish", publication_path,
+        method: :delete, class: "admin-action",
+        form: { data: { turbo_confirm: "Return #{translation.title} to draft?" } } %>
+    <% end %>
+  </div>
+
+  <%= form_with url: publication_path, method: :patch, scope: :publication,
+    data: { controller: "schedule-time", schedule_time_current_value: translation.scheduled_at&.iso8601 },
+    class: "grid gap-2" do |form| %>
+    <%= form.label :scheduled_at_local, "Publication time" %>
+    <%= form.datetime_local_field :scheduled_at_local,
+      value: translation.scheduled_at&.utc&.strftime("%Y-%m-%dT%H:%M"), required: true,
+      data: { schedule_time_target: "input", action: "input->schedule-time#update" } %>
+    <%= form.hidden_field :scheduled_at, value: "",
+      data: { schedule_time_target: "instant" } %>
+    <p class="text-sm opacity-70" data-schedule-time-target="hint">
+      Times are UTC when JavaScript is unavailable.
+    </p>
+    <%= form.submit "Schedule", class: "admin-action" %>
+  <% end %>
+</section>
