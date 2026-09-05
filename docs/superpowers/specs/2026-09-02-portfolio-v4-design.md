@@ -253,6 +253,8 @@ Manual publication changes that translation to `published` and records the publi
 
 A recurring Solid Queue task finds scheduled translations whose scheduled time has passed and publishes them in a transaction. This scan is idempotent. If the server is unavailable at the scheduled time, the next run publishes overdue translations.
 
+The scheduling control uses the owner's browser-local time. JavaScript converts the selected wall time to an ISO 8601 instant before submission and rejects nonexistent daylight-saving times; repeated fall-back-hour times use the browser's earlier occurrence. Without JavaScript, the control is explicitly labeled and interpreted as UTC. Persisted timestamps remain UTC, while admin schedule summaries progressively render in browser-local time with UTC text as the fallback.
+
 ### Localization behavior
 
 Rails I18n YAML files provide English, French, and Vietnamese navigation, forms, validation messages, date formats, and other fixed interface copy. The admin interface remains English.
