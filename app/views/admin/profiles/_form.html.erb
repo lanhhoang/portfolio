@@ -10,7 +10,7 @@
       <% Profile::ACCENTS.each do |accent| %>
         <label class="flex min-h-11 items-center gap-2">
           <%= form.radio_button :accent, accent %>
-          <span class="capitalize"><%= accent %></span>
+          <span><%= accent.capitalize %></span>
           <span data-accent-swatch="<%= accent %>" class="inline-block size-4 rounded-full" style="background: var(--accent-<%= accent %>, currentColor)"></span>
         </label>
       <% end %>

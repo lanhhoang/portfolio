@@ -9,5 +9,6 @@ class Admin::MarkdownPreviewsController < Admin::BaseController
     @frame_id = frame_id
     @html = MarkdownRenderer.call(values[:markdown].to_s)
     response.set_header("X-Robots-Tag", "noindex, nofollow")
+    render :create, layout: false
   end
 end

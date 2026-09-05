@@ -17,7 +17,7 @@ class Admin::PostsTest < ActionDispatch::IntegrationTest
   test "creates English and Vietnamese translations while rejecting a blank French tab" do
     assert_difference "PostTranslation.count", 2 do
       post admin_posts_path, params: { post: {
-        tag_ids: [@tag.id],
+        tag_ids: [ @tag.id ],
         cover_image: Rack::Test::UploadedFile.new(Rails.root.join("public/icon.png"), "image/png"),
         translations_attributes: {
           "0" => { locale: "en", title: "A careful post", slug: "", excerpt: "English excerpt", body_markdown: "# English" },
@@ -32,7 +32,7 @@ class Admin::PostsTest < ActionDispatch::IntegrationTest
     assert_equal %w[draft draft], post.translations.order(:locale).pluck(:state)
     assert_equal "a-careful-post", post.translations.find_by!(locale: "en").slug
     assert post.cover_image.attached?
-    assert_equal [@tag.id], post.tag_ids
+    assert_equal [ @tag.id ], post.tag_ids
   end
 
   test "renders entered values and upload errors with 422" do

@@ -23,7 +23,7 @@ class Admin::ResumesTest < ActionDispatch::IntegrationTest
     create_resume
     translation = Resume.current.translations.sole
 
-    assert_no_difference ["Resume.count", "ResumeTranslation.count"] do
+    assert_no_difference [ "Resume.count", "ResumeTranslation.count" ] do
       patch admin_resume_path, params: { resume: resume_params.merge(
         translations_attributes: { "0" => { id: translation.id, locale: "en", title: "Résumé", description: "English résumé" } }
       ) }

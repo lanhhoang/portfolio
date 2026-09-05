@@ -14,7 +14,7 @@ class Admin::ProjectsTest < ActionDispatch::IntegrationTest
         post admin_projects_path, params: { project: {
           role: "Lead developer", started_on: "2026-01-01", ended_on: "2026-06-01",
           live_url: "https://example.test", source_url: "https://github.com/example/work",
-          featured_position: "1", tag_ids: [@tag.id],
+          featured_position: "1", tag_ids: [ @tag.id ],
           cover_image: image_upload,
           translations_attributes: {
             "0" => { locale: "en", title: "Useful Work", slug: "", summary: "English summary", body_markdown: "# English" },
@@ -29,7 +29,7 @@ class Admin::ProjectsTest < ActionDispatch::IntegrationTest
     assert_redirected_to edit_admin_project_path(project)
     assert_equal %w[en fr], project.translations.order(:locale).pluck(:locale)
     assert_equal "useful-work", project.translations.find_by!(locale: "en").slug
-    assert_equal [@tag.id], project.tag_ids
+    assert_equal [ @tag.id ], project.tag_ids
     assert project.cover_image.attached?
   end
 
@@ -120,7 +120,7 @@ class Admin::ProjectsTest < ActionDispatch::IntegrationTest
 
     patch admin_project_path(project), params: { project: {
       role: project.role,
-      gallery_images: [image_upload]
+      gallery_images: [ image_upload ]
     } }
 
     assert_response :see_other

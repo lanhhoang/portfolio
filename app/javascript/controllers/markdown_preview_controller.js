@@ -10,16 +10,18 @@ export default class extends Controller {
     body.append("preview[markdown]", this.sourceTarget.value);
     body.append("preview[frame_id]", this.frameIdValue);
     try {
+      const headers = {
+        Accept: "text/html",
+        "Turbo-Frame": this.frameIdValue,
+      };
+      const csrfToken = document.querySelector("meta[name='csrf-token']")?.content;
+      if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+
       const response = await fetch(this.urlValue, {
         method: "POST",
         body,
         credentials: "same-origin",
-        headers: {
-          Accept: "text/html",
-          "Turbo-Frame": this.frameIdValue,
-          "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")
-            .content,
-        },
+        headers,
       });
       if (!response.ok) throw new Error("Preview request failed");
       this.frameTarget.outerHTML = await response.text();

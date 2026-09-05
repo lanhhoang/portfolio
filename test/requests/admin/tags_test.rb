@@ -85,7 +85,7 @@ class Admin::TagsTest < ActionDispatch::IntegrationTest
 
   test "destroy removes the tag and its taggings but not associated projects" do
     tag = Tag.create!(translations_attributes: { "0" => { locale: "en", name: "Rails" } })
-    project = Project.create!(role: "Engineer", tag_ids: [tag.id], translations_attributes: {
+    project = Project.create!(role: "Engineer", tag_ids: [ tag.id ], translations_attributes: {
       "0" => { locale: "en", title: "Tagged", slug: "tagged", summary: "S", body_markdown: "B" }
     })
 

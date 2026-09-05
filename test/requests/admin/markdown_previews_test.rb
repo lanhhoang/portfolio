@@ -13,6 +13,7 @@ class Admin::MarkdownPreviewsTest < ActionDispatch::IntegrationTest
     }, headers: { "Turbo-Frame" => "post_en_markdown_preview" }
 
     assert_response :success
+    refute_includes response.body, "<html"
     assert_select "turbo-frame#post_en_markdown_preview[data-markdown-preview-target='frame']" do
       assert_select "h1", text: "Safe"
       assert_select "pre code", text: /puts :ok/

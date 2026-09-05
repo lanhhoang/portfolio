@@ -23,7 +23,7 @@ class Admin::ProfilesTest < ActionDispatch::IntegrationTest
     create_profile
     translation = Profile.current.translations.sole
 
-    assert_no_difference ["Profile.count", "ProfileTranslation.count"] do
+    assert_no_difference [ "Profile.count", "ProfileTranslation.count" ] do
       patch admin_profile_path, params: { profile: profile_params.merge(
         translations_attributes: { "0" => { id: translation.id, locale: "en", display_name: "Owner", headline: "Ideas. Interfaces. Impact.", introduction: "Short intro", biography_markdown: "# Biography", availability_label: "Available" } }
       ) }
