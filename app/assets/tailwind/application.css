@@ -132,7 +132,8 @@ button {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   max-width: 100%;
   min-height: 2.75rem;
@@ -142,6 +143,12 @@ select {
   background: transparent;
   color: inherit;
   font: inherit;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  min-height: auto;
 }
 
 input[type="submit"] {
@@ -155,6 +162,22 @@ input[type="submit"] {
 
 [hidden] {
   display: none !important;
+}
+
+.admin-card {
+  display: block;
+  padding: 1rem;
+  border: 1px solid var(--border);
+}
+
+.admin-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  font-weight: 500;
 }
 
 .site-container {

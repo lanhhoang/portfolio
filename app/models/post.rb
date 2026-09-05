@@ -14,6 +14,12 @@ class Post < ApplicationRecord
   has_many :taggings, as: :taggable, dependent: :destroy
   has_many :tags, through: :taggings
 
+  accepts_nested_attributes_for :translations, allow_destroy: true,
+    reject_if: ->(attributes) {
+      attributes["locale"] != "en" && attributes["id"].blank? &&
+        attributes.values_at("title", "slug", "excerpt", "body_markdown").all?(&:blank?)
+    }
+
   validate :english_translation_present
 
   private

@@ -1,0 +1,18 @@
+<%= render "admin/shared/errors", record: post %>
+<%= form_with model: [:admin, post] do |form| %>
+  <div class="grid gap-4 md:grid-cols-2">
+    <div>
+      <%= form.label :tag_ids, "Tags" %>
+      <%= form.collection_check_boxes :tag_ids, Tag.includes(:translations).order(:id), :id,
+        ->(tag) { tag.translations.find { |item| item.locale == "en" }&.name || "Tag ##{tag.id}" } %>
+    </div>
+    <div>
+      <%= form.label :cover_image, "Cover image" %>
+      <%= form.file_field :cover_image, accept: "image/png,image/jpeg,image/webp" %>
+    </div>
+  </div>
+
+  <%= render "admin/shared/locale_tabs", form:, record: post, fields_partial: "admin/posts/translation_fields" %>
+
+  <%= form.submit class: "admin-action" %>
+<% end %>

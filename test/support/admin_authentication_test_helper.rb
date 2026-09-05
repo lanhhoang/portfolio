@@ -3,6 +3,9 @@ module AdminAuthenticationTestHelper
   TEST_TOTP_SECRET = "JBSWY3DPEHPK3PXP"
 
   def sign_in_as_admin
+    # ponytail: sessions rate_limit (5/15min) counts every test sign-in; clear the
+    # per-process cache instead of weakening the production limit.
+    Rails.cache.clear
     user = admin_users(:owner)
     post admin_session_path, params: {
       admin_login: { email: user.email, password: TEST_PASSWORD }
@@ -18,6 +21,9 @@ module AdminAuthenticationTestHelper
   end
 
   def sign_in_owner
+    # ponytail: the password rate limit (5/15min) is keyed on IP and system tests
+    # share one IP; clear the per-process cache instead of weakening production.
+    Rails.cache.clear
     user = admin_users(:owner)
     visit new_admin_session_path
     fill_in "Email", with: user.email
@@ -25,6 +31,13 @@ module AdminAuthenticationTestHelper
     click_button "Continue"
     fill_in "Six-digit code", with: ROTP::TOTP.new(user.totp_secret).now
     click_button "Verify"
+    # Turbo submits the TOTP form and navigates asynchronously; poll until the
+    # redirect lands so the verified cookie is guaranteed before any assertion.
+    50.times do
+      break if current_path == admin_root_path
+
+      sleep 0.1
+    end
     user
   end
 end

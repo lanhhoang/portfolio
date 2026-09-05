@@ -1,0 +1,5 @@
+<%= render "admin/shared/errors", record: tag %>
+<%= form_with model: [:admin, tag] do |form| %>
+  <%= render "admin/shared/locale_tabs", form:, record: tag, fields_partial: "admin/tags/translation_fields" %>
+  <%= form.submit class: "admin-action" %>
+<% end %>

@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-02-portfolio-v4-design.md`
 
+**Parent plan:** `docs/superpowers/plans/2026-09-02-portfolio-v4-implementation.md` — Phase 4's contract is immutable; this plan only expands it.
+
 ## Global Constraints
 
 - Public locales are exactly `en`, `fr`, and `vi`; English authored content is required and other translations are optional.
@@ -25,12 +27,13 @@
 - Primary SQLite data and every Active Storage asset receive encrypted off-site backups with 7 daily, 4 weekly, and 6 monthly restore points.
 - Use Rails defaults and the standard library before adding dependencies. The only planned application gems beyond generated Rails defaults are `commonmarker` and `rotp`.
 - Use Minitest and Capybara. Every behavior task follows red-green-refactor and ends with a focused test run and commit.
+- In this agent environment, run repository executables through Ruby 4.0.6: `mise exec -- ruby bin/rails ...`, `mise exec -- ruby bin/importmap ...`, `mise exec -- ruby bin/rubocop`, and `mise exec -- ruby bin/brakeman ...`. Plain `bin/*` commands resolve to the system Ruby 2.6 and fail before Rails boots.
 
 ---
 
 ## Scope Boundary and Consumed Interfaces
 
-Phase 1 supplies Tailwind, Turbo, Stimulus, semantic theme/accent tokens, and the responsive layouts. Phase 2 supplies these exact domain interfaces: `MarkdownRenderer.call(markdown) -> String`, nullable `Profile.current`, nullable `Resume.current`, `Project#cover_image`, `Project#gallery_images`, `Post#cover_image`, `Profile#portrait`, `ResumeTranslation#pdf`, `Project#tags`, `Post#tags`, and translation associations named `translations`. It also supplies attachment MIME-type/filename-extension/size validations and localized slug uniqueness. Phase 3 supplies `Admin::BaseController#require_admin!`, `Current.admin_user`, the protected admin layout, `sign_in_as_admin`/`sign_out_admin` for request tests, and `sign_in_owner` for system tests.
+The implementation branch must contain the accepted `portfolio-v4-phase-3` tag and start from a commit for which `git merge-base --is-ancestor portfolio-v4-phase-3 HEAD` succeeds. Phase 1 supplies Tailwind, Turbo, Stimulus, semantic theme/accent tokens, and responsive layouts. Phase 2 supplies these exact domain interfaces: `MarkdownRenderer.call(markdown) -> String`, nullable `Profile.current`, nullable `Resume.current`, `Project#cover_image`, `Project#gallery_images`, `Post#cover_image`, `Profile#portrait`, `ResumeTranslation#pdf`, `Project#tags`, `Post#tags`, and translation associations named `translations`. It also supplies attachment MIME-type/filename-extension/size validations and localized slug uniqueness. Phase 3 supplies the unchanged `Admin::BaseController#require_admin!`, `Current.admin_user`, the protected admin layout, `sign_in_as_admin`/`sign_out_admin` for request tests, and `sign_in_owner` for system tests.
 
 Use the Phase 2 column names below; do not add a corrective schema migration in this phase:
 
@@ -49,40 +52,44 @@ Use the Phase 2 column names below; do not add a corrective schema migration in 
 
 **Create**
 
-- `app/helpers/admin/content_helper.rb` — locale ordering, completion/state badges, and deterministic preview frame IDs.
+- `app/helpers/admin/content_helper.rb` — locale/state presentation and deterministic preview frame IDs.
 - `app/javascript/controllers/locale_tabs_controller.js` — accessible tabs with click and arrow-key behavior.
 - `app/javascript/controllers/markdown_preview_controller.js` — posts Markdown to the authenticated endpoint and replaces one Turbo Frame.
 - `app/controllers/admin/markdown_previews_controller.rb` and `app/views/admin/markdown_previews/create.html.erb` — sanitized preview response.
-- `app/controllers/admin/projects_controller.rb`, `posts_controller.rb`, `tags_controller.rb`, `profiles_controller.rb`, `resumes_controller.rb` — CMS endpoints.
-- `app/views/admin/shared/_errors.html.erb`, `_locale_tabs.html.erb`, `_translation_controls.html.erb` — shared form UI.
+- `app/controllers/admin/projects_controller.rb`, `posts_controller.rb`, `tags_controller.rb`, `profiles_controller.rb`, `resumes_controller.rb` — CMS resource endpoints.
+- `app/controllers/admin/projects/cover_images_controller.rb`, `app/controllers/admin/projects/gallery_images_controller.rb`, `app/controllers/admin/posts/cover_images_controller.rb`, `app/controllers/admin/profiles/portraits_controller.rb`, and `app/controllers/admin/resumes/pdfs_controller.rb` — CRUD-only attachment removal resources.
+- `app/views/admin/shared/_errors.html.erb`, `_locale_tabs.html.erb`, `_translation_controls.html.erb`, `_markdown_editor.html.erb` — shared form UI.
 - Resource views under `app/views/admin/projects/`, `posts/`, `tags/`, `profiles/`, and `resumes/` listed in their tasks.
-- `test/helpers/admin/content_helper_test.rb`, `test/requests/admin/markdown_previews_test.rb`, resource request tests, and `test/system/admin_manages_content_test.rb`.
-- Upload fixtures `test/fixtures/files/cover.png`, `portrait.png`, `resume.pdf`, `invalid.txt`.
+- `test/helpers/admin/content_helper_test.rb`, translation model tests, `test/requests/admin/markdown_previews_test.rb`, resource request tests, `test/requests/admin/cms_authorization_test.rb`, and `test/system/admin_manages_content_test.rb`.
+- Upload fixture `test/fixtures/files/resume.pdf`; image tests reuse the checked-in `public/icon.png`, and invalid-upload tests wrap the checked-in `Gemfile` as `text/plain`.
 
 **Modify**
 
 - `config/routes.rb` — authenticated admin resource and preview routes.
-- `app/controllers/admin/base_controller.rb` — build missing locale records before forms render.
+- `app/controllers/admin/base_controller.rb` — build missing locale records and strip attempted locale changes from persisted nested translations.
 - `app/controllers/admin/dashboard_controller.rb` and `app/views/admin/dashboard/show.html.erb` — actionable content counts and links.
 - `app/views/layouts/admin.html.erb` — mobile navigation to all CMS sections.
 - `app/models/project.rb`, `post.rb`, `tag.rb`, `profile.rb`, `resume.rb` — nested translation writes.
-- `app/models/project_translation.rb`, `post_translation.rb`, `tag_translation.rb` — create-only slug generation.
-- `app/assets/tailwind/application.css` only if Phase 3 lacks the two reusable admin classes specified in Task 1.
-- Existing model files only to add nested-attribute declarations required by the forms; Phase 3 already provides request and system authentication helpers.
+- `app/models/project_translation.rb`, `post_translation.rb`, `tag_translation.rb` — authored-content completeness, create-only slug generation, and explicit slug-format validation.
+- `app/models/profile_translation.rb`, `resume_translation.rb` — authored-content completeness.
+- `app/assets/tailwind/application.css` — add the two admin component classes plus textarea and checkbox/radio form primitives required by Phase 4.
+- Existing shared models gain only the nested-attribute declarations required by the forms; translation models own their `complete?` domain predicate. Phase 3 already provides request and system authentication helpers.
 
 ## Shared Parameter Contracts
 
 All translation forms submit an indexed hash, not locale-named top-level keys:
 
 ```ruby
-translations_attributes: {
-  "0" => { id: "12", locale: "en", title: "Title", slug: "title", body_markdown: "Text", _destroy: "0" },
-  "1" => { id: "13", locale: "fr", title: "Titre", slug: "titre", body_markdown: "Texte", _destroy: "0" },
-  "2" => { locale: "vi", title: "", slug: "", body_markdown: "", _destroy: "0" }
+{
+  translations_attributes: {
+    "0" => { id: "12", locale: "en", title: "Title", slug: "title", body_markdown: "Text", _destroy: "0" },
+    "1" => { id: "13", locale: "fr", title: "Titre", slug: "titre", body_markdown: "Texte", _destroy: "0" },
+    "2" => { locale: "vi", title: "", slug: "", body_markdown: "", _destroy: "0" }
+  }
 }
 ```
 
-Locale is permitted only to create a missing nested record. Association ownership plus `(parent_id, locale)` uniqueness prevents moving a translation between records or duplicating a locale. English `_destroy` is never rendered; optional translations expose it only after persistence. `state`, `scheduled_at`, `published_at`, rendered HTML fields, and Active Storage metadata are never permitted.
+Locale is accepted only when creating a missing nested record. Before assignment, `Admin::BaseController#protect_translation_locales(attributes)` removes `locale` from every nested translation hash containing an `id`; nested association ownership prevents moving a translation between parent records, and `(parent_id, locale)` uniqueness prevents duplicates. English `_destroy` is never rendered; optional translations expose it only after persistence. `state`, `scheduled_at`, `published_at`, rendered HTML fields, and Active Storage metadata are never permitted. Controllers use Rails 8.1 `params.expect`; collection-style nested attributes use the double-array filter form, for example `translations_attributes: [ %i[id locale title slug summary body_markdown _destroy] ]`.
 
 ---
 
@@ -101,7 +108,7 @@ Locale is permitted only to create a missing nested record. Association ownershi
 **Interfaces:**
 
 - Consumes: `Admin::BaseController#require_admin!`, `Current.admin_user`, `Profile.current`, `Resume.current`.
-- Produces: named admin routes and `Admin::BaseController#prepare_translations(record)`.
+- Produces: named admin routes, `Admin::BaseController#prepare_translations(record)`, and `Admin::BaseController#protect_translation_locales(attributes) -> ActionController::Parameters`.
 
 - [ ] **Step 1: Write the failing dashboard request test**
 
@@ -149,7 +156,7 @@ end
 
 - [ ] **Step 2: Run the test and verify the missing routes fail**
 
-Run: `bin/rails test test/requests/admin/dashboard_test.rb`
+Run: `mise exec -- ruby bin/rails test test/requests/admin/dashboard_test.rb`
 
 Expected: FAIL because `admin_projects_path`, `edit_admin_profile_path`, and other CMS routes do not exist.
 
@@ -159,19 +166,19 @@ Inside the existing `namespace :admin` block in `config/routes.rb`, retain the P
 
 ```ruby
 root "dashboard#show"
-resources :projects do
-  delete :cover_image, on: :member
-  delete "gallery_images/:attachment_id", action: :gallery_image, on: :member, as: :gallery_image
+resources :projects, except: :show do
+  resource :cover_image, only: :destroy, module: :projects
+  resources :gallery_images, only: :destroy, module: :projects
 end
-resources :posts do
-  delete :cover_image, on: :member
+resources :posts, except: :show do
+  resource :cover_image, only: :destroy, module: :posts
 end
 resources :tags, except: :show
 resource :profile, only: %i[edit update] do
-  delete :portrait
+  resource :portrait, only: :destroy, module: :profiles
 end
 resource :resume, only: %i[edit update] do
-  delete "translations/:translation_id/pdf", action: :pdf, as: :translation_pdf
+  resources :pdfs, only: :destroy, module: :resumes
 end
 resource :markdown_preview, only: :create
 ```
@@ -186,6 +193,13 @@ ADMIN_LOCALES = %w[en fr vi].freeze
 def prepare_translations(record)
   existing = record.translations.map(&:locale)
   (ADMIN_LOCALES - existing).each { |locale| record.translations.build(locale:) }
+end
+
+def protect_translation_locales(attributes)
+  attributes[:translations_attributes]&.each_value do |translation|
+    translation.delete(:locale) if translation[:id].present?
+  end
+  attributes
 end
 ```
 
@@ -212,9 +226,11 @@ Render three count cards and quick links in `show.html.erb`. In `layouts/admin.h
 }
 ```
 
+Also extend the existing base form rules so `textarea` shares the full-width `input, select` styling. Reset `input[type="checkbox"]` and `input[type="radio"]` to `width: auto` and `min-height: auto`; their visible `<label>` wrappers provide `min-h-11` touch targets. This prevents the existing global `input { width: 100% }` rule from stretching Phase 4 checkboxes and radios across the form.
+
 - [ ] **Step 4: Run the dashboard and authorization tests**
 
-Run: `bin/rails test test/requests/admin/dashboard_test.rb test/requests/admin/authentication_test.rb`
+Run: `mise exec -- ruby bin/rails test test/requests/admin/dashboard_test.rb test/requests/admin/authentication_test.rb`
 
 Expected: PASS; the unauthenticated CMS request follows Phase 3's login redirect.
 
@@ -237,14 +253,14 @@ git commit -m "feat(admin): add protected CMS navigation"
 - Create: `app/views/admin/shared/_translation_controls.html.erb`
 - Create: `app/javascript/controllers/locale_tabs_controller.js`
 - Modify: `app/models/project.rb`, `post.rb`, `tag.rb`, `profile.rb`, `resume.rb`
-- Modify: `app/models/project_translation.rb`, `post_translation.rb`, `tag_translation.rb`
+- Modify: `app/models/project_translation.rb`, `post_translation.rb`, `tag_translation.rb`, `profile_translation.rb`, `resume_translation.rb`
 - Create: `test/helpers/admin/content_helper_test.rb`
-- Create: `test/models/project_translation_test.rb`, `post_translation_test.rb`, `tag_translation_test.rb`
+- Create: `test/models/project_translation_test.rb`, `post_translation_test.rb`, `tag_translation_test.rb`, `profile_translation_test.rb`, `resume_translation_test.rb`
 
 **Interfaces:**
 
 - Consumes: every content model's `translations` association and Phase 2 localized uniqueness validations.
-- Produces: `accepts_nested_attributes_for :translations`, `Admin::ContentHelper#translation_complete?`, `#translation_state_label`, and create-only slug generation.
+- Produces: `accepts_nested_attributes_for :translations`, `#complete?` on every translation model, `Admin::ContentHelper#translation_state_label`, and create-only slug generation.
 
 - [ ] **Step 1: Write failing helper and model tests**
 
@@ -255,11 +271,9 @@ require "test_helper"
 class Admin::ContentHelperTest < ActionView::TestCase
   include Admin::ContentHelper
 
-  test "reports completion using the localized record's identifying field" do
-    assert translation_complete?(ProjectTranslation.new(title: "Work"))
-    assert translation_complete?(TagTranslation.new(name: "Rails"))
-    assert translation_complete?(ProfileTranslation.new(display_name: "Owner"))
-    refute translation_complete?(PostTranslation.new(title: ""))
+  test "presents a translation state when the model has one" do
+    assert_equal "Draft", translation_state_label(PostTranslation.new(state: "draft"))
+    assert_nil translation_state_label(TagTranslation.new)
   end
 
   test "uses a deterministic locale specific preview frame id" do
@@ -275,6 +289,15 @@ Create `test/models/project_translation_test.rb`:
 require "test_helper"
 
 class ProjectTranslationTest < ActiveSupport::TestCase
+  test "reports whether authored content is complete" do
+    attributes = { title: "Work", summary: "Summary", body_markdown: "Body" }
+
+    assert ProjectTranslation.new(attributes).complete?
+    attributes.each_key do |attribute|
+      refute ProjectTranslation.new(attributes.merge(attribute => "")).complete?
+    end
+  end
+
   test "generates slug once and does not change it when title changes" do
     project = Project.create!(role: "Engineer", translations_attributes: {
       "0" => { locale: "en", title: "First Title", summary: "Summary", body_markdown: "Body" }
@@ -287,6 +310,10 @@ class ProjectTranslationTest < ActiveSupport::TestCase
 
     translation.update!(slug: "chosen-slug")
     assert_equal "chosen-slug", translation.reload.slug
+
+    translation.slug = "Not/A/Slug"
+    assert_not translation.valid?
+    assert_includes translation.errors[:slug], "must use lowercase letters, numbers, and single hyphens"
   end
 end
 ```
@@ -297,6 +324,15 @@ Create `test/models/post_translation_test.rb`:
 require "test_helper"
 
 class PostTranslationTest < ActiveSupport::TestCase
+  test "reports whether authored content is complete" do
+    attributes = { title: "Post", excerpt: "Excerpt", body_markdown: "Body" }
+
+    assert PostTranslation.new(attributes).complete?
+    attributes.each_key do |attribute|
+      refute PostTranslation.new(attributes.merge(attribute => "")).complete?
+    end
+  end
+
   test "generates slug once and does not change it when title changes" do
     post = Post.create!(translations_attributes: {
       "0" => { locale: "en", title: "First Post", excerpt: "Excerpt", body_markdown: "Body" }
@@ -309,6 +345,10 @@ class PostTranslationTest < ActiveSupport::TestCase
 
     translation.update!(slug: "chosen-post")
     assert_equal "chosen-post", translation.reload.slug
+
+    translation.slug = "two words"
+    assert_not translation.valid?
+    assert_includes translation.errors[:slug], "must use lowercase letters, numbers, and single hyphens"
   end
 end
 ```
@@ -319,6 +359,11 @@ Create `test/models/tag_translation_test.rb`:
 require "test_helper"
 
 class TagTranslationTest < ActiveSupport::TestCase
+  test "reports whether authored content is complete" do
+    assert TagTranslation.new(name: "Rails").complete?
+    refute TagTranslation.new(name: "").complete?
+  end
+
   test "generates slug once and does not change it when name changes" do
     tag = Tag.create!(translations_attributes: {
       "0" => { locale: "en", name: "Ruby on Rails" }
@@ -331,15 +376,56 @@ class TagTranslationTest < ActiveSupport::TestCase
 
     translation.update!(slug: "rails-framework")
     assert_equal "rails-framework", translation.reload.slug
+
+    translation.slug = "rails--framework"
+    assert_not translation.valid?
+    assert_includes translation.errors[:slug], "must use lowercase letters, numbers, and single hyphens"
+  end
+end
+```
+
+Create `test/models/profile_translation_test.rb`:
+
+```ruby
+require "test_helper"
+
+class ProfileTranslationTest < ActiveSupport::TestCase
+  test "reports whether authored content is complete" do
+    attributes = {
+      display_name: "Owner", headline: "Headline", introduction: "Introduction",
+      biography_markdown: "Biography", availability_label: "Available"
+    }
+
+    assert ProfileTranslation.new(attributes).complete?
+    attributes.each_key do |attribute|
+      refute ProfileTranslation.new(attributes.merge(attribute => "")).complete?
+    end
+  end
+end
+```
+
+Create `test/models/resume_translation_test.rb`:
+
+```ruby
+require "test_helper"
+
+class ResumeTranslationTest < ActiveSupport::TestCase
+  test "reports whether authored content is complete" do
+    attributes = { title: "Résumé", description: "Current résumé" }
+
+    assert ResumeTranslation.new(attributes).complete?
+    attributes.each_key do |attribute|
+      refute ResumeTranslation.new(attributes.merge(attribute => "")).complete?
+    end
   end
 end
 ```
 
 - [ ] **Step 2: Run focused tests and verify failure**
 
-Run: `bin/rails test test/helpers/admin/content_helper_test.rb test/models/project_translation_test.rb test/models/post_translation_test.rb test/models/tag_translation_test.rb`
+Run: `mise exec -- ruby bin/rails test test/helpers/admin/content_helper_test.rb test/models/project_translation_test.rb test/models/post_translation_test.rb test/models/tag_translation_test.rb test/models/profile_translation_test.rb test/models/resume_translation_test.rb`
 
-Expected: FAIL because the helper and create-only callbacks are absent.
+Expected: FAIL because the presentation helper, model predicates, and create-only callbacks are absent.
 
 - [ ] **Step 3: Add the minimal shared form interfaces**
 
@@ -348,17 +434,6 @@ Use this helper:
 ```ruby
 module Admin::ContentHelper
   LOCALE_NAMES = { "en" => "English", "fr" => "French", "vi" => "Vietnamese" }.freeze
-
-  def translation_complete?(translation)
-    value = if translation.respond_to?(:title)
-      translation.title
-    elsif translation.respond_to?(:name)
-      translation.name
-    else
-      translation.display_name
-    end
-    value.present?
-  end
 
   def translation_state_label(translation)
     translation.respond_to?(:state) ? translation.state.humanize : nil
@@ -381,7 +456,69 @@ accepts_nested_attributes_for :translations, allow_destroy: true,
   }
 ```
 
-Use the same declaration in `Post` with `title`, `slug`, `excerpt`, `body_markdown`; `Tag` with `name`, `slug`; `Profile` with `display_name`, `headline`, `introduction`, `biography_markdown`, `availability_label`; and `Resume` with `title`, `description`. Keep Phase 2's English-required validation authoritative.
+Add the corresponding explicit declarations; keep Phase 2's English-required validation authoritative:
+
+```ruby
+# Post
+accepts_nested_attributes_for :translations, allow_destroy: true,
+  reject_if: ->(attributes) {
+    attributes["locale"] != "en" && attributes["id"].blank? &&
+      attributes.values_at("title", "slug", "excerpt", "body_markdown").all?(&:blank?)
+  }
+
+# Tag
+accepts_nested_attributes_for :translations, allow_destroy: true,
+  reject_if: ->(attributes) {
+    attributes["locale"] != "en" && attributes["id"].blank? &&
+      attributes.values_at("name", "slug").all?(&:blank?)
+  }
+
+# Profile
+accepts_nested_attributes_for :translations, allow_destroy: true,
+  reject_if: ->(attributes) {
+    attributes["locale"] != "en" && attributes["id"].blank? &&
+      attributes.values_at(
+        "display_name", "headline", "introduction", "biography_markdown", "availability_label"
+      ).all?(&:blank?)
+  }
+
+# Resume
+accepts_nested_attributes_for :translations, allow_destroy: true,
+  reject_if: ->(attributes) {
+    attributes["locale"] != "en" && attributes["id"].blank? &&
+      attributes.values_at("title", "description").all?(&:blank?)
+  }
+```
+
+Keep authored-content completeness on the domain models rather than branching on model classes in a helper. Add these public predicates:
+
+```ruby
+# ProjectTranslation
+def complete?
+  title.present? && summary.present? && body_markdown.present?
+end
+
+# PostTranslation
+def complete?
+  title.present? && excerpt.present? && body_markdown.present?
+end
+
+# TagTranslation
+def complete?
+  name.present?
+end
+
+# ProfileTranslation
+def complete?
+  display_name.present? && headline.present? && introduction.present? &&
+    biography_markdown.present? && availability_label.present?
+end
+
+# ResumeTranslation
+def complete?
+  title.present? && description.present?
+end
+```
 
 In each slugged translation model add:
 
@@ -397,9 +534,18 @@ end
 
 For `TagTranslation`, parameterize `name` instead of `title`.
 
-`_errors.html.erb` renders `record.errors.full_messages` in an alert. `_translation_controls.html.erb` renders hidden `id` and `locale`, a completion badge, a read-only state badge when present, and an optional `_destroy` checkbox only when locale is not `en` and the translation is persisted.
+In all three slugged translation models, keep the existing presence and locale-scoped uniqueness validations and add:
 
-`_locale_tabs.html.erb` receives `form:`, `record:`, and `fields_partial:`. Render three tab buttons and three corresponding panels in `en`, `fr`, `vi` order. Each button must have `role="tab"`, `aria-controls`, `aria-selected`, a 44px minimum height, and the completion/state badges. Each panel must have `role="tabpanel"`; only English starts visible. Within each panel use `form.fields_for :translations, translation` and render `fields_partial` with local `form:`.
+```ruby
+validates :slug, format: {
+  with: /\A[a-z0-9]+(?:-[a-z0-9]+)*\z/,
+  message: "must use lowercase letters, numbers, and single hyphens"
+}
+```
+
+`_errors.html.erb` renders `record.errors.full_messages` in an alert. `_translation_controls.html.erb` renders a hidden `id` for persisted records and a hidden `locale` only for new records, a completion badge driven by `form.object.complete?`, a read-only state badge when present, and an optional `_destroy` checkbox only when locale is not `en` and the translation is persisted.
+
+`_locale_tabs.html.erb` receives `form:`, `record:`, and `fields_partial:`. Resolve and render translations explicitly in `en`, `fr`, `vi` order. Each tab is `<button type="button">` with a unique `id`, `role="tab"`, matching `aria-controls`, `aria-selected="true"` only for English, `tabindex="0"` only for English, a 44px minimum height, and the completion/state badges. Each corresponding panel has a unique `id`, `role="tabpanel"`, and matching `aria-labelledby`. Render every panel without `hidden` in server HTML so every locale remains editable without JavaScript; `connect()` immediately calls `select(0)` and hides inactive panels when Stimulus is available. Within each panel use `form.fields_for :translations, translation` and render `fields_partial` with local `form:`.
 
 Implement the tab controller exactly as keyboard-accessible progressive enhancement:
 
@@ -451,14 +597,19 @@ export default class extends Controller {
 
 - [ ] **Step 4: Run focused tests and the JavaScript import smoke test**
 
-Run: `bin/rails test test/helpers/admin/content_helper_test.rb test/models/project_translation_test.rb test/models/post_translation_test.rb test/models/tag_translation_test.rb && bin/importmap audit`
+Run:
 
-Expected: PASS; `bin/importmap audit` exits 0 because Phase 1 generated the app with Importmap.
+```bash
+mise exec -- ruby bin/rails test test/helpers/admin/content_helper_test.rb test/models/project_translation_test.rb test/models/post_translation_test.rb test/models/tag_translation_test.rb test/models/profile_translation_test.rb test/models/resume_translation_test.rb
+mise exec -- ruby bin/importmap audit
+```
+
+Expected: PASS; the Importmap audit reports no vulnerable packages.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/helpers/admin/content_helper.rb app/views/admin/shared app/javascript/controllers/locale_tabs_controller.js app/models/project.rb app/models/post.rb app/models/tag.rb app/models/profile.rb app/models/resume.rb app/models/project_translation.rb app/models/post_translation.rb app/models/tag_translation.rb test/helpers/admin/content_helper_test.rb test/models/project_translation_test.rb test/models/post_translation_test.rb test/models/tag_translation_test.rb
+git add app/helpers/admin/content_helper.rb app/views/admin/shared app/javascript/controllers/locale_tabs_controller.js app/models/project.rb app/models/post.rb app/models/tag.rb app/models/profile.rb app/models/resume.rb app/models/project_translation.rb app/models/post_translation.rb app/models/tag_translation.rb app/models/profile_translation.rb app/models/resume_translation.rb test/helpers/admin/content_helper_test.rb test/models/project_translation_test.rb test/models/post_translation_test.rb test/models/tag_translation_test.rb test/models/profile_translation_test.rb test/models/resume_translation_test.rb
 git commit -m "feat(admin): add localized nested forms"
 ```
 
@@ -470,13 +621,14 @@ git commit -m "feat(admin): add localized nested forms"
 
 - Create: `app/controllers/admin/markdown_previews_controller.rb`
 - Create: `app/views/admin/markdown_previews/create.html.erb`
+- Create: `app/views/admin/shared/_markdown_editor.html.erb`
 - Create: `app/javascript/controllers/markdown_preview_controller.js`
 - Create: `test/requests/admin/markdown_previews_test.rb`
 
 **Interfaces:**
 
 - Consumes: `MarkdownRenderer.call(markdown) -> String`, Phase 3 admin authentication, Turbo.
-- Produces: `POST /admin/markdown_preview` accepting `preview[markdown]` and `preview[frame_id]`, returning one matching `<turbo-frame>`.
+- Produces: `POST /admin/markdown_preview` accepting `preview[markdown]` and `preview[frame_id]`, returning one matching `<turbo-frame>`, plus `admin/shared/_markdown_editor.html.erb` accepting locals `form:`, `attribute:`, and `label:`.
 
 - [ ] **Step 1: Write the failing request tests**
 
@@ -496,7 +648,7 @@ class Admin::MarkdownPreviewsTest < ActionDispatch::IntegrationTest
     }, headers: { "Turbo-Frame" => "post_en_markdown_preview" }
 
     assert_response :success
-    assert_select "turbo-frame#post_en_markdown_preview" do
+    assert_select "turbo-frame#post_en_markdown_preview[data-markdown-preview-target='frame']" do
       assert_select "h1", text: "Safe"
       assert_select "pre code", text: /puts :ok/
       assert_select "script", count: 0
@@ -509,12 +661,18 @@ class Admin::MarkdownPreviewsTest < ActionDispatch::IntegrationTest
     post admin_markdown_preview_path, params: { preview: { markdown: "Text", frame_id: "bad id<script>" } }
     assert_response :unprocessable_entity
   end
+
+  test "rejects a malformed parameter scope without raising" do
+    sign_in_as_admin
+    post admin_markdown_preview_path, params: { preview: "not-an-object" }
+    assert_response :bad_request
+  end
 end
 ````
 
 - [ ] **Step 2: Run and verify the controller is missing**
 
-Run: `bin/rails test test/requests/admin/markdown_previews_test.rb`
+Run: `mise exec -- ruby bin/rails test test/requests/admin/markdown_previews_test.rb`
 
 Expected: FAIL with `uninitialized constant Admin::MarkdownPreviewsController`.
 
@@ -525,10 +683,11 @@ class Admin::MarkdownPreviewsController < Admin::BaseController
   FRAME_ID = /\A(?:project|post|profile)_(?:en|fr|vi)_markdown_preview\z/
 
   def create
-    values = params.require(:preview).permit(:markdown, :frame_id)
-    return head :unprocessable_entity unless values[:frame_id].match?(FRAME_ID)
+    values = params.expect(preview: %i[markdown frame_id])
+    frame_id = values[:frame_id].to_s
+    return head :unprocessable_entity unless FRAME_ID.match?(frame_id)
 
-    @frame_id = values[:frame_id]
+    @frame_id = frame_id
     @html = MarkdownRenderer.call(values[:markdown].to_s)
     response.set_header("X-Robots-Tag", "noindex, nofollow")
   end
@@ -536,12 +695,32 @@ end
 ```
 
 ```erb
-<%= turbo_frame_tag @frame_id do %>
-  <article class="prose max-w-none"><%= @html.html_safe %></article>
+<%= turbo_frame_tag @frame_id, data: { markdown_preview_target: "frame" } do %>
+  <article class="rich-text"><%= sanitize @html %></article>
 <% end %>
 ```
 
-The `.html_safe` call is allowed only at this boundary because `MarkdownRenderer` is the Phase 2 sanitizer. The Stimulus controller sends CSRF-protected form data and replaces only the returned frame:
+The view reuses the public `.rich-text` styles and Rails' `sanitize` helper. Although `MarkdownRenderer` already sanitizes output, keeping the render boundary safe avoids introducing an `html_safe` exception and keeps Brakeman's contract explicit. The response repeats the Stimulus frame target so a second preview works after `outerHTML` replacement.
+
+Create one editor partial used by project, post, and profile translation forms:
+
+```erb
+<% frame_id = markdown_preview_frame_id(form.object) %>
+<div data-controller="markdown-preview"
+     data-markdown-preview-url-value="<%= admin_markdown_preview_path %>"
+     data-markdown-preview-frame-id-value="<%= frame_id %>">
+  <%= form.label attribute, label %>
+  <%= form.text_area attribute, rows: 18, data: { markdown_preview_target: "source" } %>
+  <button type="button" class="admin-action" data-action="markdown-preview#render">Preview</button>
+  <%= turbo_frame_tag frame_id, data: { markdown_preview_target: "frame" } do %>
+    <p>Preview appears here.</p>
+  <% end %>
+</div>
+```
+
+Call it with locals `form:`, `attribute:` (`:body_markdown` or `:biography_markdown`), and the visible `label:`. This keeps the frame lifecycle identical across all three resources.
+
+The Stimulus controller sends CSRF-protected form data and replaces only the returned frame:
 
 ```javascript
 import { Controller } from "@hotwired/stimulus";
@@ -555,34 +734,39 @@ export default class extends Controller {
     const body = new FormData();
     body.append("preview[markdown]", this.sourceTarget.value);
     body.append("preview[frame_id]", this.frameIdValue);
-    const response = await fetch(this.urlValue, {
-      method: "POST",
-      body,
-      credentials: "same-origin",
-      headers: {
-        Accept: "text/html",
-        "Turbo-Frame": this.frameIdValue,
-        "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")
-          .content,
-      },
-    });
-    if (response.ok) this.frameTarget.outerHTML = await response.text();
+    try {
+      const response = await fetch(this.urlValue, {
+        method: "POST",
+        body,
+        credentials: "same-origin",
+        headers: {
+          Accept: "text/html",
+          "Turbo-Frame": this.frameIdValue,
+          "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")
+            .content,
+        },
+      });
+      if (!response.ok) throw new Error("Preview request failed");
+      this.frameTarget.outerHTML = await response.text();
+    } catch (_error) {
+      this.frameTarget.innerHTML = '<p role="status">Preview unavailable. Try again.</p>';
+    }
   }
 }
 ```
 
-Project, post, and profile Markdown field partials in later tasks wrap their textarea and frame in this controller, with a `type="button"` Preview button. There is no public or shareable preview token.
+There is no public or shareable preview token.
 
 - [ ] **Step 4: Run the preview tests**
 
-Run: `bin/rails test test/requests/admin/markdown_previews_test.rb test/models/markdown_renderer_test.rb`
+Run: `mise exec -- ruby bin/rails test test/requests/admin/markdown_previews_test.rb test/models/markdown_renderer_test.rb`
 
 Expected: PASS, including sanitization inherited from Phase 2.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/controllers/admin/markdown_previews_controller.rb app/views/admin/markdown_previews/create.html.erb app/javascript/controllers/markdown_preview_controller.js test/requests/admin/markdown_previews_test.rb
+git add app/controllers/admin/markdown_previews_controller.rb app/views/admin/markdown_previews/create.html.erb app/views/admin/shared/_markdown_editor.html.erb app/javascript/controllers/markdown_preview_controller.js test/requests/admin/markdown_previews_test.rb
 git commit -m "feat(admin): add authenticated Markdown previews"
 ```
 
@@ -593,18 +777,20 @@ git commit -m "feat(admin): add authenticated Markdown previews"
 **Files:**
 
 - Create: `app/controllers/admin/projects_controller.rb`
+- Create: `app/controllers/admin/projects/cover_images_controller.rb`
+- Create: `app/controllers/admin/projects/gallery_images_controller.rb`
 - Create: `app/views/admin/projects/index.html.erb`, `new.html.erb`, `edit.html.erb`, `_form.html.erb`, `_translation_fields.html.erb`
 - Create: `test/requests/admin/projects_test.rb`
-- Create: `test/fixtures/files/cover.png`, `invalid.txt`
+- Reuse: `public/icon.png` for valid images and `Gemfile` for an invalid upload.
 
 **Interfaces:**
 
 - Consumes: nested translations, `Project#tags`, `cover_image`, `gallery_images`, attachment validations, locale tabs, Markdown preview.
-- Produces: full project CRUD and explicit cover/gallery purge routes.
+- Produces: project CRUD plus `Admin::Projects::CoverImagesController#destroy` and `Admin::Projects::GalleryImagesController#destroy`.
 
 - [ ] **Step 1: Write failing request tests for create, update, validation preservation, and removal**
 
-The test file uses `fixture_file_upload("files/cover.png", "image/png")` and covers these exact requests:
+The test file wraps `public/icon.png` with `Rack::Test::UploadedFile` and covers these exact requests:
 
 ```ruby
 require "test_helper"
@@ -618,18 +804,20 @@ class Admin::ProjectsTest < ActionDispatch::IntegrationTest
   end
 
   test "creates shared fields, tags, image, and localized translations" do
-    assert_difference ["Project.count", "ProjectTranslation.count"], 1 do
-      post admin_projects_path, params: { project: {
-        role: "Lead developer", started_on: "2026-01-01", ended_on: "2026-06-01",
-        live_url: "https://example.test", source_url: "https://github.com/example/work",
-        featured_position: "1", tag_ids: [@tag.id],
-        cover_image: fixture_file_upload("files/cover.png", "image/png"),
-        translations_attributes: {
-          "0" => { locale: "en", title: "Useful Work", slug: "", summary: "English summary", body_markdown: "# English" },
-          "1" => { locale: "fr", title: "Travail utile", slug: "travail-utile", summary: "Résumé", body_markdown: "# Français" },
-          "2" => { locale: "vi", title: "", slug: "", summary: "", body_markdown: "" }
-        }
-      } }
+    assert_difference "Project.count", 1 do
+      assert_difference "ProjectTranslation.count", 2 do
+        post admin_projects_path, params: { project: {
+          role: "Lead developer", started_on: "2026-01-01", ended_on: "2026-06-01",
+          live_url: "https://example.test", source_url: "https://github.com/example/work",
+          featured_position: "1", tag_ids: [@tag.id],
+          cover_image: image_upload,
+          translations_attributes: {
+            "0" => { locale: "en", title: "Useful Work", slug: "", summary: "English summary", body_markdown: "# English" },
+            "1" => { locale: "fr", title: "Travail utile", slug: "travail-utile", summary: "Résumé", body_markdown: "# Français" },
+            "2" => { locale: "vi", title: "", slug: "", summary: "", body_markdown: "" }
+          }
+        } }
+      end
     end
 
     project = Project.order(:id).last
@@ -651,9 +839,25 @@ class Admin::ProjectsTest < ActionDispatch::IntegrationTest
     assert_equal "existing-project", translation.reload.slug
   end
 
+  test "does not let nested updates move a persisted translation to another locale" do
+    project = create_project
+    translation = project.translations.create!(
+      locale: "fr", title: "Projet", slug: "projet", summary: "Résumé", body_markdown: "Corps"
+    )
+    patch admin_project_path(project), params: { project: {
+      role: project.role,
+      translations_attributes: { "0" => {
+        id: translation.id, locale: "vi", title: "Projet", slug: "projet",
+        summary: "Résumé", body_markdown: "Corps"
+      } }
+    } }
+    assert_response :see_other
+    assert_equal "fr", translation.reload.locale
+  end
+
   test "renders entered translations and upload errors with 422" do
     post admin_projects_path, params: { project: {
-      role: "Lead", cover_image: fixture_file_upload("files/invalid.txt", "text/plain"),
+      role: "Lead", cover_image: invalid_upload,
       translations_attributes: { "0" => { locale: "en", title: "Entered title", summary: "Entered summary", body_markdown: "Entered body" } }
     } }
     assert_response :unprocessable_entity
@@ -661,13 +865,66 @@ class Admin::ProjectsTest < ActionDispatch::IntegrationTest
     assert_select "[role='alert']", text: /cover image/i
   end
 
+  test "purges the cover image through its nested resource" do
+    project = create_project
+    project.cover_image.attach(io: Rails.root.join("public/icon.png").open, filename: "cover.png", content_type: "image/png")
+    attachment_id = project.cover_image.attachment.id
+
+    delete admin_project_cover_image_path(project)
+
+    assert_redirected_to edit_admin_project_path(project)
+    refute ActiveStorage::Attachment.exists?(attachment_id)
+  end
+
   test "purges only an owned gallery attachment" do
     project = create_project
-    project.gallery_images.attach(io: file_fixture("cover.png").open, filename: "one.png", content_type: "image/png")
-    attachment = project.gallery_images.first
-    delete gallery_image_admin_project_path(project, attachment_id: attachment.id)
+    project.gallery_images.attach(io: Rails.root.join("public/icon.png").open, filename: "owned.png", content_type: "image/png")
+    owned_attachment = project.gallery_images.first
+    other_project = create_project(slug: "other-project")
+    other_project.gallery_images.attach(io: Rails.root.join("public/icon.png").open, filename: "other.png", content_type: "image/png")
+    other_attachment = other_project.gallery_images.first
+
+    delete admin_project_gallery_image_path(project, other_attachment)
+    assert_response :not_found
+    assert ActiveStorage::Attachment.exists?(other_attachment.id)
+
+    delete admin_project_gallery_image_path(project, owned_attachment)
     assert_redirected_to edit_admin_project_path(project)
-    refute ActiveStorage::Attachment.exists?(attachment.id)
+    refute ActiveStorage::Attachment.exists?(owned_attachment.id)
+  end
+
+  test "renders destructive actions as standalone delete forms" do
+    project = create_project
+    project.cover_image.attach(io: Rails.root.join("public/icon.png").open, filename: "cover.png", content_type: "image/png")
+    project.gallery_images.attach(io: Rails.root.join("public/icon.png").open, filename: "gallery.png", content_type: "image/png")
+
+    get admin_projects_path
+    assert_delete_form admin_project_path(project)
+    assert_select "a[data-turbo-method='delete']", count: 0
+
+    get edit_admin_project_path(project)
+    assert_delete_form admin_project_cover_image_path(project)
+    assert_delete_form admin_project_gallery_image_path(project, project.gallery_images.first)
+    assert_select "form form", count: 0
+    assert_select "a[data-turbo-method='delete']", count: 0
+  end
+
+  test "appends gallery uploads without replacing existing images" do
+    project = create_project
+    project.gallery_images.attach(io: Rails.root.join("public/icon.png").open, filename: "one.png", content_type: "image/png")
+
+    patch admin_project_path(project), params: { project: {
+      role: project.role,
+      gallery_images: [image_upload]
+    } }
+
+    assert_response :see_other
+    assert_equal %w[icon.png one.png], project.reload.gallery_images.map { |image| image.filename.to_s }.sort
+  end
+
+  test "rejects a malformed project scope" do
+    post admin_projects_path, params: { project: "not-an-object" }
+    assert_response :bad_request
   end
 
   test "destroys a project after confirmation is submitted" do
@@ -678,25 +935,39 @@ class Admin::ProjectsTest < ActionDispatch::IntegrationTest
 
   private
 
-  def create_project
+  def image_upload
+    Rack::Test::UploadedFile.new(Rails.root.join("public/icon.png"), "image/png")
+  end
+
+  def invalid_upload
+    Rack::Test::UploadedFile.new(Rails.root.join("Gemfile"), "text/plain")
+  end
+
+  def create_project(slug: "existing-project")
     Project.create!(role: "Engineer", translations_attributes: {
-      "0" => { locale: "en", title: "Existing Project", slug: "existing-project", summary: "Summary", body_markdown: "Body" }
+      "0" => { locale: "en", title: slug.humanize, slug:, summary: "Summary", body_markdown: "Body" }
     })
+  end
+
+  def assert_delete_form(path)
+    assert_select "form[action='#{path}'][method='post']" do
+      assert_select "input[name='_method'][value='delete']"
+    end
   end
 end
 ```
 
 - [ ] **Step 2: Run and verify failure**
 
-Run: `bin/rails test test/requests/admin/projects_test.rb`
+Run: `mise exec -- ruby bin/rails test test/requests/admin/projects_test.rb`
 
-Expected: FAIL because `Admin::ProjectsController` and views are absent.
+Expected: FAIL because `Admin::ProjectsController`, the attachment resource controllers, and views are absent.
 
 - [ ] **Step 3: Implement the controller with an explicit strong-parameter boundary**
 
 ```ruby
 class Admin::ProjectsController < Admin::BaseController
-  before_action :set_project, only: %i[edit update destroy cover_image gallery_image]
+  before_action :set_project, only: %i[edit update destroy]
 
   def index
     @projects = Project.includes(:translations, :tags).order(created_at: :desc)
@@ -708,9 +979,9 @@ class Admin::ProjectsController < Admin::BaseController
   end
 
   def create
-    @project = Project.new(project_params)
+    @project = Project.new(protect_translation_locales(project_params))
     if @project.save
-      redirect_to edit_admin_project_path(@project), notice: "Project created."
+      redirect_to edit_admin_project_path(@project), notice: "Project created.", status: :see_other
     else
       prepare_translations(@project)
       render :new, status: :unprocessable_entity
@@ -722,8 +993,13 @@ class Admin::ProjectsController < Admin::BaseController
   end
 
   def update
-    if @project.update(project_params)
-      redirect_to edit_admin_project_path(@project), notice: "Project saved."
+    attributes = protect_translation_locales(project_params)
+    gallery_images = attributes.delete(:gallery_images)
+    @project.assign_attributes(attributes)
+    @project.gallery_images.attach(gallery_images) if gallery_images.present?
+
+    if @project.save
+      redirect_to edit_admin_project_path(@project), notice: "Project saved.", status: :see_other
     else
       prepare_translations(@project)
       render :edit, status: :unprocessable_entity
@@ -732,17 +1008,7 @@ class Admin::ProjectsController < Admin::BaseController
 
   def destroy
     @project.destroy!
-    redirect_to admin_projects_path, notice: "Project deleted."
-  end
-
-  def cover_image
-    @project.cover_image.purge
-    redirect_to edit_admin_project_path(@project), notice: "Cover image removed."
-  end
-
-  def gallery_image
-    @project.gallery_images.attachments.find(params[:attachment_id]).purge
-    redirect_to edit_admin_project_path(@project), notice: "Gallery image removed."
+    redirect_to admin_projects_path, notice: "Project deleted.", status: :see_other
   end
 
   private
@@ -752,53 +1018,84 @@ class Admin::ProjectsController < Admin::BaseController
   end
 
   def project_params
-    params.require(:project).permit(
+    params.expect(project: [
       :role, :started_on, :ended_on, :live_url, :source_url, :featured_position, :cover_image,
-      gallery_images: [], tag_ids: [],
-      translations_attributes: %i[id locale title slug summary body_markdown _destroy]
-    )
+      {
+        gallery_images: [], tag_ids: [],
+        translations_attributes: [ %i[id locale title slug summary body_markdown _destroy] ]
+      }
+    ])
   end
 end
 ```
 
-The scoped `attachments.find` is required: it prevents deleting another record's blob by ID.
+Keep attachment deletion in separate CRUD-only resource controllers:
+
+```ruby
+class Admin::Projects::CoverImagesController < Admin::BaseController
+  def destroy
+    project = Project.find(params[:project_id])
+    project.cover_image.purge
+    redirect_to edit_admin_project_path(project), notice: "Cover image removed.", status: :see_other
+  end
+end
+```
+
+```ruby
+class Admin::Projects::GalleryImagesController < Admin::BaseController
+  def destroy
+    project = Project.find(params[:project_id])
+    project.gallery_images.attachments.find(params[:id]).purge
+    redirect_to edit_admin_project_path(project), notice: "Gallery image removed.", status: :see_other
+  end
+end
+```
+
+The parent-scoped `attachments.find` prevents deleting another project's attachment by ID.
 
 - [ ] **Step 4: Build all project views**
 
-`index.html.erb` uses record cards, not a narrow table. Each card shows available locale/state badges and Edit/Delete actions. Delete uses `data: { turbo_method: :delete, turbo_confirm: "Delete this project and all translations?" }`.
-
-`new.html.erb` and `edit.html.erb` render `_form`. `_form.html.erb` uses `form_with model: [:admin, project]`, renders shared errors, shared metadata fields, `collection_check_boxes :tag_ids, Tag.includes(:translations).order(:id), :id, ->(tag) { tag.translations.find { |item| item.locale == "en" }&.name || "Tag ##{tag.id}" }`, `file_field :cover_image, accept: "image/png,image/jpeg,image/webp"`, and `file_field :gallery_images, multiple: true` with the same accept list. Existing attachment removal links use the named DELETE routes and explicit confirmations.
-
-`_translation_fields.html.erb` renders hidden controls, title, editable slug with help text “Generated from the title when first saved; later title changes do not change it,” summary, and body Markdown. Wrap the textarea/button/frame with:
+`index.html.erb` uses record cards, not a narrow table. Each card shows available locale/state badges and Edit/Delete actions. Use a real form for deletion so it works without JavaScript:
 
 ```erb
-<% frame_id = markdown_preview_frame_id(form.object) %>
-<div data-controller="markdown-preview"
-     data-markdown-preview-url-value="<%= admin_markdown_preview_path %>"
-     data-markdown-preview-frame-id-value="<%= frame_id %>">
-  <%= form.label :body_markdown, "Body (Markdown)" %>
-  <%= form.text_area :body_markdown, rows: 18, data: { markdown_preview_target: "source" } %>
-  <button type="button" class="admin-action" data-action="markdown-preview#render">Preview</button>
-  <%= turbo_frame_tag frame_id, data: { markdown_preview_target: "frame" } do %>
-    <p>Preview appears here.</p>
-  <% end %>
-</div>
+<%= button_to "Delete", admin_project_path(project), method: :delete,
+  class: "admin-action",
+  form: { data: { turbo_confirm: "Delete this project and all translations?" } } %>
+```
+
+`new.html.erb` and `edit.html.erb` render `_form`. `_form.html.erb` uses `form_with model: [:admin, project]`, renders shared errors, shared metadata fields, `collection_check_boxes :tag_ids, Tag.includes(:translations).order(:id), :id, ->(tag) { tag.translations.find { |item| item.locale == "en" }&.name || "Tag ##{tag.id}" }`, `file_field :cover_image, accept: "image/png,image/jpeg,image/webp"`, and `file_field :gallery_images, multiple: true, include_hidden: false, accept: "image/png,image/jpeg,image/webp"`. The controller appends these uploads; it never relies on `has_many_attached` assignment, which would replace the existing gallery. In `edit.html.erb`, render existing attachment previews and these removal forms after `_form`, never inside the resource `form_with`, so the HTML contains no nested forms:
+
+```erb
+<%= button_to "Remove cover image", admin_project_cover_image_path(project), method: :delete,
+  class: "admin-action",
+  form: { data: { turbo_confirm: "Remove the cover image?" } } %>
+
+<%= button_to "Remove gallery image", admin_project_gallery_image_path(project, image), method: :delete,
+  class: "admin-action",
+  form: { data: { turbo_confirm: "Remove this gallery image?" } } %>
+```
+
+`_translation_fields.html.erb` renders hidden controls, title, editable slug with help text “Generated from the title when first saved; later title changes do not change it,” summary, and the shared Markdown editor:
+
+```erb
+<%= render "admin/shared/markdown_editor",
+  form: form, attribute: :body_markdown, label: "Body (Markdown)" %>
 ```
 
 Every input has a visible label; actions have `min-h-11`; form groups stack at the base breakpoint and use two columns only at `md:`. Render entered values from the bound invalid object, never from a reload.
 
 - [ ] **Step 5: Run project tests and manually inspect phone layout**
 
-Run: `bin/rails test test/requests/admin/projects_test.rb test/models/project_test.rb test/models/project_translation_test.rb`
+Run: `mise exec -- ruby bin/rails test test/requests/admin/projects_test.rb test/models/project_translation_test.rb test/models/public_content_test.rb`
 
-Run: `bin/rails server`, sign in, open `/admin/projects/new` at 320×568, and verify no horizontal scroll, each locale tab/action is touch reachable, invalid values survive, preview updates only its locale, and image removal asks for confirmation.
+Run: `mise exec -- ruby bin/rails server`, sign in, open `/admin/projects/new` at 320×568, and verify no horizontal scroll, each locale tab/action is touch reachable, invalid values survive, preview updates only its locale, and image removal asks for confirmation.
 
 Expected: all automated tests PASS and the manual checks succeed.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add app/controllers/admin/projects_controller.rb app/views/admin/projects test/requests/admin/projects_test.rb test/fixtures/files/cover.png test/fixtures/files/invalid.txt
+git add app/controllers/admin/projects_controller.rb app/controllers/admin/projects/cover_images_controller.rb app/controllers/admin/projects/gallery_images_controller.rb app/views/admin/projects test/requests/admin/projects_test.rb
 git commit -m "feat(admin): manage projects and images"
 ```
 
@@ -809,23 +1106,25 @@ git commit -m "feat(admin): manage projects and images"
 **Files:**
 
 - Create: `app/controllers/admin/posts_controller.rb`
+- Create: `app/controllers/admin/posts/cover_images_controller.rb`
 - Create: `app/views/admin/posts/index.html.erb`, `new.html.erb`, `edit.html.erb`, `_form.html.erb`, `_translation_fields.html.erb`
 - Create: `test/requests/admin/posts_test.rb`
 
 **Interfaces:**
 
 - Consumes: post nested translations, tags, cover attachment validation, shared tabs, and preview endpoint.
-- Produces: complete post CRUD and cover purge.
+- Produces: post CRUD plus `Admin::Posts::CoverImagesController#destroy`.
 
 - [ ] **Step 1: Write the failing post request tests**
 
-Create tests parallel in assertion depth—not copied controller internals—to prove: unauthenticated access redirects; create persists English and Vietnamese while rejecting a blank French tab; selected tags and an image persist; invalid MIME type returns 422 with title/body still in the response; title-only update leaves the old slug; explicitly edited slug persists; `DELETE /admin/posts/:id/cover_image` purges the post's cover; destroy removes the post and redirects.
+Create request tests proving: unauthenticated access redirects; create persists English and Vietnamese while rejecting a blank French tab; selected tags and an image persist; invalid MIME type returns 422 with title/body still in the response; title-only update leaves the old slug; explicitly edited slug persists; a persisted French translation submitted with `locale: "vi"` remains French; a scalar `post` scope returns 400; `DELETE admin_post_cover_image_path(post)` reaches `Admin::Posts::CoverImagesController#destroy` and purges only that post's cover; and destroy removes the post with a 303 redirect. GET the index and edit pages and assert post deletion and cover removal render as separate POST forms containing `_method=delete`, with no nested forms or `a[data-turbo-method='delete']`.
 
 Use this create payload in the test:
 
 ```ruby
 post admin_posts_path, params: { post: {
-  tag_ids: [@tag.id], cover_image: fixture_file_upload("files/cover.png", "image/png"),
+  tag_ids: [@tag.id],
+  cover_image: Rack::Test::UploadedFile.new(Rails.root.join("public/icon.png"), "image/png"),
   translations_attributes: {
     "0" => { locale: "en", title: "A careful post", slug: "", excerpt: "English excerpt", body_markdown: "# English" },
     "1" => { locale: "fr", title: "", slug: "", excerpt: "", body_markdown: "" },
@@ -838,35 +1137,92 @@ Assert `PostTranslation.count` changes by 2, its states are both `draft`, and th
 
 - [ ] **Step 2: Run and verify failure**
 
-Run: `bin/rails test test/requests/admin/posts_test.rb`
+Run: `mise exec -- ruby bin/rails test test/requests/admin/posts_test.rb`
 
 Expected: FAIL because the controller does not exist.
 
 - [ ] **Step 3: Implement post CRUD**
 
-Use the same status and redirect policy as projects. Exact permitted parameters are:
+Use this complete controller:
 
 ```ruby
-params.require(:post).permit(
-  :cover_image, tag_ids: [],
-  translations_attributes: %i[id locale title slug excerpt body_markdown _destroy]
-)
+class Admin::PostsController < Admin::BaseController
+  before_action :set_post, only: %i[edit update destroy]
+
+  def index
+    @posts = Post.includes(:translations).order(created_at: :desc)
+  end
+
+  def new
+    @post = Post.new
+    prepare_translations(@post)
+  end
+
+  def create
+    @post = Post.new(protect_translation_locales(post_params))
+    if @post.save
+      redirect_to edit_admin_post_path(@post), notice: "Post created.", status: :see_other
+    else
+      prepare_translations(@post)
+      render :new, status: :unprocessable_entity
+    end
+  end
+
+  def edit
+    prepare_translations(@post)
+  end
+
+  def update
+    if @post.update(protect_translation_locales(post_params))
+      redirect_to edit_admin_post_path(@post), notice: "Post saved.", status: :see_other
+    else
+      prepare_translations(@post)
+      render :edit, status: :unprocessable_entity
+    end
+  end
+
+  def destroy
+    @post.destroy!
+    redirect_to admin_posts_path, notice: "Post deleted.", status: :see_other
+  end
+
+  private
+
+  def set_post = @post = Post.find(params[:id])
+
+  def post_params
+    params.expect(post: [
+      :cover_image,
+      { tag_ids: [], translations_attributes: [ %i[id locale title slug excerpt body_markdown _destroy] ] }
+    ])
+  end
+end
 ```
 
-`index` loads `Post.includes(:translations, :tags).order(created_at: :desc)`. `new`, failed `create`, `edit`, and failed `update` call `prepare_translations`. `cover_image` calls `@post.cover_image.purge`; `destroy` calls `@post.destroy!`. All actions inherit `Admin::BaseController`; do not repeat authentication checks.
+Keep cover removal in its own resource controller:
 
-Build card-based index/new/edit/form views. The translation fields are title, slug, excerpt, and Markdown body; include the same exact preview wrapper from Task 4 with the post-specific frame ID generated by the helper. The cover input accepts PNG, JPEG, and WebP. Tag labels use their English translation. Delete and cover removal require Turbo confirmations.
+```ruby
+class Admin::Posts::CoverImagesController < Admin::BaseController
+  def destroy
+    post = Post.find(params[:post_id])
+    post.cover_image.purge
+    redirect_to edit_admin_post_path(post), notice: "Cover image removed.", status: :see_other
+  end
+end
+```
+
+Build card-based index/new/edit/form views. The translation fields are title, slug, excerpt, and `<%= render "admin/shared/markdown_editor", form: form, attribute: :body_markdown, label: "Body (Markdown)" %>`. The cover input accepts PNG, JPEG, and WebP. Load tag choices with `Tag.includes(:translations).order(:id)` and label them from their English translation. Use `button_to`, `method: :delete`, and `form: { data: { turbo_confirm: "..." } }` for both post deletion and `admin_post_cover_image_path(post)` so both operations remain ordinary HTML forms without JavaScript. Render the cover-removal `button_to` in `edit.html.erb` after `_form`, not inside the resource `form_with`.
 
 - [ ] **Step 4: Run focused tests**
 
-Run: `bin/rails test test/requests/admin/posts_test.rb test/models/post_test.rb test/models/post_translation_test.rb test/requests/admin/markdown_previews_test.rb`
+Run: `mise exec -- ruby bin/rails test test/requests/admin/posts_test.rb test/models/post_translation_test.rb test/models/public_content_test.rb test/requests/admin/markdown_previews_test.rb`
 
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/controllers/admin/posts_controller.rb app/views/admin/posts test/requests/admin/posts_test.rb
+git add app/controllers/admin/posts_controller.rb app/controllers/admin/posts/cover_images_controller.rb app/views/admin/posts test/requests/admin/posts_test.rb
 git commit -m "feat(admin): manage posts and cover images"
 ```
 
@@ -887,7 +1243,7 @@ git commit -m "feat(admin): manage posts and cover images"
 
 - [ ] **Step 1: Write failing tests**
 
-Test that create with English/French and blank Vietnamese produces exactly two translations; blank English returns 422 with the French value preserved; duplicate French slug returns 422; renaming a tag does not rewrite its slug; an explicit slug update works; destroy removes the tag and its taggings but not associated projects/posts; unauthenticated index redirects.
+Test that create with English/French and blank Vietnamese produces exactly two translations; blank English returns 422 with the French value preserved; duplicate French slug returns 422; renaming a tag does not rewrite its slug; an explicit slug update works; a persisted French translation submitted as Vietnamese remains French; a scalar `tag` scope returns 400; destroy removes the tag and its taggings but not associated projects/posts; and unauthenticated index redirects. GET the index and assert tag deletion renders as a POST form containing `_method=delete`, with no `a[data-turbo-method='delete']`.
 
 Use this exact valid payload:
 
@@ -901,7 +1257,7 @@ Use this exact valid payload:
 
 - [ ] **Step 2: Run and verify failure**
 
-Run: `bin/rails test test/requests/admin/tags_test.rb`
+Run: `mise exec -- ruby bin/rails test test/requests/admin/tags_test.rb`
 
 Expected: FAIL because `Admin::TagsController` is absent.
 
@@ -923,9 +1279,9 @@ class Admin::TagsController < Admin::BaseController
   end
 
   def create
-    @tag = Tag.new(tag_params)
+    @tag = Tag.new(protect_translation_locales(tag_params))
     if @tag.save
-      redirect_to admin_tags_path, notice: "Tag created."
+      redirect_to admin_tags_path, notice: "Tag created.", status: :see_other
     else
       prepare_translations(@tag)
       render :new, status: :unprocessable_entity
@@ -937,8 +1293,8 @@ class Admin::TagsController < Admin::BaseController
   end
 
   def update
-    if @tag.update(tag_params)
-      redirect_to admin_tags_path, notice: "Tag saved."
+    if @tag.update(protect_translation_locales(tag_params))
+      redirect_to admin_tags_path, notice: "Tag saved.", status: :see_other
     else
       prepare_translations(@tag)
       render :edit, status: :unprocessable_entity
@@ -947,7 +1303,7 @@ class Admin::TagsController < Admin::BaseController
 
   def destroy
     @tag.destroy!
-    redirect_to admin_tags_path, notice: "Tag deleted."
+    redirect_to admin_tags_path, notice: "Tag deleted.", status: :see_other
   end
 
   private
@@ -955,16 +1311,18 @@ class Admin::TagsController < Admin::BaseController
   def set_tag = @tag = Tag.find(params[:id])
 
   def tag_params
-    params.require(:tag).permit(translations_attributes: %i[id locale name slug _destroy])
+    params.expect(tag: [
+      { translations_attributes: [ %i[id locale name slug _destroy] ] }
+    ])
   end
 end
 ```
 
-Use locale tabs even though fields are short, preserving the same mobile interaction. Translation fields contain name and editable stable slug help text. Index cards list all available localized names/slugs. Delete confirmation reads “Delete this tag and remove it from all projects and posts?”.
+Render `admin/shared/locale_tabs` with the tag form, record, and tag translation-fields partial. Translation fields contain name and editable stable slug help text. Index cards list all available localized names/slugs. Render deletion as `<%= button_to "Delete", admin_tag_path(tag), method: :delete, class: "admin-action", form: { data: { turbo_confirm: "Delete this tag and remove it from all projects and posts?" } } %>` so the destructive request remains a normal form without JavaScript.
 
 - [ ] **Step 4: Run tests**
 
-Run: `bin/rails test test/requests/admin/tags_test.rb test/models/tag_test.rb test/models/tag_translation_test.rb`
+Run: `mise exec -- ruby bin/rails test test/requests/admin/tags_test.rb test/models/tag_translation_test.rb test/models/public_content_test.rb`
 
 Expected: PASS.
 
@@ -982,18 +1340,19 @@ git commit -m "feat(admin): manage localized tags"
 **Files:**
 
 - Create: `app/controllers/admin/profiles_controller.rb`
+- Create: `app/controllers/admin/profiles/portraits_controller.rb`
 - Create: `app/views/admin/profiles/edit.html.erb`, `_form.html.erb`, `_translation_fields.html.erb`
 - Create: `test/requests/admin/profiles_test.rb`
-- Create: `test/fixtures/files/portrait.png`
+- Reuse: `public/icon.png` for the valid portrait upload.
 
 **Interfaces:**
 
 - Consumes: nullable `Profile.current`, nested translations, portrait MIME/extension/size validation, fixed accent enum, theme `<html data-accent>` contract.
-- Produces: singleton profile editor and portrait purge route.
+- Produces: singleton profile editor plus `Admin::Profiles::PortraitsController#destroy`.
 
 - [ ] **Step 1: Write failing request tests**
 
-Test the editor against an empty database first: GET renders, the first PATCH creates the singleton plus its English translation, and a second PATCH updates the same row. Test `public_contact_email`, the three `social_links` keys, `accent`, portrait, and all three translations in one request. Assert blank social values are removed from the stored JSON. Test invalid email, invalid HTTP(S) social URL, invalid accent, and invalid portrait MIME/extension/size return 422 while preserving `headline` and `biography_markdown`. Test the portrait purge route only after the singleton exists. Test unauthenticated edit redirects.
+Test the editor against an empty database first: GET renders without persisting a row; the first PATCH creates the singleton plus its English translation; and a second PATCH includes that translation's persisted `id` and updates the same rows. Test `public_contact_email`, the three `social_links` keys, `accent`, portrait, and all three translations in one request. Assert blank social values are removed from the stored JSON. Test invalid email, invalid HTTP(S) social URL, invalid accent, and one `text/plain` portrait upload return 422 while preserving `headline` and `biography_markdown`; `test/models/public_content_test.rb` remains the MIME/extension/size matrix. Submit a persisted French translation with `locale: "vi"` and assert it remains French. Submit `profile: "not-an-object"` and assert 400. After the singleton exists, assert that `DELETE admin_profile_portrait_path` reaches the dedicated portrait resource and purges the attachment. GET edit and assert portrait removal renders after the profile form as a separate POST form containing `_method=delete`, with no nested forms or `a[data-turbo-method='delete']`. Test unauthenticated edit redirects.
 
 Use this representative update:
 
@@ -1001,9 +1360,9 @@ Use this representative update:
 patch admin_profile_path, params: { profile: {
   public_contact_email: "hello@example.test", accent: "orange",
   social_links: { github: "https://github.com/owner", linkedin: "", website: "https://example.test" },
-  portrait: fixture_file_upload("files/portrait.png", "image/png"),
+  portrait: Rack::Test::UploadedFile.new(Rails.root.join("public/icon.png"), "image/png"),
   translations_attributes: {
-    "0" => { id: english.id, locale: "en", display_name: "Portfolio Owner", headline: "Ideas. Interfaces. Impact.", introduction: "Short intro", biography_markdown: "# Biography", availability_label: "Available" },
+    "0" => { locale: "en", display_name: "Portfolio Owner", headline: "Ideas. Interfaces. Impact.", introduction: "Short intro", biography_markdown: "# Biography", availability_label: "Available" },
     "1" => { locale: "fr", display_name: "Propriétaire", headline: "Des idées qui comptent", introduction: "Présentation", biography_markdown: "# Biographie", availability_label: "Disponible" },
     "2" => { locale: "vi", display_name: "", headline: "", introduction: "", biography_markdown: "", availability_label: "" }
   }
@@ -1012,7 +1371,7 @@ patch admin_profile_path, params: { profile: {
 
 - [ ] **Step 2: Run and verify failure**
 
-Run: `bin/rails test test/requests/admin/profiles_test.rb`
+Run: `mise exec -- ruby bin/rails test test/requests/admin/profiles_test.rb`
 
 Expected: FAIL because `Admin::ProfilesController` is absent.
 
@@ -1021,55 +1380,62 @@ Expected: FAIL because `Admin::ProfilesController` is absent.
 ```ruby
 class Admin::ProfilesController < Admin::BaseController
   before_action :set_profile, only: %i[edit update]
-  before_action :find_profile, only: :portrait
 
   def edit
     prepare_translations(@profile)
   end
 
   def update
-    attributes = profile_params
-    attributes[:social_links] = attributes[:social_links].to_h.compact_blank
+    attributes = protect_translation_locales(profile_params)
+    attributes[:social_links] = attributes[:social_links].to_h.compact_blank if attributes[:social_links]
     if @profile.update(attributes)
-      redirect_to edit_admin_profile_path, notice: "Profile saved."
+      redirect_to edit_admin_profile_path, notice: "Profile saved.", status: :see_other
     else
       prepare_translations(@profile)
       render :edit, status: :unprocessable_entity
     end
   end
 
-  def portrait
-    @profile.portrait.purge
-    redirect_to edit_admin_profile_path, notice: "Portrait removed."
-  end
-
   private
 
   def set_profile = @profile = Profile.current || Profile.new(singleton_guard: 1)
-  def find_profile = @profile = Profile.current || raise(ActiveRecord::RecordNotFound)
 
   def profile_params
-    params.require(:profile).permit(
+    params.expect(profile: [
       :public_contact_email, :accent, :portrait,
-      social_links: %i[github linkedin website],
-      translations_attributes: %i[id locale display_name headline introduction biography_markdown availability_label _destroy]
-    )
+      {
+        social_links: %i[github linkedin website],
+        translations_attributes: [ %i[id locale display_name headline introduction biography_markdown availability_label _destroy] ]
+      }
+    ])
   end
 end
 ```
 
-Use `form_with model: @profile, url: admin_profile_path, method: :patch` so the same singleton route handles an unsaved first record and later updates. Form shared fields are contact email; labeled URL inputs for GitHub, LinkedIn, and website; portrait; and exactly five accent radios generated from `Profile::ACCENTS`. Show each radio's preset name and semantic accent swatch; no free-form color input. Translation fields are display name, headline, introduction, availability label, and biography Markdown with the Task 4 preview wrapper. Portrait removal requires confirmation.
+Keep portrait removal in its own resource controller:
+
+```ruby
+class Admin::Profiles::PortraitsController < Admin::BaseController
+  def destroy
+    profile = Profile.current || raise(ActiveRecord::RecordNotFound)
+    profile.portrait.purge
+    redirect_to edit_admin_profile_path, notice: "Portrait removed.", status: :see_other
+  end
+end
+```
+
+Use `form_with model: @profile, url: admin_profile_path, method: :patch` so the same singleton route handles an unsaved first record and later updates. Form shared fields are contact email; labeled URL inputs for GitHub, LinkedIn, and website; portrait; and exactly five accent radios generated from `Profile::ACCENTS`. Show each radio's preset name and semantic accent swatch; no free-form color input. Translation fields are display name, headline, introduction, availability label, and `<%= render "admin/shared/markdown_editor", form: form, attribute: :biography_markdown, label: "Biography (Markdown)" %>`. In `edit.html.erb`, render `<%= button_to "Remove portrait", admin_profile_portrait_path, method: :delete, class: "admin-action", form: { data: { turbo_confirm: "Remove the portrait?" } } %>` after `_form`, not inside the profile `form_with`.
 
 - [ ] **Step 4: Run profile plus public accent regression tests**
 
-Run: `bin/rails test test/requests/admin/profiles_test.rb test/models/profile_test.rb test/requests/public/home_test.rb`
+Run: `mise exec -- ruby bin/rails test test/requests/admin/profiles_test.rb test/models/public_content_test.rb test/integration/public_content_test.rb`
 
 Expected: PASS; the public layout still emits the selected `data-accent` value.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/controllers/admin/profiles_controller.rb app/views/admin/profiles test/requests/admin/profiles_test.rb test/fixtures/files/portrait.png
+git add app/controllers/admin/profiles_controller.rb app/controllers/admin/profiles/portraits_controller.rb app/views/admin/profiles test/requests/admin/profiles_test.rb
 git commit -m "feat(admin): manage profile and site accent"
 ```
 
@@ -1080,6 +1446,7 @@ git commit -m "feat(admin): manage profile and site accent"
 **Files:**
 
 - Create: `app/controllers/admin/resumes_controller.rb`
+- Create: `app/controllers/admin/resumes/pdfs_controller.rb`
 - Create: `app/views/admin/resumes/edit.html.erb`, `_form.html.erb`, `_translation_fields.html.erb`
 - Create: `test/requests/admin/resumes_test.rb`
 - Create: `test/fixtures/files/resume.pdf`
@@ -1087,25 +1454,36 @@ git commit -m "feat(admin): manage profile and site accent"
 **Interfaces:**
 
 - Consumes: nullable `Resume.current`, nested translations, `ResumeTranslation#pdf`, and Phase 2 PDF MIME/extension/size validation.
-- Produces: résumé metadata/editor and ownership-scoped localized PDF purge.
+- Produces: résumé metadata/editor plus ownership-scoped `Admin::Resumes::PdfsController#destroy`.
 
 - [ ] **Step 1: Write failing request tests**
 
-Test the editor against an empty database first: GET renders, the first PATCH creates the singleton plus its English translation, and a second PATCH updates the same row. Test one update with `updated_on`, English and French text, and a distinct valid PDF on each translation. Assert English is required, optional blank Vietnamese is rejected rather than persisted, and invalid PDF MIME, extension, or size returns 422 with text retained. Test removal only after the singleton exists, including that removing French PDF cannot remove English PDF or another translation's PDF. Test unauthenticated access.
+Test the editor against an empty database first: GET renders without persisting a row; the first PATCH creates the singleton plus its English translation; and a second PATCH includes that translation's persisted `id` and updates the same rows. Test one update with `updated_on`, English and French text, and a distinct valid PDF on each translation. Assert English is required, optional blank Vietnamese is rejected rather than persisted, and one `text/plain` PDF upload returns 422 with text retained; `test/models/public_content_test.rb` remains the MIME/extension/size matrix. Submit a persisted French translation with `locale: "vi"` and assert it remains French. Submit `resume: "not-an-object"` and assert 400. Test `DELETE admin_resume_pdf_path(french_translation)` only after the singleton exists, including that removing the French PDF cannot remove the English PDF or another translation's PDF. GET edit and assert each localized PDF removal renders after the résumé form as a separate POST form containing `_method=delete`, with no nested forms or `a[data-turbo-method='delete']`. Test unauthenticated access.
 
 The nested upload parameter is exact:
 
+Create the small metadata-validation fixture as literal text; Phase 2 validates MIME type, extension, and byte size rather than parsing PDF internals:
+
+```text
+%PDF-1.4
+%%EOF
+```
+
+Save those bytes as `test/fixtures/files/resume.pdf`, then submit:
+
 ```ruby
-translations_attributes: {
-  "0" => { id: english.id, locale: "en", title: "Résumé", description: "English résumé", pdf: fixture_file_upload("files/resume.pdf", "application/pdf") },
-  "1" => { locale: "fr", title: "CV", description: "CV français", pdf: fixture_file_upload("files/resume.pdf", "application/pdf") },
-  "2" => { locale: "vi", title: "", description: "", pdf: nil }
+{
+  translations_attributes: {
+    "0" => { locale: "en", title: "Résumé", description: "English résumé", pdf: fixture_file_upload("files/resume.pdf", "application/pdf") },
+    "1" => { locale: "fr", title: "CV", description: "CV français", pdf: fixture_file_upload("files/resume.pdf", "application/pdf") },
+    "2" => { locale: "vi", title: "", description: "", pdf: nil }
+  }
 }
 ```
 
 - [ ] **Step 2: Run and verify failure**
 
-Run: `bin/rails test test/requests/admin/resumes_test.rb`
+Run: `mise exec -- ruby bin/rails test test/requests/admin/resumes_test.rb`
 
 Expected: FAIL because `Admin::ResumesController` is absent.
 
@@ -1114,53 +1492,58 @@ Expected: FAIL because `Admin::ResumesController` is absent.
 ```ruby
 class Admin::ResumesController < Admin::BaseController
   before_action :set_resume, only: %i[edit update]
-  before_action :find_resume, only: :pdf
 
   def edit
     prepare_translations(@resume)
   end
 
   def update
-    if @resume.update(resume_params)
-      redirect_to edit_admin_resume_path, notice: "Résumé saved."
+    if @resume.update(protect_translation_locales(resume_params))
+      redirect_to edit_admin_resume_path, notice: "Résumé saved.", status: :see_other
     else
       prepare_translations(@resume)
       render :edit, status: :unprocessable_entity
     end
   end
 
-  def pdf
-    translation = @resume.translations.find(params[:translation_id])
-    translation.pdf.purge
-    redirect_to edit_admin_resume_path, notice: "PDF removed."
-  end
-
   private
 
   def set_resume = @resume = Resume.current || Resume.new(singleton_guard: 1)
-  def find_resume = @resume = Resume.current || raise(ActiveRecord::RecordNotFound)
 
   def resume_params
-    params.require(:resume).permit(
+    params.expect(resume: [
       :updated_on,
-      translations_attributes: %i[id locale title description pdf _destroy]
-    )
+      { translations_attributes: [ %i[id locale title description pdf _destroy] ] }
+    ])
   end
 end
 ```
 
-Use `form_with model: @resume, url: admin_resume_path, method: :patch` so the singleton route also creates the first row. The form uses a date input for `updated_on`; each locale panel contains title, description, and `file_field :pdf, accept: "application/pdf,.pdf"`. Show filename and byte size when attached. PDF removal uses `translation_pdf_admin_resume_path(translation_id: form.object.id)`, DELETE, and text “Remove the French PDF?” based on the tab locale. Do not build a media library.
+Keep PDF removal in its own resource controller and scope the translation lookup through the singleton résumé:
+
+```ruby
+class Admin::Resumes::PdfsController < Admin::BaseController
+  def destroy
+    resume = Resume.current || raise(ActiveRecord::RecordNotFound)
+    translation = resume.translations.find(params[:id])
+    translation.pdf.purge
+    redirect_to edit_admin_resume_path, notice: "PDF removed.", status: :see_other
+  end
+end
+```
+
+Use `form_with model: @resume, url: admin_resume_path, method: :patch` so the singleton route also creates the first row. The form uses a date input for `updated_on`; each locale panel contains title, description, and `file_field :pdf, accept: "application/pdf,.pdf"`. Show filename and byte size when attached. In `edit.html.erb`, render one localized removal form per persisted translation after `_form`, using `<%= button_to "Remove the #{Admin::ContentHelper::LOCALE_NAMES.fetch(translation.locale)} PDF", admin_resume_pdf_path(translation), method: :delete, class: "admin-action", form: { data: { turbo_confirm: "Remove this localized PDF?" } } %>`. Do not nest these forms or build a media library.
 
 - [ ] **Step 4: Run résumé and public download regressions**
 
-Run: `bin/rails test test/requests/admin/resumes_test.rb test/models/resume_test.rb test/models/resume_translation_test.rb test/requests/public/resume_test.rb`
+Run: `mise exec -- ruby bin/rails test test/requests/admin/resumes_test.rb test/models/public_content_test.rb test/integration/public_content_test.rb`
 
 Expected: PASS; admin upload changes are visible through the existing localized public download only where that translation exists.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/controllers/admin/resumes_controller.rb app/views/admin/resumes test/requests/admin/resumes_test.rb test/fixtures/files/resume.pdf
+git add app/controllers/admin/resumes_controller.rb app/controllers/admin/resumes/pdfs_controller.rb app/views/admin/resumes test/requests/admin/resumes_test.rb test/fixtures/files/resume.pdf
 git commit -m "feat(admin): manage localized resume files"
 ```
 
@@ -1170,13 +1553,14 @@ git commit -m "feat(admin): manage localized resume files"
 
 **Files:**
 
+- Create: `test/requests/admin/cms_authorization_test.rb`
 - Create: `test/system/admin_manages_content_test.rb`
 - Modify only for discovered accessibility/layout defects: admin views and `app/assets/tailwind/application.css` created or modified in Tasks 1–8.
 
 **Interfaces:**
 
 - Consumes: all Phase 4 routes/forms, Phase 3 real two-factor system sign-in helper, Turbo/Stimulus.
-- Produces: one regression proving the complete CMS workflow at phone and desktop widths.
+- Produces: an authorization matrix for every Phase 4 controller and one regression proving the complete CMS workflow at phone and desktop widths.
 
 - [ ] **Step 1: Write the failing phone-first system test**
 
@@ -1185,6 +1569,21 @@ require "application_system_test_case"
 
 class AdminManagesContentTest < ApplicationSystemTestCase
   setup do
+    Profile.create!(
+      public_contact_email: "owner@example.test",
+      translations_attributes: {
+        "0" => {
+          locale: "en", display_name: "Portfolio Owner", headline: "Ideas. Interfaces. Impact.",
+          introduction: "Short introduction", biography_markdown: "Biography", availability_label: "Available"
+        }
+      }
+    )
+    Resume.create!(
+      updated_on: Date.new(2026, 9, 2),
+      translations_attributes: {
+        "0" => { locale: "en", title: "Résumé", description: "Current résumé" }
+      }
+    )
     sign_in_owner
     page.current_window.resize_to(320, 700)
   end
@@ -1195,9 +1594,12 @@ class AdminManagesContentTest < ApplicationSystemTestCase
     fill_in "Title", with: "Phone-first project", match: :first
     fill_in "Summary", with: "Created from a narrow viewport", match: :first
     fill_in "Body (Markdown)", with: "# Preview heading", match: :first
-    attach_file "Cover image", file_fixture("cover.png")
+    attach_file "Cover image", Rails.root.join("public/icon.png")
     click_button "Preview", match: :first
     within("turbo-frame#project_en_markdown_preview") { assert_text "Preview heading" }
+    fill_in "Body (Markdown)", with: "# Updated preview", match: :first
+    click_button "Preview", match: :first
+    within("turbo-frame#project_en_markdown_preview") { assert_text "Updated preview" }
 
     click_button "French"
     within("[role='tabpanel']:not([hidden])") do
@@ -1234,15 +1636,97 @@ class AdminManagesContentTest < ApplicationSystemTestCase
     english.send_keys(:arrow_right)
     assert_equal "true", find("[role='tab']", text: "French")["aria-selected"]
     assert_selector "[role='tabpanel']:not([hidden])", text: /French/
+    find("[role='tab']", text: "French").send_keys(:end)
+    assert_equal "true", find("[role='tab']", text: "Vietnamese")["aria-selected"]
+    find("[role='tab']", text: "Vietnamese").send_keys(:home)
+    assert_equal "true", find("[role='tab']", text: "English")["aria-selected"]
+  end
+
+  test "preview request failures are visible without losing editor content" do
+    visit new_admin_post_path
+    fill_in "Body (Markdown)", with: "Unsaved body", match: :first
+    editor = find("[data-controller~='markdown-preview']", match: :first)
+    page.execute_script(
+      'arguments[0].setAttribute("data-markdown-preview-url-value", "/missing-preview")',
+      editor
+    )
+
+    click_button "Preview", match: :first
+
+    within("turbo-frame#post_en_markdown_preview") do
+      assert_text "Preview unavailable. Try again."
+    end
+    assert_field "Body (Markdown)", with: "Unsaved body", match: :first
   end
 end
 ```
 
-Create `Profile.current`, `Resume.current`, and their English translations in the system-test setup; development seeds are not a production precondition. The request tests for Tasks 7 and 8 must separately prove the first authenticated PATCH creates each missing singleton. The system helper performs the actual Phase 3 password and TOTP flow; do not disable authentication in system tests.
+The request tests for Tasks 7 and 8 separately prove the first authenticated PATCH creates each missing singleton. Development seeds are not a production precondition. The system helper performs the actual Phase 3 password and TOTP flow; do not disable authentication in system tests.
+
+Create the controller-level authorization matrix:
+
+```ruby
+require "test_helper"
+
+class Admin::CmsAuthorizationTest < ActionDispatch::IntegrationTest
+  test "anonymous sessions cannot reach any Phase 4 controller" do
+    assert_cms_redirects_to(new_admin_session_path)
+  end
+
+  test "password-only sessions cannot reach any Phase 4 controller" do
+    user = admin_users(:owner)
+    post admin_session_path, params: {
+      admin_login: { email: user.email, password: TEST_PASSWORD }
+    }
+
+    assert_cms_redirects_to(admin_totp_challenge_path)
+  end
+
+  test "server HTML exposes every locale when JavaScript is unavailable" do
+    sign_in_as_admin
+    get new_admin_project_path
+
+    assert_response :success
+    assert_select "[role='tabpanel']", count: 3
+    assert_select "[role='tabpanel'][hidden]", count: 0
+    assert_select "button[type='button'][role='tab']", count: 3
+  end
+
+  private
+
+  def assert_cms_redirects_to(destination)
+    [
+      -> { get admin_projects_path },
+      -> { get admin_posts_path },
+      -> { get admin_tags_path },
+      -> { get edit_admin_profile_path },
+      -> { get edit_admin_resume_path },
+      -> { delete admin_project_cover_image_path(0) },
+      -> { delete admin_project_gallery_image_path(0, 0) },
+      -> { delete admin_post_cover_image_path(0) },
+      -> { delete admin_profile_portrait_path },
+      -> { delete admin_resume_pdf_path(0) },
+      -> {
+        post admin_markdown_preview_path,
+          params: { preview: { markdown: "Text", frame_id: "post_en_markdown_preview" } }
+      }
+    ].each do |request|
+      request.call
+      assert_redirected_to destination
+    end
+  end
+end
+```
+
+One inherited request per new controller is sufficient because every action inherits the unchanged `Admin::BaseController#require_admin!`; authenticated resource tests separately exercise each mutating action. The zero IDs are intentional because authentication redirects before any resource lookup.
 
 - [ ] **Step 2: Run and observe the first failure**
 
-Run: `bin/rails test:system test/system/admin_manages_content_test.rb`
+Run: `mise exec -- ruby bin/rails test test/requests/admin/cms_authorization_test.rb`
+
+Expected: FAIL until all Phase 4 controllers and JavaScript-fallback tab markup exist.
+
+Run: `mise exec -- ruby bin/rails test:system test/system/admin_manages_content_test.rb`
 
 Expected: FAIL on the first missing label, inaccessible tab, preview replacement, or overflow defect; fix one observed defect at a time without adding a frontend framework.
 
@@ -1257,7 +1741,7 @@ All controls: visible labels and keyboard-visible focus
 Tabs: role/aria-selected/aria-controls plus Left/Right/Home/End
 Actions: minimum 44 CSS px touch height
 Lists: cards at base width; denser grids only from md upward
-Destructive links: explicit Turbo confirmation
+Destructive actions: `button_to` forms with explicit Turbo confirmation
 Validation: 422 response bound to the submitted in-memory record
 Preview: authenticated POST, sanitized server HTML, locale-specific Turbo Frame
 ```
@@ -1267,12 +1751,13 @@ Do not add screenshot gems, a component library, a rich-text editor, direct uplo
 - [ ] **Step 4: Run the complete Phase 4 verification suite**
 
 ```bash
-bin/rails test test/models test/helpers/admin test/requests/admin
-bin/rails test:system test/system/admin_manages_content_test.rb
-bin/rails test
-bin/rails test:system
-bin/rubocop
-bin/brakeman --no-pager
+mise exec -- ruby bin/rails test test/models test/helpers/admin test/requests/admin
+mise exec -- ruby bin/rails test:system test/system/admin_manages_content_test.rb
+mise exec -- ruby bin/rails test
+mise exec -- ruby bin/rails test:system
+mise exec -- ruby bin/importmap audit
+mise exec -- ruby bin/rubocop
+mise exec -- ruby bin/brakeman --no-pager
 ```
 
 Expected: every command exits 0. Brakeman must not report an authentication bypass, unsafe redirect, unrestricted mass assignment, or raw unsanitized preview. Manually repeat the create/edit/preview/upload/delete workflow at 320×568 and 1440×900, then zoom the browser to 200%; all content remains reachable and no page gains horizontal scrolling.
@@ -1280,7 +1765,7 @@ Expected: every command exits 0. Brakeman must not report an authentication bypa
 - [ ] **Step 5: Commit acceptance coverage**
 
 ```bash
-git add test/system/admin_manages_content_test.rb app/views/admin app/assets/tailwind/application.css
+git add test/requests/admin/cms_authorization_test.rb test/system/admin_manages_content_test.rb app/views/admin app/assets/tailwind/application.css
 git commit -m "test(admin): cover mobile CMS workflow"
 ```
 
@@ -1299,11 +1784,13 @@ Expected: the worktree is clean before tagging; the tag points at the acceptance
 - [ ] Every `/admin` CMS and preview endpoint redirects an unauthenticated or password-only session through Phase 3 authentication.
 - [ ] Project, post, tag, profile, and résumé forms save shared fields and nested `en`, `fr`, `vi` records in one transaction.
 - [ ] English remains required; untouched optional locale tabs do not create blank records.
+- [ ] Persisted nested translations cannot be moved to another locale through submitted hidden-field changes.
 - [ ] Project/post state badges are visible but state transitions remain deferred to Phase 5.
-- [ ] Generated slugs stay unchanged after title/name edits unless the owner explicitly edits the slug.
+- [ ] Generated slugs stay unchanged after title/name edits unless the owner explicitly edits the slug; explicit values accept only lowercase ASCII kebab-case.
 - [ ] Invalid nested data and invalid uploads return 422 with entered values and errors intact.
-- [ ] Cover, gallery, portrait, and locale-specific PDF deletion is ownership-scoped and confirmed.
-- [ ] Markdown preview requires full admin authentication, uses `MarkdownRenderer`, returns `noindex, nofollow`, and replaces only the requested Turbo Frame.
+- [ ] New gallery uploads append without replacing existing images; cover, gallery, portrait, and locale-specific PDF deletion is ownership-scoped and confirmed.
+- [ ] Successful form mutations redirect with 303; malformed structured parameter scopes return 400 rather than 500.
+- [ ] Markdown preview requires full admin authentication, uses `MarkdownRenderer` plus the safe render boundary, returns `noindex, nofollow`, supports repeated previews, and replaces only the requested Turbo Frame.
 - [ ] Accent accepts only `brown`, `green`, `lime`, `orange`, or `yellow` and updates the existing public semantic accent contract.
 - [ ] Card/list layouts, forms, tabs, uploads, preview, and destructive actions work at 320 CSS pixels, desktop width, keyboard-only input, and 200% zoom.
 - [ ] Full model, request, system, RuboCop, and Brakeman commands pass before the phase tag is created.

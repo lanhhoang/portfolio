@@ -2,6 +2,22 @@ class Admin::BaseController < Admin::AuthenticationController
   layout "admin"
   before_action :require_admin!
 
+  protected
+
+  ADMIN_LOCALES = %w[en fr vi].freeze
+
+  def prepare_translations(record)
+    existing = record.translations.map(&:locale)
+    (ADMIN_LOCALES - existing).each { |locale| record.translations.build(locale:) }
+  end
+
+  def protect_translation_locales(attributes)
+    attributes[:translations_attributes]&.each_value do |translation|
+      translation.delete(:locale) if translation[:id].present?
+    end
+    attributes
+  end
+
   private
 
   def require_admin!

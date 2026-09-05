@@ -1,0 +1,18 @@
+<%= render "admin/shared/translation_controls", form:, translation: form.object %>
+<div>
+  <%= form.label :display_name, "Display name" %>
+  <%= form.text_field :display_name %>
+</div>
+<div>
+  <%= form.label :headline %>
+  <%= form.text_field :headline %>
+</div>
+<div>
+  <%= form.label :introduction %>
+  <%= form.text_area :introduction, rows: 3 %>
+</div>
+<div>
+  <%= form.label :availability_label, "Availability label" %>
+  <%= form.text_field :availability_label %>
+</div>
+<%= render "admin/shared/markdown_editor", form: form, attribute: :biography_markdown, label: "Biography (Markdown)" %>

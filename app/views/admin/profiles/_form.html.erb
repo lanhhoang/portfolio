@@ -1,0 +1,42 @@
+<%= render "admin/shared/errors", record: profile %>
+<%= form_with model: profile, url: admin_profile_path, method: :patch do |form| %>
+  <div class="grid gap-4 md:grid-cols-2">
+    <div>
+      <%= form.label :public_contact_email, "Public contact email" %>
+      <%= form.email_field :public_contact_email %>
+    </div>
+    <fieldset>
+      <legend>Accent</legend>
+      <% Profile::ACCENTS.each do |accent| %>
+        <label class="flex min-h-11 items-center gap-2">
+          <%= form.radio_button :accent, accent %>
+          <span><%= accent.capitalize %></span>
+          <span data-accent-swatch="<%= accent %>" class="inline-block size-4 rounded-full" style="background: var(--accent-<%= accent %>, currentColor)"></span>
+        </label>
+      <% end %>
+    </fieldset>
+    <div>
+      <%= form.label :portrait, "Portrait" %>
+      <%= form.file_field :portrait, accept: "image/png,image/jpeg,image/webp" %>
+    </div>
+    <fieldset>
+      <legend>Social links</legend>
+      <div>
+        <%= form.label :social_links_github, "GitHub URL" %>
+        <%= form.url_field :social_links_github, name: "profile[social_links][github]", value: profile.social_links["github"] %>
+      </div>
+      <div>
+        <%= form.label :social_links_linkedin, "LinkedIn URL" %>
+        <%= form.url_field :social_links_linkedin, name: "profile[social_links][linkedin]", value: profile.social_links["linkedin"] %>
+      </div>
+      <div>
+        <%= form.label :social_links_website, "Website URL" %>
+        <%= form.url_field :social_links_website, name: "profile[social_links][website]", value: profile.social_links["website"] %>
+      </div>
+    </fieldset>
+  </div>
+
+  <%= render "admin/shared/locale_tabs", form:, record: profile, fields_partial: "admin/profiles/translation_fields" %>
+
+  <%= form.submit "Save profile", class: "admin-action" %>
+<% end %>

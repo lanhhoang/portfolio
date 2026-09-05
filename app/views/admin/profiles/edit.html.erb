@@ -1,0 +1,11 @@
+<h1 class="mb-6 text-2xl font-semibold">Edit profile</h1>
+<%= render "form", profile: @profile %>
+
+<% if @profile.persisted? && @profile.portrait.attached? %>
+  <section class="admin-card mt-6">
+    <p class="mb-2 text-sm opacity-70">Portrait: <%= @profile.portrait.filename %></p>
+    <%= button_to "Remove portrait", admin_profile_portrait_path, method: :delete,
+      class: "admin-action",
+      form: { data: { turbo_confirm: "Remove the portrait?" } } %>
+  </section>
+<% end %>

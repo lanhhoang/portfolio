@@ -1,0 +1,3 @@
+<%= turbo_frame_tag @frame_id, data: { markdown_preview_target: "frame" } do %>
+  <article class="rich-text"><%= sanitize @html %></article>
+<% end %>

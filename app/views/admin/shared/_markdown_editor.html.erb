@@ -1,0 +1,12 @@
+<%# locals: (form:, attribute:, label:) %>
+<% frame_id = markdown_preview_frame_id(form.object) %>
+<div data-controller="markdown-preview"
+     data-markdown-preview-url-value="<%= admin_markdown_preview_path %>"
+     data-markdown-preview-frame-id-value="<%= frame_id %>">
+  <%= form.label attribute, label %>
+  <%= form.text_area attribute, rows: 18, data: { markdown_preview_target: "source" } %>
+  <button type="button" class="admin-action" data-action="markdown-preview#render">Preview</button>
+  <%= turbo_frame_tag frame_id, data: { markdown_preview_target: "frame" } do %>
+    <p>Preview appears here.</p>
+  <% end %>
+</div>

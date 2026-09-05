@@ -16,6 +16,21 @@ Rails.application.routes.draw do
 
   namespace :admin do
     root "dashboard#show"
+    resources :projects, except: :show do
+      resource :cover_image, only: :destroy, module: :projects
+      resources :gallery_images, only: :destroy, module: :projects
+    end
+    resources :posts, except: :show do
+      resource :cover_image, only: :destroy, module: :posts
+    end
+    resources :tags, except: :show
+    resource :profile, only: %i[edit update] do
+      resource :portrait, only: :destroy, module: :profiles
+    end
+    resource :resume, only: %i[edit update] do
+      resources :pdfs, only: :destroy, module: :resumes
+    end
+    resource :markdown_preview, only: :create
     resource :session, only: %i[new create destroy]
     resource :totp_challenge, only: %i[show create]
     resource :recovery_challenge, only: %i[show create]

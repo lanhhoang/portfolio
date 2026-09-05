@@ -15,7 +15,7 @@ class AdminAuthenticationTest < ApplicationSystemTestCase
     sign_in_owner
 
     assert_current_path admin_root_path
-    assert_text "Secure access is ready"
+    assert_text "Dashboard"
     click_button "Sign out"
 
     assert_current_path new_admin_session_path

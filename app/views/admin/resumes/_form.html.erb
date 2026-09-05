@@ -1,0 +1,13 @@
+<%= render "admin/shared/errors", record: resume %>
+<%= form_with model: resume, url: admin_resume_path, method: :patch do |form| %>
+  <div class="grid gap-4 md:grid-cols-2">
+    <div>
+      <%= form.label :updated_on, "Updated on" %>
+      <%= form.date_field :updated_on %>
+    </div>
+  </div>
+
+  <%= render "admin/shared/locale_tabs", form:, record: resume, fields_partial: "admin/resumes/translation_fields" %>
+
+  <%= form.submit "Save résumé", class: "admin-action" %>
+<% end %>

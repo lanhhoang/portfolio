@@ -1,0 +1,21 @@
+<div class="grid gap-4">
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-semibold">Tags</h1>
+    <%= link_to "New tag", new_admin_tag_path, class: "admin-action" %>
+  </div>
+  <% @tags.each do |tag| %>
+    <article class="admin-card grid gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <% tag.translations.each do |translation| %>
+          <span class="text-sm"><%= translation.locale %>: <%= translation.name %> (<%= translation.slug %>)</span>
+        <% end %>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <%= link_to "Edit", edit_admin_tag_path(tag), class: "admin-action" %>
+        <%= button_to "Delete", admin_tag_path(tag), method: :delete,
+          class: "admin-action",
+          form: { data: { turbo_confirm: "Delete this tag and remove it from all projects and posts?" } } %>
+      </div>
+    </article>
+  <% end %>
+</div>

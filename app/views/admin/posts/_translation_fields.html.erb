@@ -1,0 +1,15 @@
+<%= render "admin/shared/translation_controls", form:, translation: form.object %>
+<div>
+  <%= form.label :title %>
+  <%= form.text_field :title %>
+</div>
+<div>
+  <%= form.label :slug, "Slug" %>
+  <%= form.text_field :slug %>
+  <p class="text-sm opacity-70">Generated from the title when first saved; later title changes do not change it.</p>
+</div>
+<div>
+  <%= form.label :excerpt %>
+  <%= form.text_area :excerpt, rows: 3 %>
+</div>
+<%= render "admin/shared/markdown_editor", form: form, attribute: :body_markdown, label: "Body (Markdown)" %>

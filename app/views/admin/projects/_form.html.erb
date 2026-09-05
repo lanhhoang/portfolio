@@ -1,0 +1,46 @@
+<%= render "admin/shared/errors", record: project %>
+<%= form_with model: [:admin, project] do |form| %>
+  <div class="grid gap-4 md:grid-cols-2">
+    <div>
+      <%= form.label :role %>
+      <%= form.text_field :role, required: true %>
+    </div>
+    <div>
+      <%= form.label :featured_position %>
+      <%= form.number_field :featured_position, min: 1 %>
+    </div>
+    <div>
+      <%= form.label :started_on %>
+      <%= form.date_field :started_on %>
+    </div>
+    <div>
+      <%= form.label :ended_on %>
+      <%= form.date_field :ended_on %>
+    </div>
+    <div>
+      <%= form.label :live_url %>
+      <%= form.url_field :live_url %>
+    </div>
+    <div>
+      <%= form.label :source_url %>
+      <%= form.url_field :source_url %>
+    </div>
+    <div>
+      <%= form.label :tag_ids, "Tags" %>
+      <%= form.collection_check_boxes :tag_ids, Tag.includes(:translations).order(:id), :id,
+        ->(tag) { tag.translations.find { |item| item.locale == "en" }&.name || "Tag ##{tag.id}" } %>
+    </div>
+    <div>
+      <%= form.label :cover_image, "Cover image" %>
+      <%= form.file_field :cover_image, accept: "image/png,image/jpeg,image/webp" %>
+    </div>
+    <div>
+      <%= form.label :gallery_images, "Gallery images" %>
+      <%= form.file_field :gallery_images, multiple: true, include_hidden: false, accept: "image/png,image/jpeg,image/webp" %>
+    </div>
+  </div>
+
+  <%= render "admin/shared/locale_tabs", form:, record: project, fields_partial: "admin/projects/translation_fields" %>
+
+  <%= form.submit "Create project", class: "admin-action" %>
+<% end %>
