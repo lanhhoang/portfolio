@@ -48,10 +48,13 @@ class Admin::ProjectTranslations::PublicationsTest < ActionDispatch::Integration
 
   test "uses explicitly labelled UTC input without JavaScript" do
     sign_in_as_admin
-    patch admin_project_translation_publication_path(@english), params: {
-      publication: { scheduled_at_local: 2.hours.from_now.utc.strftime("%Y-%m-%dT%H:%M"), scheduled_at: "" }
-    }
-    assert_predicate @english.reload, :scheduled?
+    travel_to Time.zone.local(2026, 9, 5, 8) do
+      patch admin_project_translation_publication_path(@english), params: {
+        publication: { scheduled_at_local: "2026-09-05T09:30", scheduled_at: "" }
+      }
+    end
+
+    assert_equal Time.utc(2026, 9, 5, 9, 30), @english.reload.scheduled_at
   end
 
   test "malformed parameter structure receives the Rails 400 response" do
@@ -63,8 +66,8 @@ class Admin::ProjectTranslations::PublicationsTest < ActionDispatch::Integration
 
   test "rejects malformed and past schedule values without changing state" do
     sign_in_as_admin
-    [{ publication: { scheduled_at: "not-a-time" } },
-     { publication: { scheduled_at: 1.minute.ago.iso8601 } }].each do |parameters|
+    [ { publication: { scheduled_at: "not-a-time" } },
+      { publication: { scheduled_at: 1.minute.ago.iso8601 } } ].each do |parameters|
       patch admin_project_translation_publication_path(@english), params: parameters
       assert_response :see_other
       assert_equal "Choose a future publication time", flash[:alert]

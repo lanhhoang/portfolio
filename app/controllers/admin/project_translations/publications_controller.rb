@@ -29,12 +29,12 @@ class Admin::ProjectTranslations::PublicationsController < Admin::BaseController
   end
 
   def scheduled_at
-    values = params.expect(publication: [:scheduled_at, :scheduled_at_local])
+    values = params.expect(publication: [ :scheduled_at, :scheduled_at_local ])
     if values[:scheduled_at].present?
       raise ArgumentError unless values[:scheduled_at].end_with?("Z")
 
       return Time.iso8601(values[:scheduled_at])
     end
-    return Time.strptime(values[:scheduled_at_local], "%Y-%m-%dT%H:%M").utc if values[:scheduled_at_local].present?
+    Time.find_zone!("UTC").strptime(values[:scheduled_at_local], "%Y-%m-%dT%H:%M") if values[:scheduled_at_local].present?
   end
 end

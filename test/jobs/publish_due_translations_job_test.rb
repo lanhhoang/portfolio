@@ -38,7 +38,7 @@ class PublishDueTranslationsJobTest < ActiveJob::TestCase
 
   test "publishes due English before a due optional locale in the same scan" do
     now = Time.zone.local(2026, 9, 2, 12, 0, 0)
-    project = create_project("ordered", optional_locales: ["fr"])
+    project = create_project("ordered", optional_locales: [ "fr" ])
     project.translations.update_all(state: "scheduled", scheduled_at: now - 1.minute)
 
     travel_to now do
@@ -51,7 +51,7 @@ class PublishDueTranslationsJobTest < ActiveJob::TestCase
 
   test "leaves blocked optional work scheduled and catches it up later" do
     now = Time.zone.local(2026, 9, 2, 12, 0, 0)
-    project = create_project("blocked", optional_locales: ["fr"])
+    project = create_project("blocked", optional_locales: [ "fr" ])
     english = project.translations.find_by!(locale: "en")
     french = project.translations.find_by!(locale: "fr")
     french.update_columns(state: "scheduled", scheduled_at: now - 1.hour)
@@ -87,13 +87,29 @@ class PublishDueTranslationsJobTest < ActiveJob::TestCase
     assert_equal first_scan, translation.reload.published_at
   end
 
+  test "does not publish a stale candidate that was returned to draft" do
+    now = Time.zone.local(2026, 9, 2, 12)
+    translation = create_post("cancelled").translations.find_by!(locale: "en")
+    translation.update_columns(state: "scheduled", scheduled_at: now - 1.minute)
+    stale_candidate = PostTranslation.find(translation.id)
+    translation.update_columns(state: "draft", scheduled_at: nil)
+    stale_scope = Object.new
+    stale_scope.define_singleton_method(:find_each) { |&block| block.call(stale_candidate) }
+
+    travel_to now do
+      PublishDueTranslationsJob.new.send(:publish_scope, stale_scope, at: now)
+    end
+
+    assert_predicate translation.reload, :draft?
+  end
+
   private
 
   def create_project(slug, optional_locales: [])
     Project.create!(
       role: "Developer",
       started_on: Date.new(2026, 1, 1),
-      translations_attributes: (["en"] + optional_locales).map do |locale|
+      translations_attributes: ([ "en" ] + optional_locales).map do |locale|
         { locale: locale, title: "#{slug} #{locale}", slug: "#{slug}-#{locale}", summary: "Summary", body_markdown: "Body" }
       end
     )
