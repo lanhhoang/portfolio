@@ -47,7 +47,7 @@ gem "thruster", require: false
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 # image_processing 2.x no longer pulls in ruby-vips; Rails 8.1 defaults to the vips
 # variant processor, so the dependency must be explicit.
-gem "image_processing", "~> 2.0"
+gem "image_processing", "~> 2.1"
 # Not eagerly required: scanning jobs run without the native libvips library,
 # and Active Storage loads it itself when the vips transformer is needed.
 gem "ruby-vips", "~> 2.0", require: false
