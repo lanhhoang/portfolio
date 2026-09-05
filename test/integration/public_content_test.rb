@@ -153,4 +153,36 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     get "/en/resume/download"
     assert_response :not_found
   end
+
+  test "publication transitions expose only the selected locale" do
+    french = @project.translations.create!(
+      locale: "fr", title: "Projet", slug: "projet", summary: "Résumé",
+      body_markdown: "Corps"
+    )
+    vietnamese = @project.translations.create!(
+      locale: "vi", title: "Dự án", slug: "du-an", summary: "Tóm tắt",
+      body_markdown: "Nội dung"
+    )
+
+    get "/fr/projects/#{french.slug}"
+    assert_response :not_found
+
+    french.publish
+    get "/fr/projects/#{french.slug}"
+    assert_response :success
+    get "/vi/projects/#{vietnamese.slug}"
+    assert_response :not_found
+
+    due_at = 1.hour.from_now.change(usec: 0)
+    vietnamese.schedule(at: due_at)
+    travel_to due_at do
+      PublishDueTranslationsJob.perform_now
+      get "/vi/projects/#{vietnamese.slug}"
+      assert_response :success
+    end
+
+    french.unpublish
+    get "/fr/projects/#{french.slug}"
+    assert_response :not_found
+  end
 end
