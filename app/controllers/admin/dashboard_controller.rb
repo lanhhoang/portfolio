@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Admin::DashboardController < Admin::BaseController
-  TRANSLATION_MODELS = [ProjectTranslation, PostTranslation].freeze
+  TRANSLATION_MODELS = [ ProjectTranslation, PostTranslation ].freeze
 
   def show
     @project_count = Project.count

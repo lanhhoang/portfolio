@@ -21,7 +21,7 @@ class PublishableTranslationTest < ActiveSupport::TestCase
   end
 
   test "non-English publication requires a published English sibling" do
-    project = create_project(optional_locales: ["fr"])
+    project = create_project(optional_locales: [ "fr" ])
     french = project.translations.find_by!(locale: "fr")
 
     error = assert_raises(PublishableTranslation::EnglishMustBePublished) do
@@ -34,7 +34,7 @@ class PublishableTranslationTest < ActiveSupport::TestCase
   end
 
   test "non-English publication succeeds after English publication" do
-    project = create_project(optional_locales: ["fr"])
+    project = create_project(optional_locales: [ "fr" ])
     english = project.translations.find_by!(locale: "en")
     french = project.translations.find_by!(locale: "fr")
 
@@ -49,7 +49,7 @@ class PublishableTranslationTest < ActiveSupport::TestCase
   end
 
   test "normal validation cannot bypass English-first publication" do
-    project = create_project(optional_locales: ["fr"])
+    project = create_project(optional_locales: [ "fr" ])
     french = project.translations.find_by!(locale: "fr")
     french.assign_attributes(state: :published, published_at: Time.current)
 
@@ -58,7 +58,7 @@ class PublishableTranslationTest < ActiveSupport::TestCase
   end
 
   test "unpublishing English does not cascade to an independently published locale" do
-    project = create_project(optional_locales: ["fr"])
+    project = create_project(optional_locales: [ "fr" ])
     english = project.translations.find_by!(locale: "en")
     french = project.translations.find_by!(locale: "fr")
     english.publish
@@ -75,7 +75,7 @@ class PublishableTranslationTest < ActiveSupport::TestCase
     travel_to 1.day.ago do
       translation.publish
     end
-    scheduled_time = 2.hours.from_now
+    scheduled_time = 2.hours.from_now.change(usec: 0)
 
     assert_same translation, translation.schedule(at: scheduled_time)
 
@@ -88,7 +88,7 @@ class PublishableTranslationTest < ActiveSupport::TestCase
   test "scheduling rejects blank or non-future times without changing the row" do
     translation = create_post.translations.find_by!(locale: "en")
 
-    [nil, 1.minute.ago].each do |invalid_time|
+    [ nil, 1.minute.ago ].each do |invalid_time|
       assert_raises(PublishableTranslation::InvalidScheduleTime) do
         translation.schedule(at: invalid_time)
       end
@@ -133,15 +133,15 @@ class PublishableTranslationTest < ActiveSupport::TestCase
   end
 
   test "due and upcoming scopes partition scheduled rows at the cutoff" do
-    post = create_post(optional_locales: ["fr"])
+    post = create_post(optional_locales: [ "fr" ])
     now = Time.zone.local(2026, 9, 2, 12, 0, 0)
     due = post.translations.find_by!(locale: "en")
     upcoming = post.translations.find_by!(locale: "fr")
     due.update_columns(state: "scheduled", scheduled_at: now)
     upcoming.update_columns(state: "scheduled", scheduled_at: now + 1.minute)
 
-    assert_equal [due], PostTranslation.due(now).to_a
-    assert_equal [upcoming], PostTranslation.upcoming(now).to_a
+    assert_equal [ due ], PostTranslation.due(now).to_a
+    assert_equal [ upcoming ], PostTranslation.upcoming(now).to_a
   end
 
   test "project and post translations expose their publication parent" do
@@ -169,7 +169,7 @@ class PublishableTranslationTest < ActiveSupport::TestCase
   end
 
   def translation_attributes(prefix, optional_locales, summary: nil, excerpt: nil)
-    (["en"] + optional_locales).map do |locale|
+    ([ "en" ] + optional_locales).map do |locale|
       {
         locale: locale,
         title: "#{prefix} #{locale}",
