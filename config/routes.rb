@@ -35,5 +35,13 @@ Rails.application.routes.draw do
     resource :totp_challenge, only: %i[show create]
     resource :recovery_challenge, only: %i[show create]
     resource :password_reset, only: %i[new create edit update]
+
+    resources :project_translations, only: [] do
+      resource :publication, only: %i[create update destroy], module: :project_translations
+    end
+
+    resources :post_translations, only: [] do
+      resource :publication, only: %i[create update destroy], module: :post_translations
+    end
   end
 end

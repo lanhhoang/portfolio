@@ -1,6 +1,11 @@
 <h1 class="mb-6 text-2xl font-semibold">Edit post</h1>
 <%= render "form", post: @post %>
 
+<% @post.translations.select(&:persisted?).each do |translation| %>
+  <%= render "admin/shared/publication_controls", translation:,
+    publication_path: admin_post_translation_publication_path(translation) %>
+<% end %>
+
 <% if @post.cover_image.attached? %>
   <section class="admin-card mt-6">
     <p class="mb-2 text-sm opacity-70">Cover image: <%= @post.cover_image.filename %></p>

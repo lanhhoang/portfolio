@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Admin::DashboardTest < ActionDispatch::IntegrationTest
+  include ActiveSupport::Testing::TimeHelpers
+
   setup { sign_in_as_admin }
 
   test "shows mobile friendly links and content counts" do
@@ -34,5 +36,46 @@ class Admin::DashboardTest < ActionDispatch::IntegrationTest
     sign_out_admin
     get admin_projects_path
     assert_redirected_to new_admin_session_path
+  end
+
+  test "shows drafts upcoming schedules and overdue English-blocked work" do
+    now = Time.current
+    project = Project.create!(
+        role: "Developer",
+        started_on: Date.new(2026, 1, 1),
+        translations_attributes: [
+          { locale: "en", title: "Draft English", slug: "draft-english", summary: "Summary", body_markdown: "Body" },
+          { locale: "fr", title: "Blocked French", slug: "blocked-french", summary: "Résumé", body_markdown: "Corps" },
+          { locale: "vi", title: "Upcoming Vietnamese", slug: "upcoming-vietnamese", summary: "Tóm tắt", body_markdown: "Nội dung" }
+        ]
+      )
+    project.translations.find_by!(locale: "fr").update_columns(state: "scheduled", scheduled_at: now - 1.hour)
+    project.translations.find_by!(locale: "vi").update_columns(state: "scheduled", scheduled_at: now + 1.hour)
+    published_post = Post.create!(translations_attributes: [
+      { locale: "en", title: "Published Post", slug: "published-post", excerpt: "Excerpt", body_markdown: "Body" }
+    ])
+    travel_to now - 1.day do
+      published_post.translations.first.publish
+    end
+
+    get admin_root_path
+
+    assert_response :success
+    assert_select "#draft-content", text: /Draft English/
+    assert_select "#upcoming-publications", text: /Upcoming Vietnamese/
+    assert_select "#failed-publications", text: /Blocked French/
+    assert_no_match(/Published Post/, response.body)
+  end
+
+  test "caps each publishing summary at ten records" do
+    11.times do |index|
+      Post.create!(translations_attributes: {
+        "0" => { locale: "en", title: "Draft #{index}", slug: "draft-#{index}", excerpt: "Excerpt", body_markdown: "Body" }
+      })
+    end
+
+    get admin_root_path
+
+    assert_select "#draft-content li", count: 10
   end
 end

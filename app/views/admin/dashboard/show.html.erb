@@ -20,4 +20,59 @@
     <%= link_to "Edit profile", edit_admin_profile_path, class: "admin-action" %>
     <%= link_to "Edit résumé", edit_admin_resume_path, class: "admin-action" %>
   </div>
+
+  <section id="draft-content" aria-labelledby="draft-content-heading">
+    <h2 id="draft-content-heading" class="text-xl font-semibold">Draft content</h2>
+    <% if @draft_translations.any? %>
+      <ul class="mt-3 space-y-3">
+        <% @draft_translations.each do |translation| %>
+          <li>
+            <%= link_to "#{translation.title} (#{translation.locale.upcase})",
+              edit_polymorphic_path([:admin, translation.publication_parent]),
+              class: "inline-flex min-h-11 items-center" %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="mt-3">No draft content.</p>
+    <% end %>
+  </section>
+
+  <section id="upcoming-publications" aria-labelledby="upcoming-publications-heading">
+    <h2 id="upcoming-publications-heading" class="text-xl font-semibold">Upcoming publications</h2>
+    <% if @upcoming_translations.any? %>
+      <ul class="mt-3 space-y-3">
+        <% @upcoming_translations.each do |translation| %>
+          <li>
+            <%= link_to "#{translation.title} (#{translation.locale.upcase})",
+              edit_polymorphic_path([:admin, translation.publication_parent]),
+              class: "inline-flex min-h-11 items-center" %>
+            <time datetime="<%= translation.scheduled_at.iso8601 %>" data-controller="local-time">
+              <%= translation.scheduled_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>
+            </time>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="mt-3">No upcoming publications.</p>
+    <% end %>
+  </section>
+
+  <section id="failed-publications" aria-labelledby="failed-publications-heading">
+    <h2 id="failed-publications-heading" class="text-xl font-semibold">Failed publication work</h2>
+    <% if @failed_publications.any? %>
+      <p class="mt-3">These overdue translations are waiting for their English translation to be published.</p>
+      <ul class="mt-3 space-y-3">
+        <% @failed_publications.each do |translation| %>
+          <li>
+            <%= link_to "#{translation.title} (#{translation.locale.upcase})",
+              edit_polymorphic_path([:admin, translation.publication_parent]),
+              class: "inline-flex min-h-11 items-center" %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="mt-3">No failed publication work.</p>
+    <% end %>
+  </section>
 </main>
