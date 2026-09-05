@@ -4,13 +4,13 @@
 
 **Goal:** Let the owner publish, unpublish, and schedule each project or post translation independently while enforcing English-first publication and catching up overdue work safely.
 
-**Architecture:** A shared `PublishableTranslation` concern owns the transitions and query scopes shared by both translation models. Six authenticated admin actions render as standalone forms after the existing editor form, and a small Stimulus adapter converts browser-local schedule input to an exact ISO 8601 instant. One recurring Solid Queue job scans every due English record before optional locales so retries and downtime catch-up remain idempotent; the dashboard reads the same scopes.
+**Architecture:** A shared `PublishableTranslation` concern owns the transitions and query scopes shared by both translation models. Singular nested `publication` resources give each translation conventional create, update, and destroy endpoints; standalone forms render after the existing editor form, and a small Stimulus adapter converts browser-local schedule input to an exact ISO 8601 instant. One recurring Solid Queue job scans every due English record before optional locales so retries and downtime catch-up remain idempotent; the dashboard reads the same scopes.
 
 **Tech Stack:** Ruby 4.0.6, Rails 8.1.x, Active Record, Active Job, Solid Queue, SQLite, Hotwire/Turbo, Tailwind CSS, Minitest, Capybara
 
 **Spec:** `docs/superpowers/specs/2026-09-02-portfolio-v4-design.md`
 
-**Parent plan:** `docs/superpowers/plans/2026-09-02-portfolio-v4-implementation.md` — Phase 5 contract is immutable.
+**Parent plan:** `docs/superpowers/plans/2026-09-02-portfolio-v4-implementation.md` — its Phase 5 interface is revised by this plan.
 
 ## Global Constraints
 
@@ -49,8 +49,9 @@ If an earlier phase has not produced one of these contracts, stop and finish tha
 | `app/models/concerns/publishable_translation.rb`                     | Shared transition methods, English-first guard, and due/upcoming scopes                  |
 | `app/models/project_translation.rb`                                  | Includes the concern and returns its `Project` publication parent                        |
 | `app/models/post_translation.rb`                                     | Includes the concern and returns its `Post` publication parent                           |
-| `config/routes.rb`                                                   | Six explicit member actions: publish, schedule, and unpublish for both translation types |
-| `app/controllers/admin/translation_publications_controller.rb`       | Authenticated transition endpoint with a fixed type allowlist                            |
+| `config/routes.rb`                                                   | Singular nested publication resources for both translation types                         |
+| `app/controllers/admin/project_translations/publications_controller.rb` | Project translation publication create, update, and destroy actions                    |
+| `app/controllers/admin/post_translations/publications_controller.rb` | Post translation publication create, update, and destroy actions                          |
 | `app/views/admin/shared/_publication_controls.html.erb`              | Standalone per-locale forms rendered outside the content editor form                      |
 | `app/views/admin/projects/edit.html.erb`                              | Renders controls for persisted project translations after the editor                     |
 | `app/views/admin/posts/edit.html.erb`                                 | Renders controls for persisted post translations after the editor                        |
@@ -61,7 +62,8 @@ If an earlier phase has not produced one of these contracts, stop and finish tha
 | `app/controllers/admin/dashboard_controller.rb`                      | Queries draft, upcoming, and blocked-overdue translations                                |
 | `app/views/admin/dashboard/show.html.erb`                            | Extends the existing dashboard with actionable publishing summaries                      |
 | `test/models/publishable_translation_test.rb`                        | Shared state-transition, validation, and idempotency coverage                            |
-| `test/requests/admin/translation_publications_test.rb`                | Authentication, explicit actions, parsing, redirects, and form structure                 |
+| `test/requests/admin/project_translations/publications_test.rb`       | Project publication authentication, parsing, redirects, and form structure               |
+| `test/requests/admin/post_translations/publications_test.rb`          | Post publication authentication, parsing, redirects, and form structure                  |
 | `test/jobs/publish_due_translations_job_test.rb`                     | Due scan, catch-up, ordering, retry, and idempotency coverage                            |
 | `test/config/recurring_schedule_test.rb`                             | Locks the recurring production schedule to the intended job                              |
 | `test/requests/admin/dashboard_test.rb`                               | Existing dashboard coverage extended with publishing summaries                           |
@@ -80,24 +82,23 @@ module PublishableTranslation
   upcoming(at = Time.current)
 
   # Returns self; repeated publication of an already-published row performs no write.
-  def publish!(at: Time.current) = self
+  def publish = self
 
   # Returns self; at must be later than Time.current.
-  def schedule!(at:) = self
+  def schedule(at:) = self
 
   # Returns self and preserves slug.
-  def unpublish! = self
+  def unpublish = self
 
   # Returns Project or Post.
   def publication_parent
 
   # Returns true for English, or when the parent's English translation is published.
-  def publishable_now?
+  def publishable?
 end
 
 class PublishDueTranslationsJob < ApplicationJob
-  # The optional argument exists for deterministic tests; recurring execution supplies none.
-  def perform(now = Time.current)
+  def perform
   end
 end
 ```
@@ -118,7 +119,7 @@ No service object, event table, state-machine gem, or separate scheduler is adde
 **Interfaces:**
 
 - Consumes: Existing string enums and translation-parent associations listed in Preconditions.
-- Produces: `due`, `upcoming`, `publish!`, `schedule!`, `unpublish!`, `publication_parent`, and `publishable_now?` exactly as documented above.
+- Produces: `due`, `upcoming`, `publish`, `schedule`, `unpublish`, `publication_parent`, and `publishable?` exactly as documented above.
 
 - [ ] **Step 1: Write the failing model tests**
 
@@ -130,12 +131,14 @@ require "test_helper"
 class PublishableTranslationTest < ActiveSupport::TestCase
   include ActiveSupport::Testing::TimeHelpers
 
-  test "publishing English records the supplied time and clears its schedule" do
+  test "publishing English records the current time and clears its schedule" do
     translation = create_project.translations.find_by!(locale: "en")
     translation.update_columns(state: "scheduled", scheduled_at: 1.hour.ago)
     publication_time = Time.zone.local(2026, 9, 2, 12, 0, 0)
 
-    assert_same translation, translation.publish!(at: publication_time)
+    travel_to publication_time do
+      assert_same translation, translation.publish
+    end
 
     translation.reload
     assert_predicate translation, :published?
@@ -148,7 +151,7 @@ class PublishableTranslationTest < ActiveSupport::TestCase
     french = project.translations.find_by!(locale: "fr")
 
     error = assert_raises(PublishableTranslation::EnglishMustBePublished) do
-      french.publish!(at: Time.current)
+      french.publish
     end
 
     assert_equal "Publish the English translation first", error.message
@@ -161,8 +164,12 @@ class PublishableTranslationTest < ActiveSupport::TestCase
     english = project.translations.find_by!(locale: "en")
     french = project.translations.find_by!(locale: "fr")
 
-    english.publish!(at: 2.minutes.ago)
-    french.publish!(at: 1.minute.ago)
+    travel_to 2.minutes.ago do
+      english.publish
+    end
+    travel_to 1.minute.ago do
+      french.publish
+    end
 
     assert_predicate french.reload, :published?
   end
@@ -180,10 +187,10 @@ class PublishableTranslationTest < ActiveSupport::TestCase
     project = create_project(optional_locales: ["fr"])
     english = project.translations.find_by!(locale: "en")
     french = project.translations.find_by!(locale: "fr")
-    english.publish!
-    french.publish!
+    english.publish
+    french.publish
 
-    english.unpublish!
+    english.unpublish
 
     assert_predicate english.reload, :draft?
     assert_predicate french.reload, :published?
@@ -191,10 +198,12 @@ class PublishableTranslationTest < ActiveSupport::TestCase
 
   test "scheduling uses a future time and clears an old publication time" do
     translation = create_post.translations.find_by!(locale: "en")
-    translation.publish!(at: 1.day.ago)
+    travel_to 1.day.ago do
+      translation.publish
+    end
     scheduled_time = 2.hours.from_now
 
-    assert_same translation, translation.schedule!(at: scheduled_time)
+    assert_same translation, translation.schedule(at: scheduled_time)
 
     translation.reload
     assert_predicate translation, :scheduled?
@@ -207,7 +216,7 @@ class PublishableTranslationTest < ActiveSupport::TestCase
 
     [nil, 1.minute.ago].each do |invalid_time|
       assert_raises(PublishableTranslation::InvalidScheduleTime) do
-        translation.schedule!(at: invalid_time)
+        translation.schedule(at: invalid_time)
       end
     end
 
@@ -218,9 +227,11 @@ class PublishableTranslationTest < ActiveSupport::TestCase
   test "unpublishing returns to draft and preserves the localized slug" do
     translation = create_project.translations.find_by!(locale: "en")
     original_slug = translation.slug
-    translation.publish!(at: 1.minute.ago)
+    travel_to 1.minute.ago do
+      translation.publish
+    end
 
-    assert_same translation, translation.unpublish!
+    assert_same translation, translation.unpublish
 
     translation.reload
     assert_predicate translation, :draft?
@@ -232,12 +243,14 @@ class PublishableTranslationTest < ActiveSupport::TestCase
   test "publishing an already-published translation performs no second write" do
     translation = create_project.translations.find_by!(locale: "en")
     first_time = Time.zone.local(2026, 9, 2, 12, 0, 0)
-    translation.publish!(at: first_time)
+    travel_to first_time do
+      translation.publish
+    end
     first_updated_at = translation.reload.updated_at
 
     travel 1.hour do
       assert_no_changes -> { translation.reload.attributes.slice("published_at", "updated_at") } do
-        translation.publish!(at: Time.current)
+        translation.publish
       end
     end
 
@@ -304,7 +317,7 @@ Run:
 mise exec -- ruby bin/rails test test/models/publishable_translation_test.rb
 ```
 
-Expected: FAIL with `NameError: uninitialized constant PublishableTranslation` or `NoMethodError` for `publish!`.
+Expected: FAIL with `NameError: uninitialized constant PublishableTranslation` or `NoMethodError` for `publish`.
 
 - [ ] **Step 3: Add the minimal shared concern**
 
@@ -324,18 +337,18 @@ module PublishableTranslation
     validate :english_is_published_before_optional_locale, if: :publishing_optional_locale?
   end
 
-  def publish!(at: Time.current)
+  def publish
     with_lock do
       return self if published?
-      raise EnglishMustBePublished, "Publish the English translation first" unless publishable_now?
+      raise EnglishMustBePublished, "Publish the English translation first" unless publishable?
 
-      update!(state: :published, scheduled_at: nil, published_at: at)
+      update!(state: :published, scheduled_at: nil, published_at: Time.current)
     end
 
     self
   end
 
-  def schedule!(at:)
+  def schedule(at:)
     raise InvalidScheduleTime, "Choose a future publication time" unless at && at > Time.current
 
     with_lock do
@@ -345,7 +358,7 @@ module PublishableTranslation
     self
   end
 
-  def unpublish!
+  def unpublish
     with_lock do
       return self if draft?
 
@@ -355,7 +368,7 @@ module PublishableTranslation
     self
   end
 
-  def publishable_now?
+  def publishable?
     locale == "en" || publication_parent.translations.published.exists?(locale: "en")
   end
 
@@ -366,7 +379,7 @@ module PublishableTranslation
   end
 
   def english_is_published_before_optional_locale
-    errors.add(:state, "requires the English translation to be published first") unless publishable_now?
+    errors.add(:state, "requires the English translation to be published first") unless publishable?
   end
 end
 ```
@@ -422,34 +435,36 @@ git commit -m "feat: centralize translation publication transitions"
 
 ---
 
-### Task 2: Add Explicit Authenticated Locale Actions
+### Task 2: Add Resourceful Publication Controls
 
 **Files:**
 
 - Modify: `config/routes.rb`
-- Create: `app/controllers/admin/translation_publications_controller.rb`
+- Create: `app/controllers/admin/project_translations/publications_controller.rb`
+- Create: `app/controllers/admin/post_translations/publications_controller.rb`
 - Create: `app/views/admin/shared/_publication_controls.html.erb`
 - Modify: `app/views/admin/projects/edit.html.erb`
 - Modify: `app/views/admin/posts/edit.html.erb`
 - Create: `app/javascript/controllers/schedule_time_controller.js`
 - Create: `app/javascript/controllers/local_time_controller.js`
-- Test: `test/requests/admin/translation_publications_test.rb`
+- Test: `test/requests/admin/project_translations/publications_test.rb`
+- Test: `test/requests/admin/post_translations/publications_test.rb`
 
 Do not modify the project/post strong parameters: Phase 4 already excludes `state`, `scheduled_at`, and `published_at`.
 
 **Interfaces:**
 
 - Consumes: Task 1 transitions, `Admin::BaseController` authentication, and existing edit pages.
-- Produces: six PATCH helpers for publish, schedule, and unpublish. Schedule submissions use `publication[scheduled_at_local]` for the visible wall time and `publication[scheduled_at]` for the ISO 8601 instant generated by JavaScript.
+- Produces: singular nested `publication` resources. `POST` publishes now, `PATCH` schedules, and `DELETE` returns a translation to draft. Schedule submissions use `publication[scheduled_at_local]` for the visible wall time and `publication[scheduled_at]` for the ISO 8601 instant generated by JavaScript.
 
 - [ ] **Step 1: Write failing request tests**
 
-Create `test/requests/admin/translation_publications_test.rb`:
+Create `test/requests/admin/project_translations/publications_test.rb`:
 
 ```ruby
 require "test_helper"
 
-class Admin::TranslationPublicationsTest < ActionDispatch::IntegrationTest
+class Admin::ProjectTranslations::PublicationsTest < ActionDispatch::IntegrationTest
   setup do
     @project = Project.create!(role: "Developer", translations_attributes: {
       "0" => { locale: "en", title: "English project", slug: "english-project", summary: "Summary", body_markdown: "Body" },
@@ -460,14 +475,14 @@ class Admin::TranslationPublicationsTest < ActionDispatch::IntegrationTest
   end
 
   test "requires a fully authenticated owner" do
-    patch publish_admin_project_translation_path(@english)
+    post admin_project_translation_publication_path(@english)
     assert_redirected_to new_admin_session_path
     assert_predicate @english.reload, :draft?
   end
 
   test "publishes only the selected translation with a 303 redirect" do
     sign_in_as_admin
-    patch publish_admin_project_translation_path(@english)
+    post admin_project_translation_publication_path(@english)
     assert_redirected_to edit_admin_project_path(@project), status: :see_other
     assert_predicate @english.reload, :published?
     assert_predicate @french.reload, :draft?
@@ -475,7 +490,7 @@ class Admin::TranslationPublicationsTest < ActionDispatch::IntegrationTest
 
   test "rejects optional publication before English" do
     sign_in_as_admin
-    patch publish_admin_project_translation_path(@french)
+    post admin_project_translation_publication_path(@french)
     assert_redirected_to edit_admin_project_path(@project), status: :see_other
     assert_equal "Publish the English translation first", flash[:alert]
     assert_predicate @french.reload, :draft?
@@ -484,7 +499,7 @@ class Admin::TranslationPublicationsTest < ActionDispatch::IntegrationTest
   test "schedules the exact ISO instant supplied by the browser" do
     sign_in_as_admin
     instant = 2.hours.from_now.change(sec: 0)
-    patch schedule_admin_project_translation_path(@english), params: {
+    patch admin_project_translation_publication_path(@english), params: {
       publication: { scheduled_at_local: "2026-09-05T09:30", scheduled_at: instant.iso8601 }
     }
     assert_redirected_to edit_admin_project_path(@project), status: :see_other
@@ -493,17 +508,24 @@ class Admin::TranslationPublicationsTest < ActionDispatch::IntegrationTest
 
   test "uses explicitly labelled UTC input without JavaScript" do
     sign_in_as_admin
-    patch schedule_admin_project_translation_path(@english), params: {
+    patch admin_project_translation_publication_path(@english), params: {
       publication: { scheduled_at_local: 2.hours.from_now.utc.strftime("%Y-%m-%dT%H:%M"), scheduled_at: "" }
     }
     assert_predicate @english.reload, :scheduled?
   end
 
-  test "rejects invalid schedule input without changing state" do
+  test "malformed parameter structure receives the Rails 400 response" do
     sign_in_as_admin
-    [ {}, { publication: { scheduled_at: "not-a-time" } },
-      { publication: { scheduled_at: 1.minute.ago.iso8601 } } ].each do |parameters|
-      patch schedule_admin_project_translation_path(@english), params: parameters
+    patch admin_project_translation_publication_path(@english), params: {}
+    assert_response :bad_request
+    assert_predicate @english.reload, :draft?
+  end
+
+  test "rejects malformed and past schedule values without changing state" do
+    sign_in_as_admin
+    [{ publication: { scheduled_at: "not-a-time" } },
+     { publication: { scheduled_at: 1.minute.ago.iso8601 } }].each do |parameters|
+      patch admin_project_translation_publication_path(@english), params: parameters
       assert_response :see_other
       assert_equal "Choose a future publication time", flash[:alert]
       assert_predicate @english.reload, :draft?
@@ -512,31 +534,13 @@ class Admin::TranslationPublicationsTest < ActionDispatch::IntegrationTest
 
   test "unpublishes without changing the slug" do
     sign_in_as_admin
-    @english.publish!(at: 1.minute.ago)
-    patch unpublish_admin_project_translation_path(@english)
+    travel_to 1.minute.ago do
+      @english.publish
+    end
+    delete admin_project_translation_publication_path(@english)
     assert_response :see_other
     assert_predicate @english.reload, :draft?
     assert_equal "english-project", @english.slug
-  end
-
-  test "post routes use the same allowlisted controller" do
-    sign_in_as_admin
-    post_record = Post.create!(translations_attributes: {
-      "0" => { locale: "en", title: "Post", slug: "post", excerpt: "Excerpt", body_markdown: "Body" }
-    })
-    translation = post_record.translations.first
-    patch publish_admin_post_translation_path(translation)
-    assert_redirected_to edit_admin_post_path(post_record), status: :see_other
-    assert_predicate translation.reload, :published?
-
-    get edit_admin_post_path(post_record)
-    assert_select "form form", count: 0
-  end
-
-  test "query parameters cannot switch the route allowlist" do
-    sign_in_as_admin
-    patch publish_admin_project_translation_path(@english), params: { translation_type: "post" }
-    assert_predicate @english.reload, :published?
   end
 
   test "ordinary content updates cannot change publication state" do
@@ -562,105 +566,155 @@ class Admin::TranslationPublicationsTest < ActionDispatch::IntegrationTest
 end
 ```
 
+Create `test/requests/admin/post_translations/publications_test.rb` with the concrete post resource coverage:
+
+```ruby
+require "test_helper"
+
+class Admin::PostTranslations::PublicationsTest < ActionDispatch::IntegrationTest
+  setup do
+    @post = Post.create!(translations_attributes: {
+      "0" => { locale: "en", title: "Post", slug: "post", excerpt: "Excerpt", body_markdown: "Body" }
+    })
+    @translation = @post.translations.first
+    sign_in_as_admin
+  end
+
+  test "creates, updates, and destroys a post translation publication" do
+    post admin_post_translation_publication_path(@translation)
+    assert_redirected_to edit_admin_post_path(@post), status: :see_other
+    assert_predicate @translation.reload, :published?
+
+    patch admin_post_translation_publication_path(@translation), params: {
+      publication: { scheduled_at: 2.hours.from_now.iso8601, scheduled_at_local: "" }
+    }
+    assert_response :see_other
+    assert_predicate @translation.reload, :scheduled?
+
+    delete admin_post_translation_publication_path(@translation)
+    assert_response :see_other
+    assert_predicate @translation.reload, :draft?
+
+    get edit_admin_post_path(@post)
+    assert_select "form form", count: 0
+  end
+end
+```
+
 - [ ] **Step 2: Verify the routes are missing**
 
-Run: `mise exec -- ruby bin/rails test test/requests/admin/translation_publications_test.rb`
+Run: `mise exec -- ruby bin/rails test test/requests/admin/project_translations/publications_test.rb test/requests/admin/post_translations/publications_test.rb`
 
 Expected: FAIL with an undefined publication route helper.
 
-- [ ] **Step 3: Add the six fixed routes**
+- [ ] **Step 3: Add singular nested publication resources**
 
 Inside `namespace :admin`, add:
 
 ```ruby
 resources :project_translations, only: [] do
-  member do
-    patch :publish, to: "translation_publications#publish", defaults: { translation_type: "project" }
-    patch :schedule, to: "translation_publications#schedule", defaults: { translation_type: "project" }
-    patch :unpublish, to: "translation_publications#unpublish", defaults: { translation_type: "project" }
-  end
+  resource :publication, only: %i[create update destroy], module: :project_translations
 end
 
 resources :post_translations, only: [] do
-  member do
-    patch :publish, to: "translation_publications#publish", defaults: { translation_type: "post" }
-    patch :schedule, to: "translation_publications#schedule", defaults: { translation_type: "post" }
-    patch :unpublish, to: "translation_publications#unpublish", defaults: { translation_type: "post" }
-  end
+  resource :publication, only: %i[create update destroy], module: :post_translations
 end
 ```
 
-- [ ] **Step 4: Add the allowlisted controller**
+- [ ] **Step 4: Add the concrete resource controllers**
 
-Create `app/controllers/admin/translation_publications_controller.rb`:
+Create `app/controllers/admin/project_translations/publications_controller.rb`:
 
 ```ruby
-class Admin::TranslationPublicationsController < Admin::BaseController
-  TRANSLATION_CLASSES = { "project" => ProjectTranslation, "post" => PostTranslation }.freeze
-
+class Admin::ProjectTranslations::PublicationsController < Admin::BaseController
   before_action :set_translation
 
-  def publish
-    @translation.publish!
-    redirect_to edit_path, notice: "#{@translation.title} was published", status: :see_other
+  def create
+    @translation.publish
+    redirect_to edit_admin_project_path(@translation.project), notice: "#{@translation.title} was published", status: :see_other
   rescue PublishableTranslation::EnglishMustBePublished => error
-    redirect_to edit_path, alert: error.message, status: :see_other
+    redirect_to edit_admin_project_path(@translation.project), alert: error.message, status: :see_other
   end
 
-  def schedule
-    @translation.schedule!(at: parsed_scheduled_at)
-    redirect_to edit_path, notice: "#{@translation.title} was scheduled", status: :see_other
+  def update
+    @translation.schedule(at: scheduled_at)
+    redirect_to edit_admin_project_path(@translation.project), notice: "#{@translation.title} was scheduled", status: :see_other
   rescue PublishableTranslation::InvalidScheduleTime, ArgumentError
-    redirect_to edit_path, alert: "Choose a future publication time", status: :see_other
+    redirect_to edit_admin_project_path(@translation.project), alert: "Choose a future publication time", status: :see_other
   end
 
-  def unpublish
-    @translation.unpublish!
-    redirect_to edit_path, notice: "#{@translation.title} was unpublished", status: :see_other
+  def destroy
+    @translation.unpublish
+    redirect_to edit_admin_project_path(@translation.project), notice: "#{@translation.title} was unpublished", status: :see_other
   end
 
   private
 
   def set_translation
-    type = request.path_parameters.fetch(:translation_type)
-    @translation = TRANSLATION_CLASSES.fetch(type).find(params[:id])
-  rescue KeyError
-    raise ActiveRecord::RecordNotFound
+    @translation = ProjectTranslation.find(params[:project_translation_id])
   end
 
-  def parsed_scheduled_at
-    publication = params[:publication]
-    return unless publication.respond_to?(:permit)
-
-    values = publication.permit(:scheduled_at, :scheduled_at_local)
+  def scheduled_at
+    values = params.expect(publication: [:scheduled_at, :scheduled_at_local])
     if values[:scheduled_at].present?
       raise ArgumentError unless values[:scheduled_at].end_with?("Z")
       return Time.iso8601(values[:scheduled_at])
     end
     return Time.strptime(values[:scheduled_at_local], "%Y-%m-%dT%H:%M").utc if values[:scheduled_at_local].present?
   end
+end
+```
 
-  def edit_path
-    case @translation
-    when ProjectTranslation then edit_admin_project_path(@translation.project)
-    when PostTranslation then edit_admin_post_path(@translation.post)
+Create `app/controllers/admin/post_translations/publications_controller.rb`:
+
+```ruby
+class Admin::PostTranslations::PublicationsController < Admin::BaseController
+  before_action :set_translation
+
+  def create
+    @translation.publish
+    redirect_to edit_admin_post_path(@translation.post), notice: "#{@translation.title} was published", status: :see_other
+  rescue PublishableTranslation::EnglishMustBePublished => error
+    redirect_to edit_admin_post_path(@translation.post), alert: error.message, status: :see_other
+  end
+
+  def update
+    @translation.schedule(at: scheduled_at)
+    redirect_to edit_admin_post_path(@translation.post), notice: "#{@translation.title} was scheduled", status: :see_other
+  rescue PublishableTranslation::InvalidScheduleTime, ArgumentError
+    redirect_to edit_admin_post_path(@translation.post), alert: "Choose a future publication time", status: :see_other
+  end
+
+  def destroy
+    @translation.unpublish
+    redirect_to edit_admin_post_path(@translation.post), notice: "#{@translation.title} was unpublished", status: :see_other
+  end
+
+  private
+
+  def set_translation
+    @translation = PostTranslation.find(params[:post_translation_id])
+  end
+
+  def scheduled_at
+    values = params.expect(publication: [:scheduled_at, :scheduled_at_local])
+    if values[:scheduled_at].present?
+      raise ArgumentError unless values[:scheduled_at].end_with?("Z")
+      return Time.iso8601(values[:scheduled_at])
     end
+    return Time.strptime(values[:scheduled_at_local], "%Y-%m-%dT%H:%M").utc if values[:scheduled_at_local].present?
   end
 end
 ```
 
-Use `request.path_parameters` so query parameters cannot switch the allowlisted model. Do not use `constantize`.
+Keep this small duplication: extract a shared concern only when a third publishable translation type exists. Do not rescue `ActionController::ExpectedParameterMissing`; malformed parameter structures should receive Rails' normal 400 response.
 
 - [ ] **Step 5: Add standalone publication controls**
 
 Create `app/views/admin/shared/_publication_controls.html.erb`:
 
 ```erb
-<%# locals: (translation:) %>
-<% model_key = translation.model_name.singular %>
-<% publish_path = public_send("publish_admin_#{model_key}_path", translation) %>
-<% schedule_path = public_send("schedule_admin_#{model_key}_path", translation) %>
-<% unpublish_path = public_send("unpublish_admin_#{model_key}_path", translation) %>
+<%# locals: (translation:, publication_path:) %>
 
 <section id="<%= dom_id(translation, :publication) %>" class="admin-card mt-6 grid gap-4"
   aria-label="<%= translation.locale.upcase %> publication">
@@ -676,23 +730,23 @@ Create `app/views/admin/shared/_publication_controls.html.erb`:
     </p>
   <% end %>
 
-  <% unless translation.publishable_now? %>
+  <% unless translation.publishable? %>
     <p role="status">Publish the English translation before publishing this locale.</p>
   <% end %>
 
   <div class="flex flex-wrap gap-3">
     <% unless translation.published? %>
-      <%= button_to "Publish now", publish_path, method: :patch,
-        disabled: !translation.publishable_now?, class: "admin-action" %>
+      <%= button_to "Publish now", publication_path,
+        disabled: !translation.publishable?, class: "admin-action" %>
     <% end %>
     <% unless translation.draft? %>
-      <%= button_to translation.scheduled? ? "Return to draft" : "Unpublish", unpublish_path,
-        method: :patch, class: "admin-action",
+      <%= button_to translation.scheduled? ? "Return to draft" : "Unpublish", publication_path,
+        method: :delete, class: "admin-action",
         form: { data: { turbo_confirm: "Return #{translation.title} to draft?" } } %>
     <% end %>
   </div>
 
-  <%= form_with url: schedule_path, method: :patch, scope: :publication,
+  <%= form_with url: publication_path, method: :patch, scope: :publication,
     data: { controller: "schedule-time", schedule_time_current_value: translation.scheduled_at&.iso8601 },
     class: "grid gap-2" do |form| %>
     <%= form.label :scheduled_at_local, "Publication time" %>
@@ -713,7 +767,8 @@ After the existing form render in both edit templates, render controls only for 
 
 ```erb
 <% @project.translations.select(&:persisted?).each do |translation| %>
-  <%= render "admin/shared/publication_controls", translation: %>
+  <%= render "admin/shared/publication_controls", translation:,
+    publication_path: admin_project_translation_publication_path(translation) %>
 <% end %>
 ```
 
@@ -721,7 +776,8 @@ In the post edit template use:
 
 ```erb
 <% @post.translations.select(&:persisted?).each do |translation| %>
-  <%= render "admin/shared/publication_controls", translation: %>
+  <%= render "admin/shared/publication_controls", translation:,
+    publication_path: admin_post_translation_publication_path(translation) %>
 <% end %>
 ```
 
@@ -740,9 +796,9 @@ export default class extends Controller {
 
   connect() {
     if (this.hasCurrentValue) {
-      this.inputTarget.value = this.localValue(new Date(this.currentValue));
+      this.inputTarget.value = this.#localValue(new Date(this.currentValue));
     }
-    this.inputTarget.min = this.localValue(new Date(Date.now() + 60_000));
+    this.inputTarget.min = this.#localValue(new Date(Date.now() + 60_000));
     this.hintTarget.textContent = `Times use ${Intl.DateTimeFormat().resolvedOptions().timeZone}.`;
     this.update();
   }
@@ -753,7 +809,7 @@ export default class extends Controller {
     if (!this.inputTarget.value) return;
 
     const instant = new Date(this.inputTarget.value);
-    if (Number.isNaN(instant.valueOf()) || this.localValue(instant) !== this.inputTarget.value) {
+    if (Number.isNaN(instant.valueOf()) || this.#localValue(instant) !== this.inputTarget.value) {
       this.inputTarget.setCustomValidity("Choose a valid local date and time.");
       return;
     }
@@ -761,7 +817,7 @@ export default class extends Controller {
     this.instantTarget.value = instant.toISOString();
   }
 
-  localValue(instant) {
+  #localValue(instant) {
     const local = new Date(instant.valueOf() - instant.getTimezoneOffset() * 60_000);
     return local.toISOString().slice(0, 16);
   }
@@ -791,17 +847,17 @@ Repeated fall-back-hour values intentionally use the browser's earlier occurrenc
 - [ ] **Step 7: Run request, route, and browser-import checks**
 
 ```bash
-mise exec -- ruby bin/rails test test/requests/admin/translation_publications_test.rb
+mise exec -- ruby bin/rails test test/requests/admin/project_translations/publications_test.rb test/requests/admin/post_translations/publications_test.rb
 mise exec -- ruby bin/rails routes -g translation
 mise exec -- ruby bin/importmap audit
 ```
 
-Expected: request tests PASS, exactly six publication PATCH routes appear, and the import audit passes.
+Expected: request tests PASS, six publication routes appear (POST/PATCH/DELETE for each translation type), and the import audit passes.
 
-- [ ] **Step 8: Commit the explicit actions**
+- [ ] **Step 8: Commit the publication resources**
 
 ```bash
-git add config/routes.rb app/controllers/admin/translation_publications_controller.rb app/views/admin/shared/_publication_controls.html.erb app/views/admin/projects/edit.html.erb app/views/admin/posts/edit.html.erb app/javascript/controllers/schedule_time_controller.js app/javascript/controllers/local_time_controller.js test/requests/admin/translation_publications_test.rb
+git add config/routes.rb app/controllers/admin/project_translations/publications_controller.rb app/controllers/admin/post_translations/publications_controller.rb app/views/admin/shared/_publication_controls.html.erb app/views/admin/projects/edit.html.erb app/views/admin/posts/edit.html.erb app/javascript/controllers/schedule_time_controller.js app/javascript/controllers/local_time_controller.js test/requests/admin/project_translations/publications_test.rb test/requests/admin/post_translations/publications_test.rb
 git commit -m "feat: add translation publication controls"
 ```
 
@@ -818,8 +874,8 @@ git commit -m "feat: add translation publication controls"
 
 **Interfaces:**
 
-- Consumes: Task 1 `due` and `publish!` interfaces.
-- Produces: `PublishDueTranslationsJob#perform(now = Time.current)` and production recurring key `publish_due_translations`.
+- Consumes: Task 1 `due` and `publish` interfaces.
+- Produces: argument-free `PublishDueTranslationsJob#perform` and production recurring key `publish_due_translations`.
 
 - [ ] **Step 1: Write failing due-job tests**
 
@@ -838,7 +894,9 @@ class PublishDueTranslationsJobTest < ActiveJob::TestCase
     post_due.update_columns(state: "scheduled", scheduled_at: now)
     future.update_columns(state: "scheduled", scheduled_at: now + 1.minute)
 
-    PublishDueTranslationsJob.perform_now(now)
+    travel_to now do
+      PublishDueTranslationsJob.perform_now
+    end
 
     assert_equal now, project_due.reload.published_at
     assert_equal now, post_due.reload.published_at
@@ -850,7 +908,9 @@ class PublishDueTranslationsJobTest < ActiveJob::TestCase
     translation = create_project("catch-up").translations.find_by!(locale: "en")
     translation.update_columns(state: "scheduled", scheduled_at: now - 3.days)
 
-    PublishDueTranslationsJob.perform_now(now)
+    travel_to now do
+      PublishDueTranslationsJob.perform_now
+    end
 
     assert_predicate translation.reload, :published?
     assert_equal now, translation.published_at
@@ -861,7 +921,9 @@ class PublishDueTranslationsJobTest < ActiveJob::TestCase
     project = create_project("ordered", optional_locales: ["fr"])
     project.translations.update_all(state: "scheduled", scheduled_at: now - 1.minute)
 
-    PublishDueTranslationsJob.perform_now(now)
+    travel_to now do
+      PublishDueTranslationsJob.perform_now
+    end
 
     assert_predicate project.translations.find_by!(locale: "en"), :published?
     assert_predicate project.translations.find_by!(locale: "fr"), :published?
@@ -874,11 +936,17 @@ class PublishDueTranslationsJobTest < ActiveJob::TestCase
     french = project.translations.find_by!(locale: "fr")
     french.update_columns(state: "scheduled", scheduled_at: now - 1.hour)
 
-    PublishDueTranslationsJob.perform_now(now)
+    travel_to now do
+      PublishDueTranslationsJob.perform_now
+    end
     assert_predicate french.reload, :scheduled?
 
-    english.publish!(at: now + 1.minute)
-    PublishDueTranslationsJob.perform_now(now + 2.minutes)
+    travel_to now + 1.minute do
+      english.publish
+    end
+    travel_to now + 2.minutes do
+      PublishDueTranslationsJob.perform_now
+    end
 
     assert_predicate french.reload, :published?
     assert_equal now + 2.minutes, french.published_at
@@ -889,8 +957,12 @@ class PublishDueTranslationsJobTest < ActiveJob::TestCase
     translation = create_post("idempotent").translations.find_by!(locale: "en")
     translation.update_columns(state: "scheduled", scheduled_at: first_scan - 1.minute)
 
-    PublishDueTranslationsJob.perform_now(first_scan)
-    PublishDueTranslationsJob.perform_now(first_scan + 1.minute)
+    travel_to first_scan do
+      PublishDueTranslationsJob.perform_now
+    end
+    travel_to first_scan + 1.minute do
+      PublishDueTranslationsJob.perform_now
+    end
 
     assert_equal first_scan, translation.reload.published_at
   end
@@ -933,18 +1005,19 @@ Create `app/jobs/publish_due_translations_job.rb`:
 class PublishDueTranslationsJob < ApplicationJob
   queue_as :default
 
-  def perform(now = Time.current)
+  def perform
+    now = Time.current
     models = [ProjectTranslation, PostTranslation]
-    models.each { |model| publish_scope(model.due(now).where(locale: "en"), at: now) }
-    models.each { |model| publish_scope(model.due(now).where.not(locale: "en"), at: now) }
+    models.each { |model| publish_scope(model.due(now).where(locale: "en")) }
+    models.each { |model| publish_scope(model.due(now).where.not(locale: "en")) }
   end
 
   private
 
-  def publish_scope(scope, at:)
+  def publish_scope(scope)
     scope.find_each do |translation|
       begin
-        translation.publish!(at: at)
+        translation.publish
       rescue PublishableTranslation::EnglishMustBePublished
         next
       end
@@ -953,7 +1026,7 @@ class PublishDueTranslationsJob < ApplicationJob
 end
 ```
 
-Only the expected English-first domain error is skipped. Let database and programming errors escape so Solid Queue records and retries the job; rows published before a retry remain unchanged because `publish!` is idempotent.
+Only the expected English-first domain error is skipped. Let database and programming errors escape so Solid Queue records and retries the job; rows published before a retry remain unchanged because `publish` is idempotent.
 
 - [ ] **Step 4: Run the job tests**
 
@@ -1040,7 +1113,7 @@ git commit -m "feat: publish due translations with Solid Queue"
 
 **Interfaces:**
 
-- Consumes: Task 1 `draft`, `upcoming`, `due`, `publishable_now?`, and `publication_parent` behavior.
+- Consumes: Task 1 `draft`, `upcoming`, `due`, `publishable?`, and `publication_parent` behavior.
 - Produces: Dashboard collections `@draft_translations`, `@upcoming_translations`, and `@failed_publications`, each capped at ten records.
 
 - [ ] **Step 1: Write a failing dashboard request test**
@@ -1064,7 +1137,9 @@ test "shows drafts upcoming schedules and overdue English-blocked work" do
   published_post = Post.create!(translations_attributes: [
     { locale: "en", title: "Published Post", slug: "published-post", excerpt: "Excerpt", body_markdown: "Body" }
   ])
-  published_post.translations.first.publish!(at: now - 1.day)
+  travel_to now - 1.day do
+    published_post.translations.first.publish
+  end
 
   get admin_root_path
 
@@ -1125,7 +1200,7 @@ class Admin::DashboardController < Admin::BaseController
 
     @failed_publications = TRANSLATION_MODELS
       .flat_map { |model| model.due(now).where.not(locale: "en").order(:scheduled_at).to_a }
-      .reject(&:publishable_now?)
+      .reject(&:publishable?)
       .sort_by(&:scheduled_at)
       .first(10)
   end
@@ -1202,7 +1277,7 @@ Phase 6 adds unread-message and failed-delivery sections after these sections; d
 Run:
 
 ```bash
-mise exec -- ruby bin/rails test test/requests/admin/dashboard_test.rb test/requests/admin/translation_publications_test.rb test/models/publishable_translation_test.rb
+mise exec -- ruby bin/rails test test/requests/admin/dashboard_test.rb test/requests/admin/project_translations/publications_test.rb test/requests/admin/post_translations/publications_test.rb test/models/publishable_translation_test.rb
 ```
 
 Expected: PASS.
@@ -1310,19 +1385,21 @@ test "publication transitions expose only the selected locale" do
   get "/fr/projects/#{french.slug}"
   assert_response :not_found
 
-  french.publish!
+  french.publish
   get "/fr/projects/#{french.slug}"
   assert_response :success
   get "/vi/projects/#{vietnamese.slug}"
   assert_response :not_found
 
   due_at = 1.hour.from_now
-  vietnamese.schedule!(at: due_at)
-  PublishDueTranslationsJob.perform_now(due_at)
+  vietnamese.schedule(at: due_at)
+  travel_to due_at do
+    PublishDueTranslationsJob.perform_now
+  end
   get "/vi/projects/#{vietnamese.slug}"
   assert_response :success
 
-  french.unpublish!
+  french.unpublish
   get "/fr/projects/#{french.slug}"
   assert_response :not_found
 end
@@ -1353,7 +1430,7 @@ git commit -m "test: cover localized publishing workflow"
 - [ ] **Run every Phase 5 focused test together**
 
 ```bash
-mise exec -- ruby bin/rails test test/models/publishable_translation_test.rb test/requests/admin/translation_publications_test.rb test/jobs/publish_due_translations_job_test.rb test/config/recurring_schedule_test.rb test/requests/admin/dashboard_test.rb test/integration/public_content_test.rb
+mise exec -- ruby bin/rails test test/models/publishable_translation_test.rb test/requests/admin/project_translations/publications_test.rb test/requests/admin/post_translations/publications_test.rb test/jobs/publish_due_translations_job_test.rb test/config/recurring_schedule_test.rb test/requests/admin/dashboard_test.rb test/integration/public_content_test.rb
 mise exec -- ruby bin/rails test test/system/admin_publishing_test.rb
 ```
 

@@ -195,16 +195,16 @@
 **Included work:**
 
 - Centralize publication transitions for project and post translations.
-- Add explicit publish, unpublish, and schedule admin actions.
+- Add nested publication resources for project and post translations.
 - Enforce English-first publication.
 - Add idempotent `PublishDueTranslationsJob` and Solid Queue recurring configuration.
 - Show drafts, upcoming schedules, and failed publication work on the dashboard.
 
 **Interfaces produced:**
 
-- `PublishableTranslation#publish!(at: Time.current)`.
-- `PublishableTranslation#schedule!(at:)` and `#unpublish!`.
-- `PublishDueTranslationsJob.perform` scanning both translation models.
+- `PublishableTranslation#publish`, `#schedule(at:)`, and `#unpublish`.
+- `PublishableTranslation#publishable?` for the English-first guard.
+- `PublishDueTranslationsJob.perform` scanning both translation models with no arguments.
 - Dashboard queries for draft and scheduled translations.
 
 **Acceptance:**
