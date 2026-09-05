@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class ProjectTranslation < ApplicationRecord
+  include PublishableTranslation
+
   belongs_to :project, inverse_of: :translations
 
   before_validation :render_body_html, if: :will_save_change_to_body_markdown?
@@ -23,6 +25,10 @@ class ProjectTranslation < ApplicationRecord
 
   def complete?
     title.present? && summary.present? && body_markdown.present?
+  end
+
+  def publication_parent
+    project
   end
 
   scope :publicly_visible, ->(locale:) {
