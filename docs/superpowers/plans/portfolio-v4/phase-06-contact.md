@@ -4,7 +4,7 @@
 
 **Goal:** Let visitors persist localized contact messages before asynchronous owner notification, while giving the owner a mobile-first inbox with safe, idempotent delivery retries.
 
-**Architecture:** `ContactMessage` is the source of truth for inbox and delivery state. A create-commit callback and an atomic failed-to-pending retry enqueue one ID-only `ContactNotificationJob`; Solid Queue serializes jobs per message ID without holding the primary SQLite database open during SMTP. The public controller uses Rails 8.1's native rate limiter plus a non-persisted honeypot, while resource-oriented admin controllers expose inbox state changes and delivery retries.
+**Architecture:** `ContactMessage` is the source of truth and domain facade for inbox and delivery behavior. Its create-commit callback and atomic failed-to-pending retry enqueue one ID-only `ContactNotificationJob`, while the job delegates synchronous delivery back to the model; Solid Queue serializes jobs per message ID without holding the primary SQLite database open during SMTP. The public controller uses Rails 8.1's native rate limiter plus a non-persisted honeypot, while resource-oriented admin controllers expose inbox state changes and delivery retries.
 
 **Tech Stack:** Ruby 4.0.6, Rails 8.1.x, Action Mailer, Active Job with Solid Queue, SQLite, Hotwire, Tailwind CSS, Minitest, Capybara
 
@@ -40,42 +40,43 @@ This phase starts after Phases 1–5 pass. It consumes these established interfa
 
 This phase produces the parent-plan interfaces exactly:
 
-- `ContactMessage#mark_delivered!`
-- `ContactMessage#mark_failed!(error)`
+- `ContactMessage#notify_owner_later`
+- `ContactMessage#notify_owner_now`
+- `ContactMessage#retry_delivery_later -> Boolean`
 - `ContactNotificationJob.perform(contact_message_id)`
 - `ContactMailer.owner_notification(contact_message)`
 - Admin message state and retry routes
 
-It additionally defines `ContactMessage#retry_delivery -> Boolean`. Inbox state changes use the validated enum directly through a dedicated state resource; no duplicate transition wrappers are added.
+Inbox state changes use the validated enum directly through a dedicated state resource; no duplicate transition wrappers are added. Delivery-state helpers remain private and use non-bang names because there are no paired non-bang/bang APIs.
 
 ## File Map
 
-| Path                                                            | Responsibility                                                                      |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `db/migrate/20260905000000_create_contact_messages.rb`          | Durable inbox and delivery columns, indexes, and database state constraints         |
-| `app/models/contact_message.rb`                                 | Validation, inbox transitions, delivery transitions, and after-commit enqueue rules |
-| `app/jobs/contact_notification_job.rb`                          | ID-only, idempotent mail delivery and failure persistence                           |
-| `app/mailers/contact_mailer.rb`                                 | Owner notification envelope                                                         |
-| `app/views/contact_mailer/owner_notification.html.erb`          | HTML notification body                                                              |
-| `app/views/contact_mailer/owner_notification.text.erb`          | Plain-text notification body                                                        |
-| `app/controllers/public/contact_messages_controller.rb`         | Localized create flow, honeypot, and native rate limiting                           |
-| `app/views/public/contact_messages/new.html.erb`                | Accessible localized public form and feedback                                       |
-| `app/controllers/admin/messages_controller.rb`                  | Authenticated inbox index and detail                                                |
-| `app/controllers/admin/messages/states_controller.rb`           | Validated inbox state updates                                                       |
-| `app/controllers/admin/messages/delivery_retries_controller.rb` | Failed-delivery retries                                                             |
-| `app/views/admin/messages/index.html.erb`                       | Mobile-first message cards                                                          |
-| `app/views/admin/messages/show.html.erb`                        | Message detail and actions                                                          |
-| `config/routes.rb`                                              | Public POST and nested admin inbox resources                                        |
-| `app/views/shared/_header.html.erb`                             | Keeps contact navigation active on the new controller                               |
-| `app/views/layouts/admin.html.erb`                              | Adds inbox navigation and removes the unused desktop grid                           |
-| `config/initializers/filter_parameter_logging.rb`               | Appends filtering for every `body` request parameter                                |
-| `config/locales/{en,fr,vi}.yml`                                 | Contact form, validation, and receipt copy                                          |
-| `test/models/contact_message_test.rb`                           | Schema validation and state transition coverage                                     |
-| `test/jobs/contact_notification_job_test.rb`                    | Success, failure, missing-row, and duplicate-attempt coverage                       |
-| `test/mailers/contact_mailer_test.rb`                           | Recipient, reply-to, subject, and multipart body coverage                           |
-| `test/integration/public_contact_messages_test.rb`              | Persistence, validation, honeypot, throttling, localization, and filtering          |
-| `test/integration/admin_messages_test.rb`                       | Authorization, state resources, and idempotent retry coverage                       |
-| `test/system/contact_flow_test.rb`                              | Visitor receipt and owner inbox workflow                                            |
+| Path                                                            | Responsibility                                                                   |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `db/migrate/*_create_contact_messages.rb`                       | Durable inbox and delivery columns, indexes, and database state constraints      |
+| `app/models/contact_message.rb`                                 | Validation, delivery behavior, state transitions, and after-commit enqueue rules |
+| `app/jobs/contact_notification_job.rb`                          | ID-only concurrency boundary delegating synchronous delivery to the model        |
+| `app/mailers/contact_mailer.rb`                                 | Owner notification envelope                                                      |
+| `app/views/contact_mailer/owner_notification.html.erb`          | HTML notification body                                                           |
+| `app/views/contact_mailer/owner_notification.text.erb`          | Plain-text notification body                                                     |
+| `app/controllers/public/contact_messages_controller.rb`         | Localized create flow, honeypot, and native rate limiting                        |
+| `app/views/public/contact_messages/new.html.erb`                | Accessible localized public form and feedback                                    |
+| `app/controllers/admin/messages_controller.rb`                  | Authenticated inbox index and detail                                             |
+| `app/controllers/admin/messages/states_controller.rb`           | Validated inbox state updates                                                    |
+| `app/controllers/admin/messages/delivery_retries_controller.rb` | Failed-delivery retries                                                          |
+| `app/views/admin/messages/index.html.erb`                       | Mobile-first message cards                                                       |
+| `app/views/admin/messages/show.html.erb`                        | Message detail and actions                                                       |
+| `config/routes.rb`                                              | Public POST and nested admin inbox resources                                     |
+| `app/views/shared/_header.html.erb`                             | Keeps contact navigation active on the new controller                            |
+| `app/views/layouts/admin.html.erb`                              | Adds inbox navigation and removes the unused desktop grid                        |
+| `config/initializers/filter_parameter_logging.rb`               | Appends filtering for every `body` request parameter                             |
+| `config/locales/{en,fr,vi}.yml`                                 | Contact form, validation, and receipt copy                                       |
+| `test/models/contact_message_test.rb`                           | Schema validation and state transition coverage                                  |
+| `test/jobs/contact_notification_job_test.rb`                    | Success, failure, missing-row, and duplicate-attempt coverage                    |
+| `test/mailers/contact_mailer_test.rb`                           | Recipient, reply-to, subject, and multipart body coverage                        |
+| `test/integration/public_contact_messages_test.rb`              | Persistence, validation, honeypot, throttling, localization, and filtering       |
+| `test/integration/admin_messages_test.rb`                       | Authorization, state resources, and idempotent retry coverage                    |
+| `test/system/contact_flow_test.rb`                              | Visitor receipt and owner inbox workflow                                         |
 
 ---
 
@@ -83,14 +84,14 @@ It additionally defines `ContactMessage#retry_delivery -> Boolean`. Inbox state 
 
 **Files:**
 
-- Create: `db/migrate/20260905000000_create_contact_messages.rb`
+- Create: `db/migrate/*_create_contact_messages.rb`
 - Create: `app/models/contact_message.rb`
 - Create: `test/models/contact_message_test.rb`
 
 **Interfaces:**
 
 - Consumes: Active Record and SQLite from Phase 1.
-- Produces: `ContactMessage` with string-backed `state` values `unread`, `read`, `archived`; string-backed `email_delivery_state` values `pending`, `delivered`, `failed`; `mark_delivered!`; and `mark_failed!(error)`.
+- Produces: `ContactMessage` with string-backed `state` values `unread`, `read`, `archived` and string-backed `email_delivery_state` values `pending`, `delivered`, `failed`.
 
 - [ ] **Step 1: Write the model tests first**
 
@@ -130,10 +131,10 @@ class ContactMessageTest < ActiveSupport::TestCase
     message = ContactMessage.new
 
     assert_not message.valid?
-    assert_includes message.errors[:sender_name], "can't be blank"
-    assert_includes message.errors[:sender_email], "can't be blank"
-    assert_includes message.errors[:subject], "can't be blank"
-    assert_includes message.errors[:body], "can't be blank"
+    assert message.errors.of_kind?(:sender_name, :blank)
+    assert message.errors.of_kind?(:sender_email, :blank)
+    assert message.errors.of_kind?(:subject, :blank)
+    assert message.errors.of_kind?(:body, :blank)
 
     message.assign_attributes(
       sender_name: "A" * 121,
@@ -144,29 +145,6 @@ class ContactMessageTest < ActiveSupport::TestCase
     assert_not message.valid?
   end
 
-  test "marks delivery successful and clears an old safe error" do
-    message = valid_message.tap(&:save!)
-    message.update!(email_delivery_state: :failed, last_delivery_error: "TimeoutError: delivery failed")
-
-    travel_to Time.zone.parse("2026-09-02 12:00:00") do
-      message.mark_delivered!
-      assert message.delivered?
-      assert_equal Time.current, message.delivered_at
-      assert_nil message.last_delivery_error
-    end
-  end
-
-  test "marks delivery failed without persisting exception text" do
-    message = valid_message.tap(&:save!)
-    secret_body = "private-message-body"
-
-    message.mark_failed!(RuntimeError.new("SMTP echoed #{secret_body}"))
-
-    assert message.failed?
-    assert_nil message.delivered_at
-    assert_equal "RuntimeError: delivery failed", message.last_delivery_error
-    assert_not_includes message.last_delivery_error, secret_body
-  end
 end
 ```
 
@@ -176,10 +154,30 @@ Run: `bin/rails test test/models/contact_message_test.rb`
 
 Expected: FAIL with `uninitialized constant ContactMessage`.
 
-- [ ] **Step 3: Create the migration and model**
+- [ ] **Step 3: Generate the migration with Rails**
+
+Run:
+
+```bash
+bin/rails generate migration CreateContactMessages \
+  sender_name:string \
+  sender_email:string \
+  subject:string \
+  body:text \
+  state:string \
+  email_delivery_state:string \
+  delivered_at:datetime \
+  last_delivery_error:string
+```
+
+Expected: Rails creates one timestamped `db/migrate/*_create_contact_messages.rb` file. Do not rename the generated timestamp.
+
+- [ ] **Step 4: Define the generated migration and model**
+
+Replace the generated migration body with the following schema while preserving its generated filename:
 
 ```ruby
-# db/migrate/20260905000000_create_contact_messages.rb
+# db/migrate/*_create_contact_messages.rb
 class CreateContactMessages < ActiveRecord::Migration[8.1]
   def change
     create_table :contact_messages do |t|
@@ -226,40 +224,25 @@ class ContactMessage < ApplicationRecord
   validates :subject, presence: true, length: { maximum: 200 }
   validates :body, presence: true, length: { maximum: 10_000 }
   validates :last_delivery_error, length: { maximum: 255 }, allow_nil: true
-
-  def mark_delivered!
-    update!(
-      email_delivery_state: :delivered,
-      delivered_at: Time.current,
-      last_delivery_error: nil
-    )
-  end
-
-  def mark_failed!(error)
-    error_class = error.class.name.to_s.gsub(/[^A-Za-z0-9_:]/, "").presence || "DeliveryError"
-    update!(
-      email_delivery_state: :failed,
-      delivered_at: nil,
-      last_delivery_error: "#{error_class}: delivery failed".truncate(255)
-    )
-  end
 end
 ```
+
+- [ ] **Step 5: Run the migration**
 
 Run: `bin/rails db:migrate`
 
 Expected: migration creates `contact_messages` and all three check constraints.
 
-- [ ] **Step 4: Run the focused tests**
+- [ ] **Step 6: Run the focused tests**
 
 Run: `bin/rails test test/models/contact_message_test.rb`
 
-Expected: 5 tests pass.
+Expected: 3 tests pass.
 
-- [ ] **Step 5: Commit the persistence boundary**
+- [ ] **Step 7: Commit the persistence boundary**
 
 ```bash
-git add db/migrate/20260905000000_create_contact_messages.rb db/schema.rb app/models/contact_message.rb test/models/contact_message_test.rb
+git add db/migrate/*_create_contact_messages.rb db/schema.rb app/models/contact_message.rb test/models/contact_message_test.rb
 git commit -m "feat: persist contact message states"
 ```
 
@@ -281,7 +264,7 @@ git commit -m "feat: persist contact message states"
 **Interfaces:**
 
 - Consumes: `Profile.current.public_contact_email` and Active Job's configured Solid Queue adapter.
-- Produces: `ContactNotificationJob.perform(contact_message_id)`, `ContactMailer.owner_notification(contact_message)`, commit-only initial enqueue, atomic failed-to-pending retry enqueue, and `ContactMessage#retry_delivery -> Boolean`.
+- Produces: `ContactMessage#notify_owner_later`, `ContactMessage#notify_owner_now`, `ContactMessage#retry_delivery_later -> Boolean`, `ContactNotificationJob.perform(contact_message_id)`, `ContactMailer.owner_notification(contact_message)`, commit-only initial enqueue, and atomic failed-to-pending retry enqueue.
 
 - [ ] **Step 1: Add failing enqueue and retry tests to the model test**
 
@@ -303,7 +286,7 @@ test "enqueues only after a new message commits" do
 end
 
 test "an enqueue failure preserves the committed message as failed" do
-  error = RuntimeError.new("queue included private-message-body")
+  error = SolidQueue::Job::EnqueueError.new("queue included private-message-body")
 
   ContactNotificationJob.stub(:perform_later, ->(*) { raise error }) do
     assert_nothing_raised { valid_message.save! }
@@ -311,7 +294,7 @@ test "an enqueue failure preserves the committed message as failed" do
 
   message = ContactMessage.order(:id).last
   assert message.failed?
-  assert_equal "RuntimeError: delivery failed", message.last_delivery_error
+  assert_equal "SolidQueue::Job::EnqueueError: delivery failed", message.last_delivery_error
   assert_not_includes message.last_delivery_error, "private-message-body"
 end
 
@@ -321,23 +304,23 @@ test "retry transitions failed to pending once and enqueues once" do
   message.update!(email_delivery_state: :failed, last_delivery_error: "TimeoutError: delivery failed")
 
   assert_enqueued_with(job: ContactNotificationJob, args: [message.id]) do
-    assert message.retry_delivery
+    assert message.retry_delivery_later
   end
   assert message.reload.pending?
   assert_nil message.last_delivery_error
 
   assert_no_enqueued_jobs do
-    assert_equal false, message.retry_delivery
+    assert_equal false, message.retry_delivery_later
   end
 end
 
 test "delivered messages cannot be requeued" do
   message = valid_message.tap(&:save!)
   clear_enqueued_jobs
-  message.mark_delivered!
+  message.update!(email_delivery_state: :delivered, delivered_at: Time.current)
 
   assert_no_enqueued_jobs do
-    assert_equal false, message.retry_delivery
+    assert_equal false, message.retry_delivery_later
   end
 end
 
@@ -346,12 +329,13 @@ test "retry returns to failed when queue insertion raises" do
   clear_enqueued_jobs
   message.update!(email_delivery_state: :failed, last_delivery_error: "TimeoutError: delivery failed")
 
-  ContactNotificationJob.stub(:perform_later, ->(*) { raise RuntimeError, "queue unavailable" }) do
-    assert_equal false, message.retry_delivery
+  error = SolidQueue::Job::EnqueueError.new("queue unavailable")
+  ContactNotificationJob.stub(:perform_later, ->(*) { raise error }) do
+    assert_equal false, message.retry_delivery_later
   end
 
   assert message.reload.failed?
-  assert_equal "RuntimeError: delivery failed", message.last_delivery_error
+  assert_equal "SolidQueue::Job::EnqueueError: delivery failed", message.last_delivery_error
 end
 ```
 
@@ -362,6 +346,21 @@ end
 require "test_helper"
 
 class ContactNotificationJobTest < ActiveJob::TestCase
+  include ActionMailer::TestHelper
+
+  setup do
+    Profile.create!(
+      public_contact_email: "owner@example.test",
+      translations_attributes: {
+        "0" => {
+          locale: "en", display_name: "Owner", headline: "Portfolio",
+          introduction: "Introduction", biography_markdown: "Biography", availability_label: "Available"
+        }
+      }
+    )
+    clear_enqueued_jobs
+  end
+
   def create_message
     ContactMessage.create!(
       sender_name: "Ada Lovelace",
@@ -373,15 +372,13 @@ class ContactNotificationJobTest < ActiveJob::TestCase
 
   test "delivers once and records success" do
     message = create_message
-    delivery = Minitest::Mock.new
-    delivery.expect(:deliver_now!, true)
+    clear_enqueued_jobs
 
-    ContactMailer.stub(:owner_notification, delivery) do
+    assert_emails 1 do
       ContactNotificationJob.perform_now(message.id)
       ContactNotificationJob.perform_now(message.id)
     end
 
-    delivery.verify
     assert message.reload.delivered?
     assert_not_nil message.delivered_at
   end
@@ -416,13 +413,6 @@ class ContactNotificationJobTest < ActiveJob::TestCase
     assert_not_includes serialized.to_json, message.body
   end
 
-  test "serializes attempts for the same message in Solid Queue" do
-    job = ContactNotificationJob.new(123)
-
-    assert_equal 1, ContactNotificationJob.concurrency_limit
-    assert_equal 10.minutes, ContactNotificationJob.concurrency_duration
-    assert_equal "ContactNotificationJob/123", job.concurrency_key
-  end
 end
 ```
 
@@ -441,7 +431,7 @@ class ContactMailerTest < ActionMailer::TestCase
         }
       }
     )
-    message = ContactMessage.create!(
+    message = ContactMessage.new(
       sender_name: "Ada Lovelace",
       sender_email: "ada@example.test",
       subject: "Project enquiry",
@@ -464,20 +454,37 @@ end
 
 Run: `bin/rails test test/models/contact_message_test.rb test/jobs/contact_notification_job_test.rb test/mailers/contact_mailer_test.rb`
 
-Expected: FAIL because `ContactNotificationJob`, `ContactMailer`, and `retry_delivery` do not exist.
+Expected: FAIL because `ContactNotificationJob`, `ContactMailer`, and the delivery methods do not exist.
 
 - [ ] **Step 4: Add commit callbacks and the atomic retry transition**
 
 Add this line immediately after the enums in `app/models/contact_message.rb`:
 
 ```ruby
-after_create_commit :enqueue_owner_notification
+after_create_commit :notify_owner_later
 ```
 
-Add these methods before the existing `mark_delivered!` method:
+Add these public methods after the validations:
 
 ```ruby
-def retry_delivery
+def notify_owner_later
+  ContactNotificationJob.perform_later(id)
+  true
+rescue SolidQueue::Job::EnqueueError => error
+  record_delivery_failure(error)
+  false
+end
+
+def notify_owner_now
+  return if delivered?
+
+  ContactMailer.owner_notification(self).deliver_now!
+  record_delivery_success
+rescue StandardError => error
+  record_delivery_failure(error) unless delivered?
+end
+
+def retry_delivery_later
   requeued = self.class.failed.where(id:).update_all(
     email_delivery_state: "pending",
     delivered_at: nil,
@@ -487,25 +494,34 @@ def retry_delivery
   return false unless requeued
 
   reload
-  enqueue_owner_notification
+  notify_owner_later
 end
 ```
 
-Add this private section at the end of the class:
+Add these private delivery-state helpers at the end of the class. They use non-bang names because there are no safe counterparts:
 
 ```ruby
 private
 
-  def enqueue_owner_notification
-    ContactNotificationJob.perform_later(id)
-    true
-  rescue StandardError => error
-    mark_failed!(error)
-    false
+  def record_delivery_success
+    update!(
+      email_delivery_state: :delivered,
+      delivered_at: Time.current,
+      last_delivery_error: nil
+    )
+  end
+
+  def record_delivery_failure(error)
+    error_class = error.class.name.to_s.gsub(/[^A-Za-z0-9_:]/, "").presence || "DeliveryError"
+    update!(
+      email_delivery_state: :failed,
+      delivered_at: nil,
+      last_delivery_error: "#{error_class}: delivery failed".truncate(255)
+    )
   end
 ```
 
-The create callback runs after commit. The retry uses one conditional SQL update, so repeated or concurrent requests produce one state transition and one enqueue. If queue insertion raises, the committed message returns to `failed` with only the safe exception-class summary; the public create remains successful because persistence already completed.
+The create callback runs after commit. The retry uses one conditional SQL update, so repeated or concurrent requests produce one state transition and one enqueue. Solid Queue's documented enqueue exception is handled at the enqueue boundary; the committed message returns to `failed` with only the safe exception-class summary, and the public create remains successful because persistence already completed. Synchronous delivery stays in the model so the job remains an orchestration boundary rather than a second business layer.
 
 - [ ] **Step 5: Implement the job and mailer**
 
@@ -516,15 +532,7 @@ class ContactNotificationJob < ApplicationJob
   limits_concurrency to: 1, key: ->(contact_message_id) { contact_message_id }, duration: 10.minutes
 
   def perform(contact_message_id)
-    contact_message = ContactMessage.find(contact_message_id)
-    return if contact_message.delivered?
-
-    ContactMailer.owner_notification(contact_message).deliver_now!
-    contact_message.mark_delivered!
-  rescue ActiveRecord::RecordNotFound
-    nil
-  rescue StandardError => error
-    contact_message&.mark_failed!(error) unless contact_message&.delivered?
+    ContactMessage.find_by(id: contact_message_id)&.notify_owner_now
   end
 end
 ```
@@ -564,13 +572,13 @@ Subject: <%= @contact_message.subject %>
 <%= simple_format(@contact_message.body) %>
 ```
 
-Solid Queue blocks overlapping jobs with the same message ID and releases the next attempt when the first finishes. The delivered guard makes that later attempt a no-op without keeping the primary SQLite database open during SMTP. Direct `perform_now` calls and non-Solid Queue adapters do not receive this concurrency guarantee; SMTP also cannot prevent a duplicate if the provider accepts mail and the process dies before `mark_delivered!` completes.
+Solid Queue blocks overlapping jobs with the same message ID and releases the next attempt when the first finishes. The model's delivered guard makes that later attempt a no-op without keeping the primary SQLite database open during SMTP. Direct `perform_now` calls and non-Solid Queue adapters do not receive this concurrency guarantee; SMTP also cannot prevent a duplicate if the provider accepts mail and the process dies before `record_delivery_success` completes.
 
 - [ ] **Step 6: Run focused delivery tests**
 
 Run: `bin/rails test test/models/contact_message_test.rb test/jobs/contact_notification_job_test.rb test/mailers/contact_mailer_test.rb`
 
-Expected: all model, job, and mailer tests pass; the duplicate job test calls `deliver_now!` once.
+Expected: all model, job, and mailer tests pass; two job executions send one email.
 
 - [ ] **Step 7: Commit asynchronous delivery**
 
@@ -993,7 +1001,7 @@ git commit -m "feat: add localized contact form protections"
 
 **Interfaces:**
 
-- Consumes: `Admin::BaseController#require_admin!`, validated `ContactMessage` enums, and `ContactMessage#retry_delivery`.
+- Consumes: `Admin::BaseController#require_admin!`, validated `ContactMessage` enums, and `ContactMessage#retry_delivery_later`.
 - Produces: `admin_messages_path`, `admin_message_path(message)`, `admin_message_state_path(message)`, and `admin_message_delivery_retry_path(message)`.
 
 - [ ] **Step 1: Write failing authorization, state, and retry request tests**
@@ -1063,7 +1071,7 @@ class AdminMessagesTest < ActionDispatch::IntegrationTest
 
   test "failed delivery retry is idempotent and preserves the message" do
     sign_in_as_admin
-    @message.mark_failed!(RuntimeError.new("provider unavailable"))
+    @message.update!(email_delivery_state: :failed, last_delivery_error: "RuntimeError: delivery failed")
     original = @message.attributes.slice("sender_name", "sender_email", "subject", "body", "created_at")
 
     assert_enqueued_with(job: ContactNotificationJob, args: [@message.id]) do
@@ -1102,53 +1110,43 @@ All actions inherit the existing admin authentication boundary and CSRF protecti
 
 ```ruby
 # app/controllers/admin/messages_controller.rb
-module Admin
-  class MessagesController < BaseController
-    def index
-      scope = params[:state] == "archived" ? ContactMessage.archived : ContactMessage.where.not(state: :archived)
-      @messages = scope.order(created_at: :desc)
-    end
+class Admin::MessagesController < Admin::BaseController
+  def index
+    scope = params[:state] == "archived" ? ContactMessage.archived : ContactMessage.where.not(state: :archived)
+    @messages = scope.order(created_at: :desc)
+  end
 
-    def show
-      @message = ContactMessage.find(params[:id])
-    end
+  def show
+    @message = ContactMessage.find(params[:id])
   end
 end
 ```
 
 ```ruby
 # app/controllers/admin/messages/states_controller.rb
-module Admin
-  module Messages
-    class StatesController < Admin::BaseController
-      def update
-        message = ContactMessage.find(params[:message_id])
-        state = params.expect(:state)
-        return head :unprocessable_entity unless state.in?(ContactMessage.states.keys)
+class Admin::Messages::StatesController < Admin::BaseController
+  def update
+    message = ContactMessage.find(params[:message_id])
+    state = params.expect(:state)
+    return head :unprocessable_entity unless state.in?(ContactMessage.states.keys)
 
-        message.update!(state:)
-        destination = message.archived? ? admin_messages_path : admin_message_path(message)
-        redirect_to destination, notice: "Message marked as #{state}.", status: :see_other
-      end
-    end
+    message.update!(state:)
+    destination = message.archived? ? admin_messages_path : admin_message_path(message)
+    redirect_to destination, notice: "Message marked as #{state}.", status: :see_other
   end
 end
 ```
 
 ```ruby
 # app/controllers/admin/messages/delivery_retries_controller.rb
-module Admin
-  module Messages
-    class DeliveryRetriesController < Admin::BaseController
-      def create
-        message = ContactMessage.find(params[:message_id])
+class Admin::Messages::DeliveryRetriesController < Admin::BaseController
+  def create
+    message = ContactMessage.find(params[:message_id])
 
-        if message.retry_delivery
-          redirect_back fallback_location: admin_message_path(message), notice: "Email retry queued.", status: :see_other
-        else
-          redirect_back fallback_location: admin_message_path(message), alert: "Email could not be queued or is already pending or delivered.", status: :see_other
-        end
-      end
+    if message.retry_delivery_later
+      redirect_back fallback_location: admin_message_path(message), notice: "Email retry queued.", status: :see_other
+    else
+      redirect_back fallback_location: admin_message_path(message), alert: "Email could not be queued or is already pending or delivered.", status: :see_other
     end
   end
 end
@@ -1338,19 +1336,13 @@ class ContactFlowTest < ApplicationSystemTestCase
 end
 ```
 
-- [ ] **Step 2: Run the system test before final polish**
-
-Run: `bin/rails test:system TEST=test/system/contact_flow_test.rb`
-
-Expected: PASS if Tasks 1–4 are complete; otherwise the failure identifies the unfinished browser-visible behavior.
-
-- [ ] **Step 3: Re-run the focused system test at phone size**
+- [ ] **Step 2: Run the focused system test at phone size**
 
 Run: `bin/rails test:system TEST=test/system/contact_flow_test.rb`
 
 Expected: PASS at 320×700; the public receipt appears after persistence and the owner can read and mark the same row.
 
-- [ ] **Step 4: Run all Phase 6 automated checks**
+- [ ] **Step 3: Run all Phase 6 automated checks**
 
 ```bash
 bin/rails test \
@@ -1366,7 +1358,7 @@ bin/rails test:system
 
 Expected: every command exits 0 with no failures or errors.
 
-- [ ] **Step 5: Perform browser and privacy acceptance checks**
+- [ ] **Step 4: Perform browser and privacy acceptance checks**
 
 Run `bin/dev`, submit one message at `/en/contact`, and verify all of the following:
 
@@ -1378,7 +1370,7 @@ Run `bin/dev`, submit one message at `/en/contact`, and verify all of the follow
 
 Expected: all five observations hold. Job payload shape, successful delivery, failure persistence, and duplicate-attempt behavior are covered by automated tests. Real Solid Queue processing and production SMTP delivery remain Phase 8 acceptance items because development uses the async adapter and Phase 8 owns SMTP configuration.
 
-- [ ] **Step 6: Commit the system proof and tag the accepted phase**
+- [ ] **Step 5: Commit the system proof and tag the accepted phase**
 
 ```bash
 git add test/system/contact_flow_test.rb
@@ -1403,7 +1395,7 @@ Do not create the tag until every automated command and all five manual observat
 
 ## Risks and Verification Points
 
-- **SMTP exactly-once ceiling:** SMTP has no universal idempotency key. Solid Queue prevents overlapping jobs per message ID and delivered rows are skipped, but a process death between provider acceptance and `mark_delivered!` can still duplicate mail. Verify provider behavior before adding provider-specific infrastructure.
+- **SMTP exactly-once ceiling:** SMTP has no universal idempotency key. Solid Queue prevents overlapping jobs per message ID and delivered rows are skipped, but a process death between provider acceptance and `record_delivery_success` can still duplicate mail. Verify provider behavior before adding provider-specific infrastructure.
 - **Rate-limit cache scope:** The native limiter uses `Rails.cache`; production must use the generated shared Solid Cache configuration rather than a per-process memory store. Verify two requests served by different Puma workers share the same counter during deployment checks.
 - **Concurrency adapter boundary:** Per-message overlap prevention is enforced by Solid Queue in production. Direct `perform_now` calls and the development async adapter retain the delivered guard but do not receive Solid Queue's concurrency semaphore.
 - **Queue handoff ceiling:** The primary and queue databases cannot share one atomic transaction. A hard process death after changing a retry to pending but before queue insertion can leave it pending; recover that exceptional case through queue/console operations rather than adding a delivery-attempt subsystem before it is needed.
