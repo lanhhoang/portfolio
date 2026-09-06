@@ -16,6 +16,8 @@ Rails.application.routes.draw do
     post "contact", to: "public/contact_messages#create"
   end
 
+  get "/:code", to: "errors#show", constraints: { code: /404|422|500/ }
+
   namespace :admin do
     root "dashboard#show"
     resources :messages, only: [ :index, :show ] do

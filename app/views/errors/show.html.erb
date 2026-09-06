@@ -1,0 +1,15 @@
+<% original_path = request.get_header("action_dispatch.original_path").presence || request.path %>
+<% page_metadata(
+  title: t("errors.pages.#{code}.title"),
+  description: t("errors.pages.#{code}.message"),
+  canonical_url: "#{request.base_url}#{original_path}",
+  alternates: [],
+  robots: "noindex,nofollow"
+) %>
+
+<main id="main-content" class="site-container page-shell" tabindex="-1">
+  <p class="eyebrow" aria-hidden="true"><%= code %></p>
+  <h1><%= t("errors.pages.#{code}.title") %></h1>
+  <p class="prose-lead"><%= t("errors.pages.#{code}.message") %></p>
+  <%= link_to t("errors.pages.home"), localized_root_path(locale: current_locale), class: "admin-action" %>
+</main>

@@ -130,6 +130,17 @@ fr:
         subject: "Objet"
         body: "Message"
   errors:
+    pages:
+      home: "Retour à l’accueil"
+      "404":
+        title: "Page introuvable"
+        message: "Cette page a peut-être été déplacée ou n’est pas disponible dans cette langue."
+      "422":
+        title: "Impossible de traiter la demande"
+        message: "Vérifiez la demande, puis réessayez."
+      "500":
+        title: "Une erreur est survenue"
+        message: "La demande n’a pas pu aboutir. Réessayez plus tard."
     messages:
       blank: "ne peut pas être vide"
       invalid: "n’est pas valide"

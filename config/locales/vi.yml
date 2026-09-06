@@ -116,6 +116,17 @@ vi:
         subject: "Chủ đề"
         body: "Tin nhắn"
   errors:
+    pages:
+      home: "Về trang chủ"
+      "404":
+        title: "Không tìm thấy trang"
+        message: "Trang có thể đã được chuyển hoặc chưa có trong ngôn ngữ này."
+      "422":
+        title: "Không thể xử lý yêu cầu"
+        message: "Vui lòng kiểm tra yêu cầu rồi thử lại."
+      "500":
+        title: "Đã xảy ra lỗi"
+        message: "Không thể hoàn tất yêu cầu. Vui lòng thử lại sau."
     messages:
       blank: "không được để trống"
       invalid: "không hợp lệ"
