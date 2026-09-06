@@ -36,4 +36,20 @@ class ErrorsTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "RuntimeError"
     assert_not_includes response.body, "backtrace"
   end
+
+  test "error pages do not depend on optional profile content" do
+    profile_looked_up = false
+    find_profile = ->(*) do
+      profile_looked_up = true
+      nil
+    end
+
+    stub_method(Profile, :find_by, find_profile) do
+      get "/500", headers: { "Accept-Language" => "en" }
+    end
+
+    assert_response :internal_server_error
+    assert_includes response.body, "Something went wrong"
+    assert_not profile_looked_up
+  end
 end
