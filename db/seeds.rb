@@ -64,6 +64,9 @@ if Rails.env.development?
       title: copy[:project][0], slug: copy[:project][1], summary: copy[:project][2],
       body_markdown: copy[:project][3], state: "published", published_at: Time.zone.parse("2026-07-01 09:00")
     )
+    # The fr/vi publication validation reads persisted rows, so save the
+    # published English translation before assigning the other locales.
+    project.save! if locale == "en"
   end
   project.save!
   project.tags << tag unless project.tags.exists?(tag.id)
@@ -75,6 +78,8 @@ if Rails.env.development?
       title: copy[:post][0], slug: copy[:post][1], excerpt: copy[:post][2],
       body_markdown: copy[:post][3], state: "published", published_at: Time.zone.parse("2026-08-01 09:00")
     )
+    # Same two-pass save as the project: English must be persisted first.
+    post.save! if locale == "en"
   end
   post.save!
   post.tags << tag unless post.tags.exists?(tag.id)

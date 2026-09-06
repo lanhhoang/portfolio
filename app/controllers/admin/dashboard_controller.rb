@@ -7,6 +7,8 @@ class Admin::DashboardController < Admin::BaseController
     @project_count = Project.count
     @post_count = Post.count
     @tag_count = Tag.count
+    @unread_message_count = ContactMessage.unread.count
+    @failed_delivery_count = ContactMessage.failed.count
     now = Time.current
 
     @draft_translations = TRANSLATION_MODELS

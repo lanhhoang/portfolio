@@ -231,7 +231,7 @@
 
 **Interfaces produced:**
 
-- `ContactMessage#mark_delivered!` and `#mark_failed!(error)`.
+- `ContactMessage#notify_owner_later`, `#notify_owner_now`, and `#retry_delivery_later`.
 - `ContactNotificationJob.perform(contact_message_id)`.
 - `ContactMailer.owner_notification(contact_message)`.
 - Admin message state and retry routes.

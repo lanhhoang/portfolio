@@ -78,3 +78,29 @@ en:
   date:
     formats:
       long: "%B %-d, %Y"
+  contact:
+    fields:
+      sender_name: "Name"
+      sender_email: "Email"
+      subject: "Subject"
+      body: "Message"
+      website: "Website"
+    submit: "Send message"
+    errors:
+      one: "Please correct 1 error."
+      other: "Please correct %{count} errors."
+    received: "Your message has been saved."
+    spam_rejected: "We could not accept that submission."
+    rate_limited: "Too many messages were submitted. Please try again later."
+  activerecord:
+    attributes:
+      contact_message:
+        sender_name: "Name"
+        sender_email: "Email"
+        subject: "Subject"
+        body: "Message"
+  errors:
+    messages:
+      blank: "can't be blank"
+      invalid: "is invalid"
+      too_long: "is too long (maximum is %{count} characters)"

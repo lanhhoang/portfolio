@@ -78,3 +78,29 @@ vi:
   date:
     formats:
       long: "%-d tháng %-m, %Y"
+  contact:
+    fields:
+      sender_name: "Tên"
+      sender_email: "Email"
+      subject: "Chủ đề"
+      body: "Tin nhắn"
+      website: "Trang web"
+    submit: "Gửi tin nhắn"
+    errors:
+      one: "Vui lòng sửa 1 lỗi."
+      other: "Vui lòng sửa %{count} lỗi."
+    received: "Tin nhắn của bạn đã được lưu."
+    spam_rejected: "Chúng tôi không thể chấp nhận nội dung gửi này."
+    rate_limited: "Đã gửi quá nhiều tin nhắn. Vui lòng thử lại sau."
+  activerecord:
+    attributes:
+      contact_message:
+        sender_name: "Tên"
+        sender_email: "Email"
+        subject: "Chủ đề"
+        body: "Tin nhắn"
+  errors:
+    messages:
+      blank: "không được để trống"
+      invalid: "không hợp lệ"
+      too_long: "quá dài (tối đa %{count} ký tự)"

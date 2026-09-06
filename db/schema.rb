@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_04_031518) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_06_043317) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -62,6 +62,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_04_031518) do
     t.index ["email"], name: "index_admin_users_on_email", unique: true
     t.index ["singleton_guard"], name: "index_admin_users_on_singleton_guard", unique: true
     t.check_constraint "singleton_guard = 1", name: "admin_users_single_owner"
+  end
+
+  create_table "contact_messages", force: :cascade do |t|
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "delivered_at"
+    t.string "email_delivery_state", default: "pending", null: false
+    t.string "last_delivery_error"
+    t.string "sender_email", null: false
+    t.string "sender_name", null: false
+    t.string "state", default: "unread", null: false
+    t.string "subject", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email_delivery_state", "created_at"], name: "index_contact_messages_on_delivery_state_and_created_at"
+    t.index ["state", "created_at"], name: "index_contact_messages_on_state_and_created_at"
+    t.check_constraint "(email_delivery_state = 'pending' AND delivered_at IS NULL AND last_delivery_error IS NULL) OR (email_delivery_state = 'delivered' AND delivered_at IS NOT NULL AND last_delivery_error IS NULL) OR (email_delivery_state = 'failed' AND delivered_at IS NULL AND last_delivery_error IS NOT NULL)", name: "contact_messages_consistent_delivery_state"
+    t.check_constraint "email_delivery_state IN ('pending', 'delivered', 'failed')", name: "contact_messages_valid_delivery_state"
+    t.check_constraint "state IN ('unread', 'read', 'archived')", name: "contact_messages_valid_state"
   end
 
   create_table "post_translations", force: :cascade do |t|

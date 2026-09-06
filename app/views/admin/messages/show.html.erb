@@ -1,0 +1,26 @@
+<article class="mx-auto max-w-3xl">
+  <%= link_to "← Inbox", admin_messages_path, class: "underline" %>
+  <header class="mt-6 border-b pb-6">
+    <p class="break-words"><%= @message.sender_name %> · <%= mail_to @message.sender_email %></p>
+    <h1 class="mt-2 break-words text-3xl font-bold"><%= @message.subject %></h1>
+    <p class="mt-2"><%= l(@message.created_at, format: :long) %></p>
+    <p class="mt-2">Inbox: <%= @message.state %> · Email: <%= @message.email_delivery_state %></p>
+    <% if @message.last_delivery_error.present? %>
+      <p class="mt-2" role="status"><%= @message.last_delivery_error %></p>
+    <% end %>
+  </header>
+
+  <div class="prose mt-6 max-w-none whitespace-pre-wrap break-words"><%= @message.body %></div>
+
+  <div class="mt-8 flex flex-wrap gap-3">
+    <% if @message.unread? %>
+      <%= button_to "Mark read", admin_message_state_path(@message), method: :patch, params: { state: "read" }, class: "admin-action" %>
+    <% else %>
+      <%= button_to "Mark unread", admin_message_state_path(@message), method: :patch, params: { state: "unread" }, class: "admin-action" %>
+    <% end %>
+    <%= button_to "Archive", admin_message_state_path(@message), method: :patch, params: { state: "archived" }, class: "admin-action", form: { data: { turbo_confirm: "Archive this message?" } } %>
+    <% if @message.failed? %>
+      <%= button_to "Retry email", admin_message_delivery_retry_path(@message), class: "admin-action" %>
+    <% end %>
+  </div>
+</article>
