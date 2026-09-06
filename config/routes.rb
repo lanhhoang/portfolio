@@ -11,7 +11,8 @@ Rails.application.routes.draw do
     get "about", to: "public/profiles#show", as: :localized_about
     get "resume", to: "public/resumes#show", as: :localized_resume
     get "resume/download", to: "public/resume_downloads#show", as: :localized_resume_download
-    get "contact", to: "public#contact", as: :localized_contact
+    get "contact", to: "public/contact_messages#new", as: :localized_contact
+    post "contact", to: "public/contact_messages#create"
   end
 
   namespace :admin do

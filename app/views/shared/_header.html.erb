@@ -29,7 +29,7 @@
         ["public/posts", nil, t("navigation.journal"), localized_blog_path(locale: current_locale)],
         ["public/profiles", nil, t("navigation.about"), localized_about_path(locale: current_locale)],
         ["public/resumes", nil, t("navigation.resume"), localized_resume_path(locale: current_locale)],
-        ["public", "contact", t("navigation.contact"), localized_contact_path(locale: current_locale)]
+        ["public/contact_messages", nil, t("navigation.contact"), localized_contact_path(locale: current_locale)]
       ].each do |target_controller, target_action, label, path| %>
         <%= link_to label, path, aria: { current: ("page" if controller_path == target_controller && (target_action.nil? || action_name == target_action)) } %>
       <% end %>

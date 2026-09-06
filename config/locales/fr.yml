@@ -43,7 +43,7 @@ fr:
       introduction: "Une expérience localisée avec un téléchargement direct du CV."
     contact:
       eyebrow: "Échangeons"
-      title: "Contact"
+      title: "Contactez-moi"
       introduction: "Un moyen direct et sécurisé de commencer une conversation."
   public:
     home:
@@ -92,3 +92,29 @@ fr:
       - "octobre"
       - "novembre"
       - "décembre"
+  contact:
+    fields:
+      sender_name: "Nom"
+      sender_email: "Adresse e-mail"
+      subject: "Objet"
+      body: "Message"
+      website: "Site web"
+    submit: "Envoyer le message"
+    errors:
+      one: "Veuillez corriger 1 erreur."
+      other: "Veuillez corriger %{count} erreurs."
+    received: "Votre message a été enregistré."
+    spam_rejected: "Nous n’avons pas pu accepter cet envoi."
+    rate_limited: "Trop de messages ont été envoyés. Veuillez réessayer plus tard."
+  activerecord:
+    attributes:
+      contact_message:
+        sender_name: "Nom"
+        sender_email: "Adresse e-mail"
+        subject: "Objet"
+        body: "Message"
+  errors:
+    messages:
+      blank: "ne peut pas être vide"
+      invalid: "n’est pas valide"
+      too_long: "est trop long (maximum : %{count} caractères)"
