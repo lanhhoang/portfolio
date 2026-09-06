@@ -1,0 +1,43 @@
+<header class="flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <p class="text-sm font-semibold uppercase tracking-widest">Inbox</p>
+    <h1 class="text-3xl font-bold">Contact messages</h1>
+  </div>
+  <nav class="flex min-h-11 items-center gap-4" aria-label="Message filters">
+    <%= link_to "Inbox", admin_messages_path, class: "underline" %>
+    <%= link_to "Archived", admin_messages_path(state: :archived), class: "underline" %>
+  </nav>
+</header>
+
+<div class="mt-8 grid gap-4">
+  <% @messages.each do |message| %>
+    <article data-message-id="<%= message.id %>" class="border p-4 sm:p-6">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0">
+          <p class="break-words font-semibold"><%= message.sender_name %></p>
+          <h2 class="break-words text-xl"><%= link_to message.subject, admin_message_path(message), class: "underline" %></h2>
+        </div>
+        <div class="flex flex-wrap gap-2 text-xs uppercase">
+          <span><%= message.state %></span>
+          <span><%= message.email_delivery_state %></span>
+        </div>
+      </div>
+      <p class="mt-3 text-sm"><%= l(message.created_at, format: :long) %></p>
+      <div class="mt-4 flex flex-wrap gap-3">
+        <% if message.unread? %>
+          <%= button_to "Mark read", admin_message_state_path(message), method: :patch, params: { state: "read" }, class: "admin-action" %>
+        <% else %>
+          <%= button_to "Mark unread", admin_message_state_path(message), method: :patch, params: { state: "unread" }, class: "admin-action" %>
+        <% end %>
+        <%= button_to "Archive", admin_message_state_path(message), method: :patch, params: { state: "archived" }, class: "admin-action", form: { data: { turbo_confirm: "Archive this message?" } } %>
+        <% if message.failed? %>
+          <%= button_to "Retry email", admin_message_delivery_retry_path(message), class: "admin-action" %>
+        <% end %>
+      </div>
+    </article>
+  <% end %>
+
+  <% if @messages.empty? %>
+    <p class="border p-6">No contact messages.</p>
+  <% end %>
+</div>

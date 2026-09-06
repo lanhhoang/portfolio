@@ -23,12 +23,13 @@
           <li><%= link_to "Projects", admin_projects_path, class: "admin-action" %></li>
           <li><%= link_to "Posts", admin_posts_path, class: "admin-action" %></li>
           <li><%= link_to "Tags", admin_tags_path, class: "admin-action" %></li>
+          <li><%= link_to "Messages", admin_messages_path, class: "admin-action" %></li>
           <li><%= link_to "Profile", edit_admin_profile_path, class: "admin-action" %></li>
           <li><%= link_to "Résumé", edit_admin_resume_path, class: "admin-action" %></li>
         </ul>
       </nav>
     </header>
-    <main class="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 md:grid md:grid-cols-[14rem_1fr]">
+    <main class="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
       <% if notice.present? %><p role="status" class="mb-4 rounded border p-3"><%= notice %></p><% end %>
       <% if alert.present? %><p role="alert" class="mb-4 rounded border border-red-600 p-3"><%= alert %></p><% end %>
       <%= yield %>

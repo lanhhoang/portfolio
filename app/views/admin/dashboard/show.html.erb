@@ -14,6 +14,13 @@
       <p class="text-sm opacity-70">Tags</p>
       <p class="text-3xl font-semibold" data-testid="tag-count"><%= @tag_count %></p>
     <% end %>
+    <%= link_to admin_messages_path, class: "block min-h-24 border p-4" do %>
+      <span class="block text-2xl font-bold"><%= @unread_message_count %></span>
+      <span>Unread messages</span>
+      <% if @failed_delivery_count.positive? %>
+        <span class="mt-2 block"><%= pluralize(@failed_delivery_count, "failed email delivery") %></span>
+      <% end %>
+    <% end %>
   </div>
 
   <div class="grid gap-4 sm:grid-cols-2">

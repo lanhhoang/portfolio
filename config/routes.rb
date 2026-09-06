@@ -17,6 +17,10 @@ Rails.application.routes.draw do
 
   namespace :admin do
     root "dashboard#show"
+    resources :messages, only: [:index, :show] do
+      resource :state, only: :update, module: :messages
+      resource :delivery_retry, only: :create, module: :messages
+    end
     resources :projects, except: :show do
       resource :cover_image, only: :destroy, module: :projects
       resources :gallery_images, only: :destroy, module: :projects
