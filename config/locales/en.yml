@@ -1,4 +1,20 @@
 en:
+  seo:
+    site_name: "Portfolio"
+    home:
+      title: "Ideas. Interfaces. Impact."
+      description: "Independent software engineering, interface design, and technical writing."
+    projects:
+      title: "Work"
+      description: "Selected software engineering and interface design projects."
+    blog:
+      title: "Journal"
+      description: "Notes on software engineering, product design, and building for the web."
+    about:
+      title: "About"
+    contact:
+      title: "Contact"
+      description: "Get in touch about software engineering and product work."
   site:
     name: "Portfolio"
   navigation:

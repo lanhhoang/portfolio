@@ -1,4 +1,20 @@
 vi:
+  seo:
+    site_name: "Portfolio"
+    home:
+      title: "Ý tưởng. Giao diện. Tác động."
+      description: "Kỹ thuật phần mềm độc lập, thiết kế giao diện và bài viết kỹ thuật."
+    projects:
+      title: "Dự án"
+      description: "Các dự án tiêu biểu về kỹ thuật phần mềm và thiết kế giao diện."
+    blog:
+      title: "Nhật ký"
+      description: "Ghi chép về kỹ thuật phần mềm, thiết kế sản phẩm và phát triển web."
+    about:
+      title: "Giới thiệu"
+    contact:
+      title: "Liên hệ"
+      description: "Trao đổi về kỹ thuật phần mềm và phát triển sản phẩm."
   site:
     name: "Portfolio"
   navigation:

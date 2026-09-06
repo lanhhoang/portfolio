@@ -1,3 +1,11 @@
+<% page_metadata(
+  title: t("seo.about.title"),
+  description: @translation.introduction,
+  alternates: alternate_locale_links(locale_switch_paths: @locale_switch_paths),
+  image_url: (@profile.portrait.attached? ? url_for(@profile.portrait) : nil),
+  json_ld: person_json_ld(@translation)
+) %>
+
 <main id="main-content" class="site-container page-shell">
   <article class="space-y-8">
     <header class="space-y-3">

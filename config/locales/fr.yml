@@ -1,4 +1,20 @@
 fr:
+  seo:
+    site_name: "Portfolio"
+    home:
+      title: "Idées. Interfaces. Impact."
+      description: "Ingénierie logicielle indépendante, design d’interfaces et écrits techniques."
+    projects:
+      title: "Réalisations"
+      description: "Une sélection de projets d’ingénierie logicielle et de design d’interfaces."
+    blog:
+      title: "Journal"
+      description: "Notes sur l’ingénierie logicielle, le design produit et la création web."
+    about:
+      title: "À propos"
+    contact:
+      title: "Contactez-moi"
+      description: "Échangeons autour de l’ingénierie logicielle et des produits numériques."
   site:
     name: "Portfolio"
   navigation:
