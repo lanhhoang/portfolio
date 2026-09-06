@@ -68,7 +68,7 @@ class PublicContactMessagesTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_includes response.body, "Your message has been saved."
     assert message.pending?
-    assert_equal [message.id], enqueued_jobs.last.fetch(:args)
+    assert_equal [ message.id ], enqueued_jobs.last.fetch(:args)
   end
 
   test "invalid input renders field errors without persistence or mail" do

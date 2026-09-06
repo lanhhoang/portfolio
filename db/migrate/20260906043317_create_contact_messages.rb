@@ -23,7 +23,7 @@ class CreateContactMessages < ActiveRecord::Migration[8.1]
       SQL
     end
 
-    add_index :contact_messages, [:state, :created_at]
-    add_index :contact_messages, [:email_delivery_state, :created_at], name: "index_contact_messages_on_delivery_state_and_created_at"
+    add_index :contact_messages, [ :state, :created_at ]
+    add_index :contact_messages, [ :email_delivery_state, :created_at ], name: "index_contact_messages_on_delivery_state_and_created_at"
   end
 end

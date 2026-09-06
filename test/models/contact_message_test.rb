@@ -60,7 +60,7 @@ class ContactMessageTest < ActiveSupport::TestCase
     assert_enqueued_with(job: ContactNotificationJob) do
       message.save!
     end
-    assert_equal [message.id], enqueued_jobs.last.fetch(:args)
+    assert_equal [ message.id ], enqueued_jobs.last.fetch(:args)
   end
 
   test "an enqueue failure preserves the committed message as failed" do
@@ -81,7 +81,7 @@ class ContactMessageTest < ActiveSupport::TestCase
     clear_enqueued_jobs
     message.update!(email_delivery_state: :failed, last_delivery_error: "TimeoutError: delivery failed")
 
-    assert_enqueued_with(job: ContactNotificationJob, args: [message.id]) do
+    assert_enqueued_with(job: ContactNotificationJob, args: [ message.id ]) do
       assert message.retry_delivery_later
     end
     assert message.reload.pending?

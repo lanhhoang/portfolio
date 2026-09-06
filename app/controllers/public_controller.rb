@@ -8,8 +8,6 @@ class PublicController < ApplicationController
     redirect_to localized_root_path(locale: preferred_locale)
   end
 
-  def contact = render_page(:contact)
-
   def current_locale
     @current_locale || I18n.default_locale.to_s
   end
@@ -19,10 +17,6 @@ class PublicController < ApplicationController
   end
 
   private
-
-  def render_page(page)
-    render :page, locals: { page: page }
-  end
 
   def with_locale(&action)
     @current_locale = params.fetch(:locale)

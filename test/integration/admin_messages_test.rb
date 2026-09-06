@@ -66,7 +66,7 @@ class AdminMessagesTest < ActionDispatch::IntegrationTest
     @message.update!(email_delivery_state: :failed, last_delivery_error: "RuntimeError: delivery failed")
     original = @message.attributes.slice("sender_name", "sender_email", "subject", "body", "created_at")
 
-    assert_enqueued_with(job: ContactNotificationJob, args: [@message.id]) do
+    assert_enqueued_with(job: ContactNotificationJob, args: [ @message.id ]) do
       post admin_message_delivery_retry_path(@message)
     end
     assert @message.reload.pending?

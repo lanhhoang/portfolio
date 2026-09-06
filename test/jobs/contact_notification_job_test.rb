@@ -66,7 +66,7 @@ class ContactNotificationJobTest < ActiveJob::TestCase
     message = create_message
     serialized = ContactNotificationJob.new(message.id).serialize
 
-    assert_equal [message.id], serialized.fetch("arguments")
+    assert_equal [ message.id ], serialized.fetch("arguments")
     assert_not_includes serialized.to_json, message.body
   end
 end

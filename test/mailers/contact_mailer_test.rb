@@ -22,9 +22,9 @@ class ContactMailerTest < ActionMailer::TestCase
 
     email = ContactMailer.owner_notification(message)
 
-    assert_equal ["owner@example.test"], email.to
-    assert_equal ["portfolio@example.test"], email.from
-    assert_equal ["ada@example.test"], email.reply_to
+    assert_equal [ "owner@example.test" ], email.to
+    assert_equal [ "portfolio@example.test" ], email.from
+    assert_equal [ "ada@example.test" ], email.reply_to
     assert_equal "[Portfolio contact] Project enquiry", email.subject
     assert_includes email.text_part.body.decoded, "Could we work together?"
     assert_includes email.html_part.body.decoded, "Could we work together?"
