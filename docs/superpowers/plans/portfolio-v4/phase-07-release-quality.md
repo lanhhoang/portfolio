@@ -23,7 +23,7 @@
 - Contact messages commit before email delivery and remain retryable after delivery failure.
 - Production remains one application container on one small Ubuntu server; do not add Redis, a separate API, SPA, CMS, search service, CDN, or observability platform.
 - Use Rails defaults, existing dependencies, and the standard library. Do not add a gem, npm package, or import-map pin in this phase.
-- Use Minitest and Capybara. Each behavior task follows red-green-refactor and ends with a focused test run and commit.
+- Use Minitest and Capybara. Prefer request/integration tests and keep Selenium for critical browser smoke behavior only. Each behavior task follows red-green-refactor and ends with a focused test run and commit.
 
 ## Audited Baseline and Fixed Assumptions
 
@@ -50,6 +50,7 @@ Current interfaces to preserve:
 - Existing image fixture: `public/icon.png` is a 512×512 PNG. There is no `test/fixtures/files/cover.png`.
 - Existing public singleton views are `app/views/public/profiles/show.html.erb` and `app/views/public/resumes/show.html.erb`.
 - Existing system files are `test/system/public_shell_test.rb` and `test/system/admin_manages_content_test.rb`; do not refer to nonexistent `theme_test.rb` or `admin_content_management_test.rb` files.
+- Do not add global profile, résumé, project, or post fixtures in Phase 7. This repository loads `fixtures :all`, and singleton fixtures would collide with existing tests that create their own singleton rows. Build records locally only where publication or singleton state is the behavior under test.
 - Existing semantic CSS variables are `--background`, `--foreground`, `--muted`, `--surface`, `--border`, `--accent`, `--accent-foreground`, and `--focus`. Do not rename them to a second token family.
 - The existing menu controller already updates `aria-expanded`, hides and shows the panel, closes on Escape, and returns focus. Preserve it.
 - The existing stylesheet already supplies visible focus, 44px control heights, responsive media bounds, contained rich-text tables/code, and reduced-motion overrides. Extend it only where tests identify a missing contract.
@@ -59,8 +60,7 @@ Current interfaces to preserve:
 
 | Path | Responsibility |
 | --- | --- |
-| `app/helpers/metadata_helper.rb` | Normalize metadata, canonical URLs, existing/public alternates, Open Graph locales, and JSON-LD. |
-| `app/views/layouts/application.html.erb` | Emit metadata and nonce-bearing escaped JSON-LD in the public/error layout. |
+| `app/helpers/metadata_helper.rb` | Fill the existing `content_for(:title)` and `content_for(:head)` outlets with canonical metadata, public alternates, Open Graph locales, and JSON-LD. |
 | `app/views/public/**/*.html.erb` | Declare page metadata, retain exactly one focusable `#main-content`, and render responsive attachments. |
 | `app/controllers/sitemap_controller.rb` | Build absolute static, singleton, and publicly visible content URLs. |
 | `app/views/sitemap/show.xml.builder` | Emit a minimal sitemap document. |
@@ -68,7 +68,7 @@ Current interfaces to preserve:
 | `app/views/errors/show.html.erb` | Shared localized error body and recovery link. |
 | `app/helpers/responsive_image_helper.rb` | Render analyzed Active Storage images with truthful width descriptors and a safe unanalyzed fallback. |
 | `app/assets/tailwind/application.css` | Preserve existing tokens; complete horizontal touch targets and visible accent swatches. |
-| `test/requests/*.rb`, `test/helpers/*.rb`, `test/system/*.rb` | Focused metadata, sitemap, error, responsive-media, keyboard, contrast, motion, and viewport regressions. |
+| `test/requests/*.rb`, `test/helpers/*.rb`, `test/system/public_shell_test.rb` | Request-first metadata, sitemap, error, media, and landmark coverage plus one critical keyboard smoke test. |
 
 ---
 
@@ -77,7 +77,6 @@ Current interfaces to preserve:
 **Files:**
 
 - Create: `app/helpers/metadata_helper.rb`
-- Modify: `app/views/layouts/application.html.erb`
 - Modify: `app/views/public/home/show.html.erb`
 - Modify: `app/views/public/projects/index.html.erb`
 - Modify: `app/views/public/projects/show.html.erb`
@@ -93,8 +92,8 @@ Current interfaces to preserve:
 
 **Interfaces:**
 
-- Consumes: `PublicController::SUPPORTED_LOCALES`, `@locale_switch_paths`, `@translation`, `request.path_parameters`, and existing route helpers.
-- Produces: `page_metadata`, `page_metadata_values`, `current_page_canonical_url`, `alternate_locale_links`, `project_json_ld`, `post_json_ld`, and `person_json_ld`.
+- Consumes: `PublicController::SUPPORTED_LOCALES`, explicitly passed locale-switch paths, `@translation`, `request.path_parameters`, and existing route helpers.
+- Produces: `page_metadata`, `current_page_canonical_url`, `alternate_locale_links`, `project_json_ld`, `post_json_ld`, and `person_json_ld`.
 
 - [ ] **Step 1: Add the failing metadata request test**
 
@@ -187,38 +186,55 @@ module MetadataHelper
   def page_metadata(title:, description:, canonical_url: current_page_canonical_url,
                     alternates: alternate_locale_links, og_type: "website",
                     image_url: nil, json_ld: nil, robots: "index,follow")
-    @page_metadata = {
-      title: title.to_s.strip,
-      description: strip_tags(description.to_s).squish.truncate(160),
-      canonical_url: canonical_url,
-      alternates: alternates,
-      og_type: og_type,
-      og_locale: OG_LOCALES.fetch(I18n.locale.to_s),
-      image_url: image_url,
-      json_ld: json_ld,
-      robots: robots
-    }
-  end
+    title = title.to_s.strip
+    description = strip_tags(description.to_s).squish.truncate(160)
+    content_for :title, title
 
-  def page_metadata_values
-    @page_metadata || page_metadata(
-      title: t("seo.site_name"),
-      description: t("seo.default_description")
-    )
+    tags = [
+      tag.meta(name: "description", content: description),
+      tag.meta(name: "robots", content: robots),
+      tag.link(rel: "canonical", href: canonical_url),
+      tag.meta(property: "og:site_name", content: t("seo.site_name")),
+      tag.meta(property: "og:title", content: title),
+      tag.meta(property: "og:description", content: description),
+      tag.meta(property: "og:type", content: og_type),
+      tag.meta(property: "og:url", content: canonical_url),
+      tag.meta(property: "og:locale", content: OG_LOCALES.fetch(I18n.locale.to_s))
+    ]
+    alternates.each do |alternate|
+      tags << tag.link(rel: "alternate", hreflang: alternate.fetch(:locale), href: alternate.fetch(:url))
+      if alternate.fetch(:locale) != I18n.locale.to_s
+        tags << tag.meta(property: "og:locale:alternate", content: OG_LOCALES.fetch(alternate.fetch(:locale)))
+      end
+    end
+    if image_url.present?
+      tags << tag.meta(property: "og:image", content: image_url)
+    end
+    if json_ld.present?
+      tags << tag.script(
+        raw(json_escape(json_ld.to_json)),
+        type: "application/ld+json",
+        nonce: content_security_policy_nonce
+      )
+    end
+
+    content_for :head, safe_join(tags, "\n")
   end
 
   def current_page_canonical_url(overrides = {})
     url_for(request.path_parameters.merge(overrides).merge(only_path: false))
   end
 
-  def alternate_locale_links
+  def alternate_locale_links(locale_switch_paths: nil)
     PublicController::SUPPORTED_LOCALES.filter_map do |locale|
-      path = if instance_variable_defined?(:@locale_switch_paths)
-        @locale_switch_paths[locale]
+      path = if locale_switch_paths
+        locale_switch_paths[locale]
       else
         url_for(request.path_parameters.merge(locale: locale, only_path: true))
       end
-      { locale: locale, url: "#{request.base_url}#{path}" } if path
+      if path
+        { locale: locale, url: "#{request.base_url}#{path}" }
+      end
     end
   end
 
@@ -258,37 +274,18 @@ module MetadataHelper
 end
 ```
 
-Do not query translation tables from this helper. The existing controllers already compute the correct public/existing equivalent-page map, so `@locale_switch_paths` remains the single detail-page authority.
+Do not query translation tables from this helper. The existing controllers already compute the correct public/existing equivalent-page map, and detail templates pass that map explicitly.
 
-- [ ] **Step 4: Render normalized metadata in the public layout**
+- [ ] **Step 4: Reuse the layout’s existing Rails content outlets**
 
-In `app/views/layouts/application.html.erb`, replace the existing `<title>` with this block. Keep `theme_bootstrap_script` before the stylesheet and JavaScript tags.
+`app/views/layouts/application.html.erb` already renders both required outlets:
 
 ```erb
-<% metadata = page_metadata_values %>
-<title><%= metadata.fetch(:title) %></title>
-<meta name="description" content="<%= metadata.fetch(:description) %>">
-<meta name="robots" content="<%= metadata.fetch(:robots) %>">
-<link rel="canonical" href="<%= metadata.fetch(:canonical_url) %>">
-<% metadata.fetch(:alternates).each do |alternate| %>
-  <link rel="alternate" hreflang="<%= alternate.fetch(:locale) %>" href="<%= alternate.fetch(:url) %>">
-<% end %>
-<meta property="og:site_name" content="<%= t("seo.site_name") %>">
-<meta property="og:title" content="<%= metadata.fetch(:title) %>">
-<meta property="og:description" content="<%= metadata.fetch(:description) %>">
-<meta property="og:type" content="<%= metadata.fetch(:og_type) %>">
-<meta property="og:url" content="<%= metadata.fetch(:canonical_url) %>">
-<meta property="og:locale" content="<%= metadata.fetch(:og_locale) %>">
-<% metadata.fetch(:alternates).reject { |alternate| alternate[:locale] == I18n.locale.to_s }.each do |alternate| %>
-  <meta property="og:locale:alternate" content="<%= MetadataHelper::OG_LOCALES.fetch(alternate.fetch(:locale)) %>">
-<% end %>
-<% if metadata[:image_url].present? %>
-  <meta property="og:image" content="<%= metadata[:image_url] %>">
-<% end %>
-<% if metadata[:json_ld].present? %>
-  <script type="application/ld+json" nonce="<%= content_security_policy_nonce %>"><%= raw(json_escape(metadata[:json_ld].to_json)) %></script>
-<% end %>
+<title><%= content_for(:title) || t("site.name") %></title>
+<%= yield :head %>
 ```
+
+Leave the layout unchanged. `page_metadata` writes to these Rails-native outlets, so it needs no layout instance variable and no metadata partial.
 
 - [ ] **Step 5: Declare page-specific metadata in the actual public templates**
 
@@ -309,7 +306,7 @@ Add the matching declaration before `<main>` in each file:
 <% page_metadata(
   title: @translation.title,
   description: @translation.summary,
-  alternates: alternate_locale_links,
+  alternates: alternate_locale_links(locale_switch_paths: @locale_switch_paths),
   image_url: (@translation.project.cover_image.attached? ? url_for(@translation.project.cover_image) : nil),
   json_ld: project_json_ld(@translation)
 ) %>
@@ -325,7 +322,7 @@ Add the matching declaration before `<main>` in each file:
 <% page_metadata(
   title: @translation.title,
   description: @translation.excerpt,
-  alternates: alternate_locale_links,
+  alternates: alternate_locale_links(locale_switch_paths: @locale_switch_paths),
   og_type: "article",
   image_url: (@translation.post.cover_image.attached? ? url_for(@translation.post.cover_image) : nil),
   json_ld: post_json_ld(@translation)
@@ -337,7 +334,7 @@ Add the matching declaration before `<main>` in each file:
 <% page_metadata(
   title: t("seo.about.title"),
   description: @translation.introduction,
-  alternates: alternate_locale_links,
+  alternates: alternate_locale_links(locale_switch_paths: @locale_switch_paths),
   image_url: (@profile.portrait.attached? ? url_for(@profile.portrait) : nil),
   json_ld: person_json_ld(@translation)
 ) %>
@@ -348,7 +345,7 @@ Add the matching declaration before `<main>` in each file:
 <% page_metadata(
   title: @translation.title,
   description: @translation.description,
-  alternates: alternate_locale_links
+  alternates: alternate_locale_links(locale_switch_paths: @locale_switch_paths)
 ) %>
 ```
 
@@ -365,7 +362,6 @@ Add under `en:` in `config/locales/en.yml`:
 ```yaml
 seo:
   site_name: "Portfolio"
-  default_description: "Independent software engineering, interface design, and technical writing."
   home:
     title: "Ideas. Interfaces. Impact."
     description: "Independent software engineering, interface design, and technical writing."
@@ -387,7 +383,6 @@ Add under `fr:` in `config/locales/fr.yml`:
 ```yaml
 seo:
   site_name: "Portfolio"
-  default_description: "Ingénierie logicielle indépendante, design d’interfaces et écrits techniques."
   home:
     title: "Idées. Interfaces. Impact."
     description: "Ingénierie logicielle indépendante, design d’interfaces et écrits techniques."
@@ -409,7 +404,6 @@ Add under `vi:` in `config/locales/vi.yml`:
 ```yaml
 seo:
   site_name: "Portfolio"
-  default_description: "Kỹ thuật phần mềm độc lập, thiết kế giao diện và bài viết kỹ thuật."
   home:
     title: "Ý tưởng. Giao diện. Tác động."
     description: "Kỹ thuật phần mềm độc lập, thiết kế giao diện và bài viết kỹ thuật."
@@ -442,7 +436,7 @@ Expected: all tests pass and Brakeman reports no warning for JSON-LD output.
 - [ ] **Step 8: Commit metadata as one reviewable unit**
 
 ```bash
-git add app/helpers/metadata_helper.rb app/views/layouts/application.html.erb app/views/public config/locales test/requests/public_metadata_test.rb
+git add app/helpers/metadata_helper.rb app/views/public config/locales test/requests/public_metadata_test.rb
 git commit -m "feat: add localized public metadata"
 ```
 
@@ -577,8 +571,12 @@ class SitemapController < ApplicationController
 
   def singleton_urls(locale)
     urls = []
-    urls << localized_about_url(locale: locale) if ProfileTranslation.exists?(locale: locale)
-    urls << localized_resume_url(locale: locale) if ResumeTranslation.exists?(locale: locale)
+    if ProfileTranslation.exists?(locale: locale)
+      urls << localized_about_url(locale: locale)
+    end
+    if ResumeTranslation.exists?(locale: locale)
+      urls << localized_resume_url(locale: locale)
+    end
     urls
   end
 
@@ -656,9 +654,7 @@ require "test_helper"
 
 class ErrorsTest < ActionDispatch::IntegrationTest
   test "an unknown French URL receives a branded French 404" do
-    with_public_exceptions do
-      get "/fr/this-page-does-not-exist"
-    end
+    get "/fr/this-page-does-not-exist"
 
     assert_response :not_found
     assert_includes response.body, "Page introuvable"
@@ -682,16 +678,6 @@ class ErrorsTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Something went wrong"
     assert_not_includes response.body, "RuntimeError"
     assert_not_includes response.body, "backtrace"
-  end
-
-  private
-
-  def with_public_exceptions
-    previous = Rails.application.env_config["action_dispatch.show_exceptions"]
-    Rails.application.env_config["action_dispatch.show_exceptions"] = :all
-    yield
-  ensure
-    Rails.application.env_config["action_dispatch.show_exceptions"] = previous
   end
 end
 ```
@@ -717,72 +703,46 @@ config.exceptions_app = routes
 Near the end of `config/routes.rb`, after real application routes, add:
 
 ```ruby
-match "/:code", to: "errors#show", via: :all,
-  constraints: { code: /404|422|500/ }
+get "/:code", to: "errors#show", constraints: { code: /404|422|500/ }
 ```
 
-Do not add a general catch-all route. Routing, controller, and server exceptions must all continue through `config.exceptions_app`.
+Do not add a general catch-all route. Rails rewrites exception requests to `GET /404`, `GET /422`, or `GET /500` before calling `config.exceptions_app`, so no other verb is needed.
 
 - [ ] **Step 4: Add a locale-safe error controller that satisfies the public layout contract**
 
 Create `app/controllers/errors_controller.rb`:
 
 ```ruby
-class ErrorsController < ApplicationController
-  layout "application"
-  helper_method :current_locale
+class ErrorsController < PublicController
+  skip_around_action :with_locale
+  around_action :with_error_locale
 
   def show
-    @current_locale = error_locale
-    @locale_switch_paths = PublicController::SUPPORTED_LOCALES.index_with do |locale|
+    @locale_switch_paths = SUPPORTED_LOCALES.index_with do |locale|
       localized_root_path(locale: locale)
     end
+    code = params.expect(:code).to_i
 
-    I18n.with_locale(@current_locale) do
-      render :show, status: params.fetch(:code).to_i, formats: :html,
-        locals: { code: params.fetch(:code).to_i }
-    end
-  end
-
-  def current_locale
-    @current_locale
+    render :show, status: code, formats: :html, locals: { code: code }
   end
 
   private
 
-  def error_locale
-    original_path = request.get_header("action_dispatch.original_path").to_s
-    path_locale = original_path.split("/").second
-    return path_locale if path_locale.in?(PublicController::SUPPORTED_LOCALES)
-
-    cookie_locale = cookies[:portfolio_locale].to_s
-    return cookie_locale if cookie_locale.in?(PublicController::SUPPORTED_LOCALES)
-
-    requested_locale || I18n.default_locale.to_s
+  def with_error_locale(&action)
+    @current_locale = original_path_locale || preferred_locale
+    I18n.with_locale(@current_locale, &action)
   end
 
-  def requested_locale
-    request.get_header("HTTP_ACCEPT_LANGUAGE").to_s
-      .split(",")
-      .each_with_index
-      .filter_map do |entry, index|
-        language_range, *parameters = entry.strip.split(";")
-        locale = language_range.downcase.split("-").first
-        next unless locale.in?(PublicController::SUPPORTED_LOCALES)
-
-        quality_parameter = parameters.find { |parameter| parameter.strip.start_with?("q=") }
-        quality = quality_parameter ? Float(quality_parameter.split("=", 2).last, exception: false).to_f : 1.0
-        next unless quality.positive? && quality <= 1.0
-
-        [ locale, quality, index ]
-      end
-      .max_by { |_locale, quality, index| [ quality, -index ] }
-      &.first
+  def original_path_locale
+    locale = request.get_header("action_dispatch.original_path").to_s.split("/").second
+    if locale.in?(SUPPORTED_LOCALES)
+      locale
+    end
   end
 end
 ```
 
-`current_locale` is required because the public layout and shared header normally receive it from `PublicController`. The explicit home-only `@locale_switch_paths` prevents the error layout from generating malformed locale variants of `/404`, `/422`, or `/500`.
+The error controller inherits `current_locale`, cookie lookup, weighted `Accept-Language` negotiation, and the default locale from `PublicController` instead of maintaining a second locale parser. The explicit home-only `@locale_switch_paths` prevents the error layout from generating malformed locale variants of `/404`, `/422`, or `/500`.
 
 - [ ] **Step 5: Add the shared localized error view**
 
@@ -980,36 +940,34 @@ module ResponsiveImageHelper
 
   def responsive_image_tag(attachment, alt:, sizes:, widths: DEFAULT_WIDTHS,
                            loading: "lazy", **options)
-    raise ArgumentError, "attachment must be attached" unless attachment.attached?
-
     metadata = attachment.blob.metadata
     intrinsic_width = metadata["width"].to_i
     intrinsic_height = metadata["height"].to_i
 
-    unless intrinsic_width.positive? && intrinsic_height.positive?
-      return image_tag(
+    if intrinsic_width.positive? && intrinsic_height.positive?
+      candidate_widths = (widths.map(&:to_i).select { |width| width.positive? && width <= intrinsic_width } +
+        [ intrinsic_width ]).uniq.sort
+      variants = candidate_widths.to_h do |width|
+        [ width, attachment.variant(resize_to_limit: [ width, nil ]) ]
+      end
+
+      image_tag(
+        variants.fetch(candidate_widths.last),
+        alt: alt,
+        srcset: variants.map { |width, variant| [ variant, "#{width}w" ] },
+        sizes: sizes,
+        loading: loading,
+        decoding: "async",
+        width: intrinsic_width,
+        height: intrinsic_height,
+        **options
+      )
+    else
+      image_tag(
         attachment, alt: alt, sizes: sizes, loading: loading,
         decoding: "async", **options
       )
     end
-
-    candidate_widths = (widths.map(&:to_i).select { |width| width.positive? && width <= intrinsic_width } +
-      [ intrinsic_width ]).uniq.sort
-    variants = candidate_widths.to_h do |width|
-      [ width, attachment.variant(resize_to_limit: [ width, nil ]) ]
-    end
-
-    image_tag(
-      variants.fetch(candidate_widths.last),
-      alt: alt,
-      srcset: variants.map { |width, variant| [ variant, "#{width}w" ] },
-      sizes: sizes,
-      loading: loading,
-      decoding: "async",
-      width: intrinsic_width,
-      height: intrinsic_height,
-      **options
-    )
   end
 end
 ```
@@ -1148,7 +1106,7 @@ git commit -m "feat: serve responsive public images"
 
 ---
 
-### Task 5: Keyboard, Contrast, Motion, Touch, and Narrow-Viewport Regression Gate
+### Task 5: Public Landmarks and Presentation Quality
 
 **Files:**
 
@@ -1161,45 +1119,60 @@ git commit -m "feat: serve responsive public images"
 - Modify: `app/views/public/resumes/show.html.erb`
 - Modify: `app/views/public/contact_messages/new.html.erb`
 - Modify: `app/assets/tailwind/application.css`
+- Modify: `test/integration/public_content_test.rb`
 - Modify: `test/system/public_shell_test.rb`
-- Create: `test/system/release_quality_test.rb`
 
 **Interfaces:**
 
-- Consumes: existing `menu_controller.js`, `theme_controller.js`, `portfolio-theme`, `sign_in_owner`, `--background`, `--foreground`, `--accent`, `--accent-foreground`, `--focus`, and fixed profile accents.
-- Produces: exactly one focusable `#main-content` per public page, generated Tailwind classes that use the existing CSS variables, 44×44px primary mobile targets, and browser-level release regressions.
+- Consumes: the existing public-content request setup, `menu_controller.js`, `theme_controller.js`, `portfolio-theme`, and the current semantic CSS variables.
+- Produces: exactly one focusable `#main-content` per public page, generated Tailwind classes that use the existing variables, visible owner accent swatches, 44×44px primary mobile targets, and one critical skip-link browser smoke test.
 
-- [ ] **Step 1: Add a failing skip-link regression to the existing public shell suite**
+- [ ] **Step 1: Add request-first landmark coverage to the existing public-content suite**
+
+Append to `PublicContentRequestTest` in `test/integration/public_content_test.rb`:
+
+```ruby
+test "every public page has one focusable main landmark" do
+  paths = [
+    localized_root_path(locale: :en),
+    localized_projects_path(locale: :en),
+    localized_project_path(locale: :en, slug: "visible-project"),
+    localized_blog_path(locale: :en),
+    localized_post_path(locale: :en, slug: "visible-post"),
+    localized_about_path(locale: :en),
+    localized_resume_path(locale: :en),
+    localized_contact_path(locale: :en)
+  ]
+
+  paths.each do |path|
+    get path
+
+    assert_response :success
+    assert_select 'main#main-content[tabindex="-1"]', count: 1
+  end
+end
+```
+
+Run:
+
+```bash
+bin/rails test test/integration/public_content_test.rb
+```
+
+Expected: FAIL because the current main landmarks are not focus targets and the contact template has no `main-content` ID.
+
+- [ ] **Step 2: Keep one critical browser smoke test for actual focus transfer**
 
 Append to `test/system/public_shell_test.rb`:
 
 ```ruby
-test "skip link focuses main content on every public template" do
-  profile = Profile.new(public_contact_email: "owner@example.test")
-  profile.translations.build(
-    locale: "en", display_name: "Owner", headline: "Headline",
-    introduction: "Introduction", biography_markdown: "Biography",
-    availability_label: "Available"
-  )
-  profile.save!
-  resume = Resume.new(updated_on: Date.current)
-  resume.translations.build(locale: "en", title: "Résumé", description: "Description")
-  resume.save!
+test "skip link moves focus to main content" do
+  visit localized_root_path(locale: :en)
 
-  [
-    localized_root_path(locale: :en),
-    localized_projects_path(locale: :en),
-    localized_blog_path(locale: :en),
-    localized_about_path(locale: :en),
-    localized_resume_path(locale: :en),
-    localized_contact_path(locale: :en)
-  ].each do |path|
-    visit path
-    find("body").send_keys(:tab)
-    assert page.active_element.matches_selector?(".skip-link"), path
-    page.active_element.send_keys(:enter)
-    assert page.active_element.matches_selector?("#main-content"), path
-  end
+  find("body").send_keys(:tab)
+  assert page.active_element.matches_selector?(".skip-link")
+  page.active_element.send_keys(:enter)
+  assert page.active_element.matches_selector?("#main-content")
 end
 ```
 
@@ -1209,9 +1182,9 @@ Run:
 bin/rails test:system test/system/public_shell_test.rb
 ```
 
-Expected: FAIL because existing public `<main>` elements are not focus targets and the contact template has no `main-content` ID.
+Expected: FAIL because `#main-content` is not focusable. Keep this as a single full-stack smoke test; do not add a Selenium matrix for behavior that request tests or the mandatory manual review can cover more cheaply.
 
-- [ ] **Step 2: Make the existing public main landmarks focusable**
+- [ ] **Step 3: Make the existing public main landmarks focusable**
 
 On the opening `<main>` in each listed public view, preserve existing classes and attributes while adding:
 
@@ -1225,200 +1198,9 @@ id="main-content" tabindex="-1"
 <main id="main-content" class="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6" tabindex="-1" aria-labelledby="contact-title">
 ```
 
-Do not alter `app/javascript/controllers/menu_controller.js`; its current Escape, focus-return, label, hidden-state, and `aria-expanded` behavior already passes `test/system/public_shell_test.rb`.
+Do not alter `app/javascript/controllers/menu_controller.js`; its current Escape, focus-return, label, hidden-state, and `aria-expanded` behavior already passes the existing public-shell smoke tests.
 
-- [ ] **Step 3: Add the browser-level release suite**
-
-Create `test/system/release_quality_test.rb`:
-
-```ruby
-require "application_system_test_case"
-
-class ReleaseQualityTest < ApplicationSystemTestCase
-  ACCENTS = %w[brown green lime orange yellow].freeze
-
-  setup do
-    @profile = Profile.new(public_contact_email: "owner@example.test")
-    @profile.translations.build(
-      locale: "en", display_name: "Owner", headline: "Ideas. Interfaces. Impact.",
-      introduction: "Introduction", biography_markdown: "Biography",
-      availability_label: "Available"
-    )
-    @profile.save!
-
-    @resume = Resume.new(updated_on: Date.current)
-    @resume.translations.build(locale: "en", title: "Résumé", description: "Description")
-    @resume.save!
-
-    @project = Project.new(role: "Engineer", featured_position: 1)
-    @project.translations.build(
-      locale: "en", title: "Project", slug: "project", summary: "Summary",
-      body_markdown: "Body", state: "published", published_at: 2.days.ago
-    )
-    @project.save!
-
-    @post = Post.new
-    @post.translations.build(
-      locale: "en", title: "Post", slug: "post", excerpt: "Excerpt",
-      body_markdown: "Body", state: "published", published_at: 1.day.ago
-    )
-    @post.save!
-  end
-
-  test "saved theme and every accent pass WCAG AA token contrast" do
-    visit localized_root_path(locale: :en)
-
-    %w[light dark].each do |theme|
-      ACCENTS.each do |accent|
-        @profile.update!(accent: accent)
-        page.execute_script("localStorage.setItem('portfolio-theme', arguments[0])", theme)
-        visit localized_root_path(locale: :en)
-
-        assert_equal theme, find("html", visible: :all)["data-theme"]
-        assert_equal accent, find("html", visible: :all)["data-accent"]
-        assert_operator contrast("--foreground", "--background"), :>=, 4.5,
-          "#{theme}/#{accent} body text must pass WCAG AA"
-        assert_operator contrast("--accent", "--background"), :>=, 4.5,
-          "#{theme}/#{accent} accent text and focus must pass WCAG AA"
-        assert_operator contrast("--accent-foreground", "--accent"), :>=, 4.5,
-          "#{theme}/#{accent} filled controls must pass WCAG AA"
-      end
-    end
-  end
-
-  test "public and admin pages do not overflow at 320 CSS pixels" do
-    page.current_window.resize_to(320, 900)
-
-    public_paths.each do |path|
-      visit path
-      assert_no_horizontal_overflow(path)
-    end
-
-    sign_in_owner
-    admin_paths.each do |path|
-      visit path
-      assert_no_horizontal_overflow(path)
-    end
-  end
-
-  test "primary mobile navigation targets are at least 44 pixels square" do
-    page.current_window.resize_to(320, 900)
-    visit localized_root_path(locale: :en)
-    find(".menu-button").click
-
-    all(".menu-button, .theme-button, .primary-navigation a, .locale-switcher a", visible: :visible).each do |element|
-      box = page.evaluate_script(<<~JAVASCRIPT, element)
-        const rect = arguments[0].getBoundingClientRect();
-        return { width: rect.width, height: rect.height };
-      JAVASCRIPT
-      assert_operator box.fetch("width"), :>=, 44, element.text
-      assert_operator box.fetch("height"), :>=, 44, element.text
-    end
-  end
-
-  test "reduced motion collapses authored transition duration" do
-    page.driver.browser.execute_cdp(
-      "Emulation.setEmulatedMedia",
-      features: [ { name: "prefers-reduced-motion", value: "reduce" } ]
-    )
-    visit localized_root_path(locale: :en)
-    page.execute_script(<<~JAVASCRIPT)
-      const probe = document.createElement("div");
-      probe.id = "motion-probe";
-      probe.style.transition = "transform 1s";
-      document.body.appendChild(probe);
-    JAVASCRIPT
-
-    duration = page.evaluate_script("parseFloat(getComputedStyle(document.querySelector('#motion-probe')).transitionDuration)")
-    assert_operator duration, :<=, 0.00001
-  ensure
-    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [])
-  end
-
-  private
-
-  def public_paths
-    [
-      localized_root_path(locale: :en),
-      localized_projects_path(locale: :en),
-      localized_project_path(locale: :en, slug: "project"),
-      localized_blog_path(locale: :en),
-      localized_post_path(locale: :en, slug: "post"),
-      localized_about_path(locale: :en),
-      localized_resume_path(locale: :en),
-      localized_contact_path(locale: :en)
-    ]
-  end
-
-  def admin_paths
-    [
-      admin_root_path,
-      admin_projects_path,
-      edit_admin_project_path(@project),
-      admin_posts_path,
-      edit_admin_post_path(@post),
-      admin_tags_path,
-      edit_admin_profile_path,
-      edit_admin_resume_path,
-      admin_messages_path
-    ]
-  end
-
-  def assert_no_horizontal_overflow(path)
-    dimensions = page.evaluate_script(<<~JAVASCRIPT)
-      ({
-        scrollWidth: document.documentElement.scrollWidth,
-        clientWidth: document.documentElement.clientWidth
-      });
-    JAVASCRIPT
-    assert_operator dimensions.fetch("scrollWidth"), :<=, dimensions.fetch("clientWidth") + 1,
-      "#{path} overflows at 320px: #{dimensions.inspect}"
-  end
-
-  def contrast(first_token, second_token)
-    luminances = [ first_token, second_token ].map { |token| relative_luminance(resolved_color(token)) }
-    lighter, darker = luminances.max, luminances.min
-    (lighter + 0.05) / (darker + 0.05)
-  end
-
-  def resolved_color(token)
-    page.evaluate_script(<<~JAVASCRIPT, token)
-      const probe = document.createElement("span");
-      probe.style.color = `var(${arguments[0]})`;
-      document.body.appendChild(probe);
-      const color = getComputedStyle(probe).color;
-      probe.remove();
-      return color;
-    JAVASCRIPT
-  end
-
-  def relative_luminance(css_color)
-    channels = css_color.scan(/[\d.]+/).first(3).map { |channel| channel.to_f / 255.0 }
-    linear = channels.map do |channel|
-      channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055)**2.4
-    end
-    (0.2126 * linear[0]) + (0.7152 * linear[1]) + (0.0722 * linear[2])
-  end
-end
-```
-
-- [ ] **Step 4: Run the new suite and capture only real failures**
-
-Run:
-
-```bash
-bin/rails test:system test/system/release_quality_test.rb test/system/public_shell_test.rb
-```
-
-Expected initial failures:
-
-- Short mobile navigation labels can be narrower than 44px.
-- The contact page’s `text-accent`, `bg-accent`, and `text-accent-foreground` classes are absent from the generated Tailwind build because this application exposes `--accent` variables rather than Tailwind `--color-accent` theme tokens.
-- Accent swatches refer to undefined `--accent-brown`, `--accent-green`, `--accent-lime`, `--accent-orange`, and `--accent-yellow` variables.
-
-If any page still overflows, identify the exact overflowing element in the assertion’s path before changing CSS. Do not hide page overflow globally or add JavaScript resize behavior.
-
-- [ ] **Step 5: Complete existing tokens and generated classes without introducing a second theme system**
+- [ ] **Step 4: Complete the existing token system without introducing another abstraction**
 
 In the existing `:root` block in `app/assets/tailwind/application.css`, add the fixed admin swatch values:
 
@@ -1454,24 +1236,24 @@ Replace the ungenerated submit utilities with existing arbitrary-value variable 
 <%= form.submit t("contact.submit"), class: "min-h-12 cursor-pointer bg-[var(--accent)] px-6 py-3 font-semibold text-[var(--accent-foreground)]" %>
 ```
 
-Keep all approved accent hex values and the current `--background`, `--foreground`, `--accent`, `--accent-foreground`, and `--focus` names unchanged.
+Keep the approved accent hex values and the current `--background`, `--foreground`, `--accent`, `--accent-foreground`, and `--focus` names unchanged. Do not add JavaScript for layout, contrast, touch sizing, or reduced motion.
 
-- [ ] **Step 6: Run the complete focused browser regression group**
+- [ ] **Step 5: Run fast behavior coverage, then the existing browser smoke suite**
 
 Run:
 
 ```bash
-bin/rails test:system test/system/release_quality_test.rb test/system/public_shell_test.rb test/system/admin_manages_content_test.rb test/system/admin_publishing_test.rb test/system/contact_flow_test.rb
-bin/rails test test/helpers/theme_helper_test.rb test/integration/public_content_test.rb test/integration/public_contact_messages_test.rb
+bin/rails test test/integration/public_content_test.rb test/integration/public_contact_messages_test.rb test/helpers/theme_helper_test.rb
+bin/rails test:system test/system/public_shell_test.rb test/system/admin_manages_content_test.rb test/system/admin_publishing_test.rb test/system/contact_flow_test.rb
 ```
 
-Expected: all tests pass for ten theme/accent combinations, every listed public/admin page at 320px, reduced motion, existing menu behavior, skip-link focus, touch targets, admin content management, publishing, and contact flow.
+Expected: request tests pass for every public landmark; the existing browser smoke tests pass for skip-link focus, menu/theme behavior, representative 320px public/admin flows, publishing, and contact management. Contrast, reduced-motion emulation, the full viewport matrix, and every accent/theme pairing remain in Task 6’s manual browser gate instead of becoming a slow Selenium implementation test.
 
-- [ ] **Step 7: Commit the release interaction regressions and concrete fixes**
+- [ ] **Step 6: Commit the landmarks and concrete presentation fixes**
 
 ```bash
-git add app/views/public app/assets/tailwind/application.css test/system/public_shell_test.rb test/system/release_quality_test.rb
-git commit -m "test: enforce release presentation quality"
+git add app/views/public app/assets/tailwind/application.css test/integration/public_content_test.rb test/system/public_shell_test.rb
+git commit -m "fix: complete public release presentation"
 ```
 
 ---
@@ -1607,7 +1389,7 @@ Expected: only Phase 7 files changed, the working tree is clean, and the annotat
 
 ## Risks and Review Triggers
 
-- **Metadata render order:** Rails renders the template before its layout, so template-level `page_metadata` assignments are available to the layout. Keep declarations before page markup for readability.
+- **Metadata render order:** Rails renders the template before its layout, so template-level `page_metadata` calls can fill the existing `content_for(:title)` and `content_for(:head)` outlets. Keep declarations before page markup for readability.
 - **Alternate authority:** project/post alternates must continue using controller-built public sibling paths; profile/résumé alternates must continue using existing translations. Do not add duplicate translation queries to the metadata helper.
 - **Canonical query leakage:** canonical and metadata alternate URLs derive only from `request.path_parameters`; search/tag query parameters must not appear.
 - **JSON-LD injection:** retain `json_escape`, `raw`, and the CSP nonce together. Never place authored rendered HTML directly in JSON-LD.
@@ -1630,7 +1412,7 @@ Phase 7 is complete only when:
 - `/sitemap.xml` is valid XML and contains only routable public HTML pages.
 - 404, 422, and 500 are branded and localized, emit `noindex,nofollow`, and disclose no exception details.
 - Every existing public cover, gallery image, and portrait uses native Active Storage variants with truthful `srcset`, `sizes`, localized alt text, lazy loading except priority detail media, and intrinsic dimensions after analysis.
-- Existing menu behavior, skip-link focus, visible focus, primary touch targets, reduced motion, saved theme, and all five owner accents pass focused browser tests.
-- Public and admin flows pass automated 320 CSS-pixel checks and manual real 200% Chrome zoom without page-level horizontal overflow.
+- Existing browser smoke tests pass for menu behavior, saved theme, representative narrow public/admin flows, and skip-link focus; the manual gate passes for visible focus, touch targets, reduced motion, and all five owner accents in both themes.
+- Public and admin flows pass the existing representative 320px smoke checks and the complete manual viewport/real-200%-zoom matrix without page-level horizontal overflow.
 - `bin/ci` and `bin/rails test:system` exit 0.
 - The manual browser and network matrix is complete, the tree is clean, and annotated tag `portfolio-v4-phase-07` exists.
