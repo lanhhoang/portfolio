@@ -1,5 +1,6 @@
 Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
+  get "/sitemap.xml", to: "sitemap#show", defaults: { format: :xml }
   root "public#root"
 
   scope "/:locale", locale: /en|fr|vi/, format: false do
