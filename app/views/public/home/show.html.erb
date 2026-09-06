@@ -1,6 +1,6 @@
 <% page_metadata(title: t("seo.home.title"), description: t("seo.home.description")) %>
 
-<main id="main-content" class="site-container page-shell space-y-16">
+<main id="main-content" class="site-container page-shell space-y-16" tabindex="-1">
   <% if @profile_translation %>
     <section aria-labelledby="home-heading" class="space-y-6">
       <p class="text-sm uppercase"><%= @profile_translation.availability_label %></p>

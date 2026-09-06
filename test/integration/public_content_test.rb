@@ -199,4 +199,24 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'img[srcset][sizes][width="512"][height="512"][loading="eager"][fetchpriority="high"]'
   end
+
+  test "every public page has one focusable main landmark" do
+    paths = [
+      localized_root_path(locale: :en),
+      localized_projects_path(locale: :en),
+      localized_project_path(locale: :en, slug: "visible-project"),
+      localized_blog_path(locale: :en),
+      localized_post_path(locale: :en, slug: "visible-post"),
+      localized_about_path(locale: :en),
+      localized_resume_path(locale: :en),
+      localized_contact_path(locale: :en)
+    ]
+
+    paths.each do |path|
+      get path
+
+      assert_response :success
+      assert_select 'main#main-content[tabindex="-1"]', count: 1
+    end
+  end
 end

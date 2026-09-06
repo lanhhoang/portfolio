@@ -7,7 +7,7 @@
   json_ld: post_json_ld(@translation)
 ) %>
 
-<main id="main-content" class="site-container page-shell">
+<main id="main-content" class="site-container page-shell" tabindex="-1">
   <article class="space-y-8">
     <header class="space-y-3">
       <p><%= l(@translation.published_at.to_date, format: :long) %></p>
