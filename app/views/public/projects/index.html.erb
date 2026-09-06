@@ -21,7 +21,12 @@
       <% @translations.each do |translation| %>
         <article class="space-y-3">
           <% if translation.project.cover_image.attached? %>
-            <%= image_tag translation.project.cover_image, alt: translation.title, loading: "lazy", class: "max-w-full" %>
+            <%= responsive_image_tag(
+              translation.project.cover_image,
+              alt: translation.title,
+              sizes: "(min-width: 80rem) 40rem, (min-width: 48rem) 50vw, 100vw",
+              class: "max-w-full"
+            ) %>
           <% end %>
           <h2 class="text-2xl font-bold"><%= link_to translation.title, localized_project_path(locale: current_locale, slug: translation.slug) %></h2>
           <p><%= translation.summary %></p>

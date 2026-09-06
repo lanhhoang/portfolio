@@ -185,4 +185,18 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     get "/fr/projects/#{french.slug}"
     assert_response :not_found
   end
+
+  test "public content renders analyzed attachments responsively" do
+    @project.cover_image.attach(
+      io: Rails.root.join("public/icon.png").open,
+      filename: "icon.png",
+      content_type: "image/png"
+    )
+    @project.cover_image.blob.update!(metadata: { "width" => 512, "height" => 512, "analyzed" => true })
+
+    get localized_project_path(locale: :en, slug: "visible-project")
+
+    assert_response :success
+    assert_select 'img[srcset][sizes][width="512"][height="512"][loading="eager"][fetchpriority="high"]'
+  end
 end

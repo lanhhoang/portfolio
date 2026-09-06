@@ -17,7 +17,15 @@
     </header>
 
     <% if @translation.post.cover_image.attached? %>
-      <%= image_tag @translation.post.cover_image, alt: @translation.title, class: "max-w-full" %>
+      <%= responsive_image_tag(
+        @translation.post.cover_image,
+        alt: @translation.title,
+        sizes: "(min-width: 80rem) 80rem, 100vw",
+        widths: [640, 960, 1280, 1600],
+        loading: "eager",
+        fetchpriority: "high",
+        class: "max-w-full"
+      ) %>
     <% end %>
 
     <div class="rich-text"><%= sanitize @translation.body_html %></div>

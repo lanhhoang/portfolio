@@ -15,7 +15,14 @@
     </header>
 
     <% if @profile.portrait.attached? %>
-      <%= image_tag @profile.portrait, alt: @translation.display_name, class: "max-w-full" %>
+      <%= responsive_image_tag(
+        @profile.portrait,
+        alt: @translation.display_name,
+        sizes: "(min-width: 64rem) 24rem, 100vw",
+        widths: [320, 480, 640, 960],
+        loading: "eager",
+        class: "max-w-full"
+      ) %>
     <% end %>
 
     <div class="rich-text"><%= sanitize @translation.biography_html %></div>

@@ -7,7 +7,13 @@
       <h1 id="home-heading" class="text-5xl font-bold"><%= @profile_translation.headline %></h1>
       <p class="max-w-prose text-lg"><%= @profile_translation.introduction %></p>
       <% if @profile.portrait.attached? %>
-        <%= image_tag @profile.portrait, alt: @profile_translation.display_name, class: "max-w-full" %>
+        <%= responsive_image_tag(
+          @profile.portrait,
+          alt: @profile_translation.display_name,
+          sizes: "(min-width: 64rem) 24rem, 100vw",
+          widths: [320, 480, 640, 960],
+          class: "max-w-full"
+        ) %>
       <% end %>
     </section>
   <% end %>
@@ -19,7 +25,12 @@
         <% @projects.each do |translation| %>
           <article class="space-y-3">
             <% if translation.project.cover_image.attached? %>
-              <%= image_tag translation.project.cover_image, alt: translation.title, loading: "lazy", class: "max-w-full" %>
+              <%= responsive_image_tag(
+                translation.project.cover_image,
+                alt: translation.title,
+                sizes: "(min-width: 80rem) 40rem, (min-width: 48rem) 50vw, 100vw",
+                class: "max-w-full"
+              ) %>
             <% end %>
             <h2 class="text-2xl font-bold"><%= link_to translation.title, localized_project_path(locale: current_locale, slug: translation.slug) %></h2>
             <p><%= translation.summary %></p>
