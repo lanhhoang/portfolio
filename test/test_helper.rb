@@ -16,8 +16,22 @@ end
 
 Dir[Rails.root.join("test/support/**/*.rb")].sort.each { |file| require file }
 
+# ponytail: minitest 6 removed minitest/mock; a singleton-method stub with
+# restore covers the few delivery-failure tests. Swap for a stub library if
+# call assertions are ever needed.
+module MethodStubbing
+  def stub_method(owner, name, implementation)
+    original = owner.method(name)
+    owner.define_singleton_method(name, implementation)
+    yield
+  ensure
+    owner.define_singleton_method(name, original)
+  end
+end
+
 class ActiveSupport::TestCase
   include AdminAuthenticationTestHelper
+  include MethodStubbing
 end
 
 class ActionDispatch::IntegrationTest
