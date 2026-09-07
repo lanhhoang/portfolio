@@ -2,7 +2,11 @@ module ThemeHelper
   ACCENT_PRESETS = %w[brown green lime orange yellow].freeze
 
   def site_accent
-    Profile.find_by(singleton_guard: 1)&.accent || "lime"
+    if controller_path == "errors"
+      "lime"
+    else
+      Profile.find_by(singleton_guard: 1)&.accent || "lime"
+    end
   end
 
   def accent_preset(candidate = ENV["SITE_ACCENT"])

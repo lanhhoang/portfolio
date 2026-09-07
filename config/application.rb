@@ -33,5 +33,7 @@ module Portfolio
     config.i18n.default_locale = :en
     config.i18n.enforce_available_locales = true
     config.i18n.fallbacks = false
+
+    config.exceptions_app = routes
   end
 end

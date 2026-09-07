@@ -1,4 +1,20 @@
 fr:
+  seo:
+    site_name: "Portfolio"
+    home:
+      title: "Idées. Interfaces. Impact."
+      description: "Ingénierie logicielle indépendante, design d’interfaces et écrits techniques."
+    projects:
+      title: "Réalisations"
+      description: "Une sélection de projets d’ingénierie logicielle et de design d’interfaces."
+    blog:
+      title: "Journal"
+      description: "Notes sur l’ingénierie logicielle, le design produit et la création web."
+    about:
+      title: "À propos"
+    contact:
+      title: "Contactez-moi"
+      description: "Échangeons autour de l’ingénierie logicielle et des produits numériques."
   site:
     name: "Portfolio"
   navigation:
@@ -114,6 +130,17 @@ fr:
         subject: "Objet"
         body: "Message"
   errors:
+    pages:
+      home: "Retour à l’accueil"
+      "404":
+        title: "Page introuvable"
+        message: "Cette page a peut-être été déplacée ou n’est pas disponible dans cette langue."
+      "422":
+        title: "Impossible de traiter la demande"
+        message: "Vérifiez la demande, puis réessayez."
+      "500":
+        title: "Une erreur est survenue"
+        message: "La demande n’a pas pu aboutir. Réessayez plus tard."
     messages:
       blank: "ne peut pas être vide"
       invalid: "n’est pas valide"

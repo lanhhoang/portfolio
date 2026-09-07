@@ -1,4 +1,12 @@
-<main id="main-content" class="site-container page-shell">
+<% page_metadata(
+  title: t("seo.about.title"),
+  description: @translation.introduction,
+  alternates: alternate_locale_links(locale_switch_paths: @locale_switch_paths),
+  image_url: (@profile.portrait.attached? ? url_for(@profile.portrait) : nil),
+  json_ld: person_json_ld(@translation)
+) %>
+
+<main id="main-content" class="site-container page-shell" tabindex="-1">
   <article class="space-y-8">
     <header class="space-y-3">
       <p class="text-sm uppercase"><%= @translation.availability_label %></p>
@@ -7,7 +15,14 @@
     </header>
 
     <% if @profile.portrait.attached? %>
-      <%= image_tag @profile.portrait, alt: @translation.display_name, class: "max-w-full" %>
+      <%= responsive_image_tag(
+        @profile.portrait,
+        alt: @translation.display_name,
+        sizes: "(min-width: 64rem) 24rem, 100vw",
+        widths: [320, 480, 640, 960],
+        loading: "eager",
+        class: "max-w-full"
+      ) %>
     <% end %>
 
     <div class="rich-text"><%= sanitize @translation.biography_html %></div>

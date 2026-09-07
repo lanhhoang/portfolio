@@ -1,5 +1,6 @@
 Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
+  get "/sitemap.xml", to: "sitemap#show", defaults: { format: :xml }
   root "public#root"
 
   scope "/:locale", locale: /en|fr|vi/, format: false do
@@ -14,6 +15,8 @@ Rails.application.routes.draw do
     get "contact", to: "public/contact_messages#new", as: :localized_contact
     post "contact", to: "public/contact_messages#create"
   end
+
+  get "/:code", to: "errors#show", constraints: { code: /404|422|500/ }
 
   namespace :admin do
     root "dashboard#show"

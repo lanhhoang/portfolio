@@ -69,6 +69,15 @@ class PublicShellTest < ApplicationSystemTestCase
     assert page.evaluate_script("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
   end
 
+  test "skip link moves focus to main content" do
+    visit localized_root_path(locale: :en)
+
+    find("body").send_keys(:tab)
+    assert page.active_element.matches_selector?(".skip-link")
+    page.active_element.send_keys(:enter)
+    assert page.active_element.matches_selector?("#main-content")
+  end
+
   test "theme override is accessible and persists across pages" do
     visit localized_root_path(locale: "en")
     page.execute_script('localStorage.removeItem("portfolio-theme")')

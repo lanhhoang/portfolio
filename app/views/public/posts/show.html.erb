@@ -1,4 +1,13 @@
-<main id="main-content" class="site-container page-shell">
+<% page_metadata(
+  title: @translation.title,
+  description: @translation.excerpt,
+  alternates: alternate_locale_links(locale_switch_paths: @locale_switch_paths),
+  og_type: "article",
+  image_url: (@translation.post.cover_image.attached? ? url_for(@translation.post.cover_image) : nil),
+  json_ld: post_json_ld(@translation)
+) %>
+
+<main id="main-content" class="site-container page-shell" tabindex="-1">
   <article class="space-y-8">
     <header class="space-y-3">
       <p><%= l(@translation.published_at.to_date, format: :long) %></p>
@@ -8,7 +17,15 @@
     </header>
 
     <% if @translation.post.cover_image.attached? %>
-      <%= image_tag @translation.post.cover_image, alt: @translation.title, class: "max-w-full" %>
+      <%= responsive_image_tag(
+        @translation.post.cover_image,
+        alt: @translation.title,
+        sizes: "(min-width: 80rem) 80rem, 100vw",
+        widths: [640, 960, 1280, 1600],
+        loading: "eager",
+        fetchpriority: "high",
+        class: "max-w-full"
+      ) %>
     <% end %>
 
     <div class="rich-text"><%= sanitize @translation.body_html %></div>

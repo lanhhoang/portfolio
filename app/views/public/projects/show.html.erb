@@ -1,4 +1,12 @@
-<main id="main-content" class="site-container page-shell">
+<% page_metadata(
+  title: @translation.title,
+  description: @translation.summary,
+  alternates: alternate_locale_links(locale_switch_paths: @locale_switch_paths),
+  image_url: (@translation.project.cover_image.attached? ? url_for(@translation.project.cover_image) : nil),
+  json_ld: project_json_ld(@translation)
+) %>
+
+<main id="main-content" class="site-container page-shell" tabindex="-1">
   <article class="space-y-8">
     <header class="space-y-3">
       <p class="text-sm uppercase"><%= @translation.project.role %></p>
@@ -8,7 +16,15 @@
     </header>
 
     <% if @translation.project.cover_image.attached? %>
-      <%= image_tag @translation.project.cover_image, alt: @translation.title, class: "max-w-full" %>
+      <%= responsive_image_tag(
+        @translation.project.cover_image,
+        alt: @translation.title,
+        sizes: "(min-width: 80rem) 80rem, 100vw",
+        widths: [640, 960, 1280, 1600],
+        loading: "eager",
+        fetchpriority: "high",
+        class: "max-w-full"
+      ) %>
     <% end %>
 
     <div class="rich-text"><%= sanitize @translation.body_html %></div>
@@ -16,7 +32,12 @@
     <% if @translation.project.gallery_images.attached? %>
       <ul class="grid gap-4 md:grid-cols-2">
         <% @translation.project.gallery_images.each_with_index do |image, index| %>
-          <li><%= image_tag image, alt: t("public.projects.gallery_alt", title: @translation.title, number: index + 1), loading: "lazy", class: "max-w-full" %></li>
+          <li><%= responsive_image_tag(
+            image,
+            alt: t("public.projects.gallery_alt", title: @translation.title, number: index + 1),
+            sizes: "(min-width: 48rem) 50vw, 100vw",
+            class: "max-w-full"
+          ) %></li>
         <% end %>
       </ul>
     <% end %>

@@ -11,6 +11,11 @@
   --accent: var(--accent-light);
   --accent-foreground: #ffffff;
   --focus: var(--accent);
+  --accent-brown: #7a4e35;
+  --accent-green: #216e46;
+  --accent-lime: #5a7600;
+  --accent-orange: #a94300;
+  --accent-yellow: #806100;
   --font-display:
     ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
@@ -244,6 +249,7 @@ input[type="submit"] {
 
 .primary-navigation a {
   display: flex;
+  min-width: 2.75rem;
   min-height: 2.75rem;
   align-items: center;
   border-bottom: 1px solid var(--border);
@@ -268,6 +274,7 @@ input[type="submit"] {
 .locale-switcher a,
 .locale-switcher span {
   display: inline-flex;
+  min-width: 2.75rem;
   min-height: 2.75rem;
   align-items: center;
   font-size: 0.75rem;
