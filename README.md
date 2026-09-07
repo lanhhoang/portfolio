@@ -83,6 +83,13 @@ bin/rails test
 bin/rails test:system
 ```
 
+Run operational script checks with SQLite and a local Podman or Docker engine:
+
+```bash
+test/operations/sqlite_backup_test.sh
+test/operations/backup_restore_safety_test.sh
+```
+
 Run security and style checks with:
 
 ```bash

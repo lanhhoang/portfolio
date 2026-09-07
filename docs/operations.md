@@ -222,6 +222,8 @@ Success requires `status=0/SUCCESS`, a new snapshot, and an unpaused web contain
 
 ```bash
 ssh deploy@"$DEPLOY_HOST" 'sudo bash -c '\''set -a; source /etc/portfolio/backup.env; set +a; restic snapshots --tag portfolio'\'''
+read -r -p "Paste the snapshot ID: " SNAPSHOT_ID
+[[ "$SNAPSHOT_ID" =~ ^[0-9a-fA-F]{8,64}$ ]] || { echo "invalid snapshot ID" >&2; exit 64; }
 ```
 
 2. Record incident start UTC and snapshot UTC. Record an accepted RPO breach if the snapshot is older than 24 hours.
@@ -238,8 +240,8 @@ bin/kamal app exec 'bin/rails runner '\''puts({projects: Project.count, posts: P
 6. Keep the printed `storage.before-*` directory until owner acceptance. Remove only the exact validated path:
 
 ```bash
-[[ "$VERIFIED_OLD_DIR" =~ ^/var/lib/portfolio/storage\.before-[0-9]{8}T[0-9]{6}Z$ ]]
-sudo rm -rf -- "$VERIFIED_OLD_DIR"
+[[ "$VERIFIED_OLD_DIR" =~ ^/var/lib/portfolio/storage\.before-[0-9]{8}T[0-9]{6}Z$ ]] || { echo "invalid retained-data path" >&2; exit 64; }
+ssh deploy@"$DEPLOY_HOST" "sudo test -d '$VERIFIED_OLD_DIR' && sudo rm -rf -- '$VERIFIED_OLD_DIR'"
 ```
 
 7. Record restore end UTC, snapshot age, elapsed minutes, SQLite result, asset result, smoke result, operator, and incident link.

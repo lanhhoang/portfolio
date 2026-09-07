@@ -822,7 +822,7 @@ notify_failure() {
 resume_app() {
   [[ "$PAUSED" == 1 && -n "$APP_CONTAINER" ]] || return 0
 
-  for attempt in 1 2 3; do
+  for _attempt in 1 2 3; do
     if docker unpause "$APP_CONTAINER" >/dev/null 2>&1; then
       PAUSED=0
       return 0
@@ -865,7 +865,7 @@ trap cleanup EXIT
 [[ $EUID -eq 0 ]] || { echo "bin/backup must run as root" >&2; exit 1; }
 [[ -r "$ENV_FILE" ]] || { echo "cannot read $ENV_FILE" >&2; exit 1; }
 set -a
-# shellcheck disable=SC1091
+# shellcheck disable=SC1090
 source "$ENV_FILE"
 set +a
 
@@ -877,10 +877,10 @@ for variable_name in RESTIC_REPOSITORY RESTIC_PASSWORD_FILE AWS_ACCESS_KEY_ID AW
 done
 [[ -r "$RESTIC_PASSWORD_FILE" ]] || { echo "cannot read RESTIC_PASSWORD_FILE" >&2; exit 1; }
 [[ -f "$PRIMARY_DB" ]] || { echo "missing primary database: $PRIMARY_DB" >&2; exit 1; }
-[[ -d "$ASSET_DIR" ]] || { echo "missing Active Storage directory: $ASSET_DIR" >&2; exit 1; }
 
 exec 9>"$LOCK_FILE"
 flock -n 9 || { echo "another backup or restore is running" >&2; exit 75; }
+install -d -o 1000 -g 1000 -m 0750 "$ASSET_DIR"
 
 mapfile -t containers < <(docker ps --filter label=service=portfolio --filter label=role=web --format '{{.ID}}')
 [[ ${#containers[@]} -eq 1 ]] || { echo "expected one running portfolio web container, found ${#containers[@]}" >&2; exit 1; }
@@ -1068,7 +1068,7 @@ trap cleanup EXIT
 [[ $# -eq 1 && "$SNAPSHOT_ID" =~ ^[0-9a-fA-F]{8,64}$ ]] || { echo "usage: bin/restore SNAPSHOT_ID (8-64 hexadecimal characters; latest is forbidden)" >&2; exit 64; }
 [[ -r "$ENV_FILE" ]] || { echo "cannot read $ENV_FILE" >&2; exit 1; }
 set -a
-# shellcheck disable=SC1091
+# shellcheck disable=SC1090
 source "$ENV_FILE"
 set +a
 
@@ -1130,6 +1130,7 @@ RESTORE_TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
 OLD_DIR="/var/lib/portfolio/storage.before-$RESTORE_TIMESTAMP"
 [[ ! -e "$OLD_DIR" ]] || { echo "safety directory already exists: $OLD_DIR" >&2; exit 1; }
 install -d -o root -g root -m 0700 "$OLD_DIR"
+REPLACED=1
 find "$DATA_DIR" -mindepth 1 -maxdepth 1 -exec mv -t "$OLD_DIR" -- {} +
 chmod 0750 "$DATA_DIR"
 chown 1000:1000 "$DATA_DIR"
@@ -1137,7 +1138,6 @@ install -o 1000 -g 1000 -m 0640 "$RESTORE_DIR/production.sqlite3" "$DATA_DIR/pro
 install -d -o 1000 -g 1000 -m 0750 "$DATA_DIR/active_storage"
 rsync -a "$RESTORE_DIR/active_storage/" "$DATA_DIR/active_storage/"
 chown -R 1000:1000 "$DATA_DIR/active_storage"
-REPLACED=1
 
 docker run --rm \
   --volumes-from "$APP_CONTAINER" \
@@ -1146,7 +1146,7 @@ docker run --rm \
   "$APP_IMAGE" db:prepare
 
 docker start "$APP_CONTAINER" >/dev/null
-for attempt in $(seq 1 60); do
+for _attempt in $(seq 1 60); do
   if docker exec "$APP_CONTAINER" curl --fail --silent http://127.0.0.1/up >/dev/null 2>&1; then
     STOPPED_BY_SCRIPT=0
     logger -t portfolio-restore -- "restored $SNAPSHOT_ID; previous data retained at $OLD_DIR"
@@ -1157,7 +1157,7 @@ for attempt in $(seq 1 60); do
 done
 
 echo "health check did not pass within 60 seconds" >&2
-exit 1
+false # Trigger the EXIT trap with a failure status.
 ```
 
 ```bash
@@ -1591,6 +1591,8 @@ Success requires `status=0/SUCCESS`, a new snapshot, and an unpaused web contain
 
 ```bash
 ssh deploy@"$DEPLOY_HOST" 'sudo bash -c '\''set -a; source /etc/portfolio/backup.env; set +a; restic snapshots --tag portfolio'\'''
+read -r -p "Paste the snapshot ID: " SNAPSHOT_ID
+[[ "$SNAPSHOT_ID" =~ ^[0-9a-fA-F]{8,64}$ ]] || { echo "invalid snapshot ID" >&2; exit 64; }
 ```
 
 2. Record incident start UTC and snapshot UTC. Record an accepted RPO breach if the snapshot is older than 24 hours.
@@ -1607,8 +1609,8 @@ bin/kamal app exec 'bin/rails runner '\''puts({projects: Project.count, posts: P
 6. Keep the printed `storage.before-*` directory until owner acceptance. Remove only the exact validated path:
 
 ```bash
-[[ "$VERIFIED_OLD_DIR" =~ ^/var/lib/portfolio/storage\.before-[0-9]{8}T[0-9]{6}Z$ ]]
-sudo rm -rf -- "$VERIFIED_OLD_DIR"
+[[ "$VERIFIED_OLD_DIR" =~ ^/var/lib/portfolio/storage\.before-[0-9]{8}T[0-9]{6}Z$ ]] || { echo "invalid retained-data path" >&2; exit 64; }
+ssh deploy@"$DEPLOY_HOST" "sudo test -d '$VERIFIED_OLD_DIR' && sudo rm -rf -- '$VERIFIED_OLD_DIR'"
 ```
 
 7. Record restore end UTC, snapshot age, elapsed minutes, SQLite result, asset result, smoke result, operator, and incident link.
@@ -1768,9 +1770,10 @@ git commit -m "docs: document development and operations"
 - [ ] **Step 1: Run local repository checks**
 
 ```bash
-bash -n bin/backup bin/restore test/operations/sqlite_backup_test.sh
-shellcheck bin/backup bin/restore test/operations/sqlite_backup_test.sh
+bash -n bin/backup bin/restore test/operations/sqlite_backup_test.sh test/operations/backup_restore_safety_test.sh
+shellcheck bin/backup bin/restore test/operations/sqlite_backup_test.sh test/operations/backup_restore_safety_test.sh
 test/operations/sqlite_backup_test.sh
+test/operations/backup_restore_safety_test.sh
 bin/rails test
 bin/rails test:system
 bin/rails zeitwerk:check

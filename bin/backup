@@ -88,10 +88,10 @@ for variable_name in RESTIC_REPOSITORY RESTIC_PASSWORD_FILE AWS_ACCESS_KEY_ID AW
 done
 [[ -r "$RESTIC_PASSWORD_FILE" ]] || { echo "cannot read RESTIC_PASSWORD_FILE" >&2; exit 1; }
 [[ -f "$PRIMARY_DB" ]] || { echo "missing primary database: $PRIMARY_DB" >&2; exit 1; }
-[[ -d "$ASSET_DIR" ]] || { echo "missing Active Storage directory: $ASSET_DIR" >&2; exit 1; }
 
 exec 9>"$LOCK_FILE"
 flock -n 9 || { echo "another backup or restore is running" >&2; exit 75; }
+install -d -o 1000 -g 1000 -m 0750 "$ASSET_DIR"
 
 mapfile -t containers < <(docker ps --filter label=service=portfolio --filter label=role=web --format '{{.ID}}')
 [[ ${#containers[@]} -eq 1 ]] || { echo "expected one running portfolio web container, found ${#containers[@]}" >&2; exit 1; }

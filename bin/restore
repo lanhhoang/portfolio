@@ -135,6 +135,7 @@ RESTORE_TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
 OLD_DIR="/var/lib/portfolio/storage.before-$RESTORE_TIMESTAMP"
 [[ ! -e "$OLD_DIR" ]] || { echo "safety directory already exists: $OLD_DIR" >&2; exit 1; }
 install -d -o root -g root -m 0700 "$OLD_DIR"
+REPLACED=1
 find "$DATA_DIR" -mindepth 1 -maxdepth 1 -exec mv -t "$OLD_DIR" -- {} +
 chmod 0750 "$DATA_DIR"
 chown 1000:1000 "$DATA_DIR"
@@ -142,7 +143,6 @@ install -o 1000 -g 1000 -m 0640 "$RESTORE_DIR/production.sqlite3" "$DATA_DIR/pro
 install -d -o 1000 -g 1000 -m 0750 "$DATA_DIR/active_storage"
 rsync -a "$RESTORE_DIR/active_storage/" "$DATA_DIR/active_storage/"
 chown -R 1000:1000 "$DATA_DIR/active_storage"
-REPLACED=1
 
 docker run --rm \
   --volumes-from "$APP_CONTAINER" \
@@ -162,4 +162,4 @@ for _attempt in $(seq 1 60); do
 done
 
 echo "health check did not pass within 60 seconds" >&2
-false
+false # Trigger the EXIT trap with a failure status.
