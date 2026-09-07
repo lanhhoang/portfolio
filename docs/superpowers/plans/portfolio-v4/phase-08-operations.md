@@ -50,8 +50,8 @@
 
 | Path                                                | Action  | Responsibility                                                                                                  |
 | --------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------- |
-| `app/assets/fonts/BeVietnamPro-Variable.ttf`        | Create  | Self-host normal Be Vietnam Pro weights 100–900.                                                                |
-| `app/assets/fonts/BeVietnamPro-Italic-Variable.ttf` | Create  | Self-host italic Be Vietnam Pro weights 100–900.                                                                |
+| `public/fonts/BeVietnamPro-Variable.ttf`                | Create  | Self-host normal Be Vietnam Pro weights 100–900.                                                                |
+| `public/fonts/BeVietnamPro-Italic-Variable.ttf` | Create  | Self-host italic Be Vietnam Pro weights 100–900.                                                                |
 | `vendor/fonts/be-vietnam-pro/OFL.txt`               | Create  | Preserve the font license.                                                                                      |
 | `app/assets/tailwind/application.css`               | Modify  | Declare the font faces and apply them through existing font tokens.                                             |
 | `test/config/font_assets_test.rb`                   | Create  | Protect the font files and CSS contract.                                                                        |
@@ -124,8 +124,8 @@ These values are documented and wired into configuration during implementation, 
 
 **Files:**
 
-- Create: `app/assets/fonts/BeVietnamPro-Variable.ttf`
-- Create: `app/assets/fonts/BeVietnamPro-Italic-Variable.ttf`
+- Create: `public/fonts/BeVietnamPro-Variable.ttf`
+- Create: `public/fonts/BeVietnamPro-Italic-Variable.ttf`
 - Create: `vendor/fonts/be-vietnam-pro/OFL.txt`
 - Modify: `app/assets/tailwind/application.css`
 - Create: `test/config/font_assets_test.rb`
@@ -143,8 +143,8 @@ require "test_helper"
 
 class FontAssetsTest < ActiveSupport::TestCase
   test "self-hosts and applies Be Vietnam Pro" do
-    normal_font = Rails.root.join("app/assets/fonts/BeVietnamPro-Variable.ttf")
-    italic_font = Rails.root.join("app/assets/fonts/BeVietnamPro-Italic-Variable.ttf")
+    normal_font = Rails.root.join("public/fonts/BeVietnamPro-Variable.ttf")
+    italic_font = Rails.root.join("public/fonts/BeVietnamPro-Italic-Variable.ttf")
     license = Rails.root.join("vendor/fonts/be-vietnam-pro/OFL.txt")
     stylesheet = Rails.root.join("app/assets/tailwind/application.css").read
 
@@ -173,27 +173,27 @@ Expected: failure because the font files and declarations do not exist.
 - [ ] **Step 3: Download the exact upstream font files and license**
 
 ```bash
-install -d app/assets/fonts vendor/fonts/be-vietnam-pro
+install -d public/fonts vendor/fonts/be-vietnam-pro
 curl --fail --location --silent --show-error \
   'https://raw.githubusercontent.com/bettergui/BeVietnamPro/main/fonts/variable/BeVietnamPro%5Bwght%5D.ttf' \
-  --output app/assets/fonts/BeVietnamPro-Variable.ttf
+  --output public/fonts/BeVietnamPro-Variable.ttf
 curl --fail --location --silent --show-error \
   'https://raw.githubusercontent.com/bettergui/BeVietnamPro/main/fonts/variable/BeVietnamPro-Italic%5Bwght%5D.ttf' \
-  --output app/assets/fonts/BeVietnamPro-Italic-Variable.ttf
+  --output public/fonts/BeVietnamPro-Italic-Variable.ttf
 curl --fail --location --silent --show-error \
   'https://raw.githubusercontent.com/bettergui/BeVietnamPro/main/OFL.txt' \
   --output vendor/fonts/be-vietnam-pro/OFL.txt
 shasum -a 256 \
-  app/assets/fonts/BeVietnamPro-Variable.ttf \
-  app/assets/fonts/BeVietnamPro-Italic-Variable.ttf \
+  public/fonts/BeVietnamPro-Variable.ttf \
+  public/fonts/BeVietnamPro-Italic-Variable.ttf \
   vendor/fonts/be-vietnam-pro/OFL.txt
 ```
 
 Expected hashes:
 
 ```text
-2e7f074803b2252224a55ebc3112d19e2e844b5edee4dcf1e91e254f78e69f4c  app/assets/fonts/BeVietnamPro-Variable.ttf
-c82ce3bb59565e30e4e9699a0e56164e939c6cd976f65c16b43f15e210a6090e  app/assets/fonts/BeVietnamPro-Italic-Variable.ttf
+2e7f074803b2252224a55ebc3112d19e2e844b5edee4dcf1e91e254f78e69f4c  public/fonts/BeVietnamPro-Variable.ttf
+c82ce3bb59565e30e4e9699a0e56164e939c6cd976f65c16b43f15e210a6090e  public/fonts/BeVietnamPro-Italic-Variable.ttf
 6b7f8f73609a25ea78c891e34cf37b06f8a676b7ea986e941e43b009110f2a85  vendor/fonts/be-vietnam-pro/OFL.txt
 ```
 
@@ -235,12 +235,11 @@ Do not add remote stylesheet tags or CSP hosts.
 ```bash
 bin/rails test test/config/font_assets_test.rb
 bin/rails tailwindcss:build
-RAILS_ENV=production SECRET_KEY_BASE_DUMMY=1 bin/rails assets:precompile
-find public/assets -type f -name 'BeVietnamPro-*-*.ttf' -print
-bin/rails assets:clobber
+curl --fail --silent --show-error --include http://127.0.0.1:3000/fonts/BeVietnamPro-Variable.ttf | head -1
+curl --fail --silent --show-error --include http://127.0.0.1:3000/fonts/BeVietnamPro-Italic-Variable.ttf | head -1
 ```
 
-Expected: the test passes, asset compilation exits 0 without production runtime variables, and both fonts appear with Propshaft digests.
+Expected: the test passes, the Tailwind build exits 0, and both `/fonts/` URLs return HTTP 200. Static `public/` files are served unchanged in every environment, so no production asset compilation gate is needed for the fonts. No production runtime variables are required.
 
 - [ ] **Step 6: Check rendered typography**
 
@@ -249,7 +248,7 @@ Run `bin/dev`, open English, French, Vietnamese, and admin pages, and confirm in
 - [ ] **Step 7: Commit typography**
 
 ```bash
-git add app/assets/fonts vendor/fonts/be-vietnam-pro app/assets/tailwind/application.css test/config/font_assets_test.rb
+git add public/fonts vendor/fonts/be-vietnam-pro app/assets/tailwind/application.css test/config/font_assets_test.rb
 git commit -m "style: use Be Vietnam Pro"
 ```
 
