@@ -57,6 +57,7 @@
 | `test/config/font_assets_test.rb`                   | Create  | Protect the font files and CSS contract.                                                                        |
 | `Dockerfile.dev`                                    | Create  | Build the development image without changing the production image.                                              |
 | `docker-compose.yml`                                | Create  | Run Rails and Tailwind in one portable development service.                                                     |
+| `Procfile.dev`                                      | Modify  | Keep the Tailwind watcher alive in non-TTY detached containers via `watch[always]`.                             |
 | `config/storage.yml`                                | Modify  | Isolate production Active Storage under `storage/active_storage`.                                               |
 | `config/environments/production.rb`                 | Modify  | Complete TLS, local uploads, SMTP, stdout logging, and Solid Queue settings while preserving dummy-secret boot. |
 | `test/controllers/health_check_test.rb`             | Create  | Protect the `/up` deployment contract.                                                                          |
@@ -260,10 +261,11 @@ git commit -m "style: use Be Vietnam Pro"
 
 - Create: `Dockerfile.dev`
 - Create: `docker-compose.yml`
+- Modify: `Procfile.dev`
 
 **Interfaces:**
 
-- Consumes: `Gemfile.lock`, `bin/dev`, `Procfile.dev`, and the existing development SQLite configuration.
+- Consumes: `Gemfile.lock`, `bin/dev`, `Procfile.dev`, and the existing development SQLite configuration. The `css` entry in `Procfile.dev` runs `bin/rails 'tailwindcss:watch[always]'` so the watcher polls file changes instead of exiting when stdin closes in detached containers.
 - Produces: one `web` development service at `http://localhost:3000`, usable through Podman Compose or Docker Compose.
 
 - [ ] **Step 1: Create the development image**
@@ -298,7 +300,6 @@ CMD ["bin/dev"]
 This image is development-only. Do not add development packages to the production `Dockerfile`.
 
 - [ ] **Step 2: Create the Compose application**
-
 ```yaml
 # docker-compose.yml
 services:
