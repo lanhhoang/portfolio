@@ -1,0 +1,23 @@
+# docker-compose.yml
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: ["sh", "-c", "bin/rails db:prepare && exec bin/dev"]
+    environment:
+      BINDING: 0.0.0.0
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/rails
+      - portfolio_builds:/rails/app/assets/builds
+      - portfolio_storage:/rails/storage
+      - portfolio_tmp:/rails/tmp
+    stop_grace_period: 10s
+
+volumes:
+  portfolio_builds:
+  portfolio_storage:
+  portfolio_tmp:

@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# bin/backup
+set -euo pipefail
+umask 077
+
+readonly DATA_DIR=/var/lib/portfolio/storage
+readonly PRIMARY_DB="$DATA_DIR/production.sqlite3"
+readonly ASSET_DIR="$DATA_DIR/active_storage"
+readonly WORK_ROOT=/var/lib/portfolio/backup-work
+readonly ENV_FILE=/etc/portfolio/backup.env
+readonly LOCK_FILE=/run/lock/portfolio-backup.lock
+
+PAUSED=0
+APP_CONTAINER=""
+STAGE=""
+SNAPSHOT_CREATED=0
+
+notify_failure() {
+  local message=$1
+  logger -t portfolio-backup -- "$message" || true
+  if [[ -n "${OPS_SMTP_URL:-}" && -n "${OPS_SMTP_USERNAME:-}" && -n "${OPS_SMTP_PASSWORD:-}" && -n "${OPS_EMAIL_FROM:-}" && -n "${OPS_EMAIL_TO:-}" ]]; then
+    printf 'From: %s\r\nTo: %s\r\nSubject: Portfolio backup failed on %s\r\n\r\n%s\r\n' \
+      "$OPS_EMAIL_FROM" "$OPS_EMAIL_TO" "$(hostname -f)" "$message" |
+      curl --silent --show-error --fail --ssl-reqd \
+        --url "$OPS_SMTP_URL" \
+        --user "$OPS_SMTP_USERNAME:$OPS_SMTP_PASSWORD" \
+        --mail-from "$OPS_EMAIL_FROM" \
+        --mail-rcpt "$OPS_EMAIL_TO" \
+        --upload-file - >/dev/null || logger -t portfolio-backup -- "SMTP failure alert could not be sent" || true
+  fi
+}
+
+resume_app() {
+  [[ "$PAUSED" == 1 && -n "$APP_CONTAINER" ]] || return 0
+
+  for _attempt in 1 2 3; do
+    if docker unpause "$APP_CONTAINER" >/dev/null 2>&1; then
+      PAUSED=0
+      return 0
+    fi
+    sleep 1
+  done
+
+  return 1
+}
+
+cleanup() {
+  local status=$?
+  local resumed=1
+  trap - EXIT
+  set +e
+
+  resume_app || resumed=0
+  [[ -z "$STAGE" ]] || rm -rf -- "$STAGE"
+
+  if [[ "$status" -ne 0 || "$resumed" -eq 0 ]]; then
+    notify_failure "bin/backup exited=$status resumed=$resumed snapshot_created=$SNAPSHOT_CREATED; inspect Docker state and backup logs"
+  fi
+
+  if [[ "$status" -eq 0 && "$resumed" -eq 0 ]]; then
+    status=1
+  fi
+  exit "$status"
+}
+
+require_command() {
+  command -v "$1" >/dev/null || { echo "missing command: $1" >&2; return 1; }
+}
+
+require_env() {
+  [[ -n "${!1:-}" ]] || { echo "missing environment variable: $1" >&2; return 1; }
+}
+
+trap cleanup EXIT
+
+[[ $EUID -eq 0 ]] || { echo "bin/backup must run as root" >&2; exit 1; }
+[[ -r "$ENV_FILE" ]] || { echo "cannot read $ENV_FILE" >&2; exit 1; }
+set -a
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+set +a
+
+for command_name in curl docker flock logger restic rsync sha256sum sqlite3; do
+  require_command "$command_name"
+done
+for variable_name in RESTIC_REPOSITORY RESTIC_PASSWORD_FILE AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION OPS_SMTP_URL OPS_SMTP_USERNAME OPS_SMTP_PASSWORD OPS_EMAIL_FROM OPS_EMAIL_TO; do
+  require_env "$variable_name"
+done
+[[ -r "$RESTIC_PASSWORD_FILE" ]] || { echo "cannot read RESTIC_PASSWORD_FILE" >&2; exit 1; }
+[[ -f "$PRIMARY_DB" ]] || { echo "missing primary database: $PRIMARY_DB" >&2; exit 1; }
+
+exec 9>"$LOCK_FILE"
+flock -n 9 || { echo "another backup or restore is running" >&2; exit 75; }
+install -d -o 1000 -g 1000 -m 0750 "$ASSET_DIR"
+
+mapfile -t containers < <(docker ps --filter label=service=portfolio --filter label=role=web --format '{{.ID}}')
+[[ ${#containers[@]} -eq 1 ]] || { echo "expected one running portfolio web container, found ${#containers[@]}" >&2; exit 1; }
+APP_CONTAINER=${containers[0]}
+
+restic snapshots --latest 1 >/dev/null
+install -d -o root -g root -m 0700 "$WORK_ROOT"
+STAGE=$(mktemp -d "$WORK_ROOT/snapshot.XXXXXXXX")
+install -d -m 0700 "$STAGE/active_storage"
+
+docker pause "$APP_CONTAINER" >/dev/null
+PAUSED=1
+sqlite3 "$PRIMARY_DB" ".timeout 5000" ".backup '$STAGE/production.sqlite3'"
+rsync -a --delete "$ASSET_DIR/" "$STAGE/active_storage/"
+(
+  cd "$STAGE"
+  find production.sqlite3 active_storage -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+  sha256sum --check SHA256SUMS
+  [[ "$(sqlite3 production.sqlite3 'PRAGMA integrity_check;')" == ok ]]
+)
+resume_app
+
+(
+  cd "$STAGE"
+  restic backup --tag portfolio --tag nightly .
+)
+SNAPSHOT_CREATED=1
+restic forget --tag portfolio --group-by tags --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune
+restic check
+logger -t portfolio-backup -- "backup, retention, and Restic structural verification completed"
