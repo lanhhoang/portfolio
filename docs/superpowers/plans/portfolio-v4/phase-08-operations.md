@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task. Do not dispatch subagents. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Apply Be Vietnam Pro, provide portable containerized development, deploy the accepted Rails application to one Ubuntu server, and prove encrypted backup and guarded restore of `production.sqlite3` and every Active Storage object.
+**Goal:** Apply Be Vietnam Pro and prepare locally verified development, deployment, backup, restore, and operator documentation without connecting to or changing a real production server.
 
-**Architecture:** Development remains a normal Rails process and gains an optional one-service Compose workflow that runs through Podman or Docker. Production remains one Kamal 2 application container behind `kamal-proxy`, with Docker on both the deployment workstation and Ubuntu host. A bind mount persists SQLite and Active Storage; host scripts briefly pause the app to snapshot the primary database and assets, then Restic encrypts and uploads the snapshot off-site.
+**Architecture:** Development remains a normal Rails process and gains an optional one-service Compose workflow that runs through Podman or Docker. The repository prepares Kamal configuration for a future one-container Docker deployment and host scripts for encrypted SQLite and Active Storage backups. Phase execution stops at local tests, static checks, configuration parsing, and local Podman builds; every real-host action is an operator-only procedure in `docs/operations.md`.
 
 **Tech Stack:** Ruby 4.0.6, Rails 8.1.3.1, SQLite 3, Tailwind CSS, Propshaft, Be Vietnam Pro, Podman Compose, Docker Compose, Docker, Kamal 2.12.0, kamal-proxy, Ubuntu 24.04 LTS, Bash, systemd, Restic, S3-compatible object storage, curl SMTP
 
@@ -23,6 +23,8 @@
 - Be Vietnam Pro is self-hosted. Do not add Google Fonts or weaken the same-origin Content Security Policy.
 - `docker-compose.yml` is development-only and must work with `podman compose` and `docker compose`.
 - Production deployment remains Kamal on Docker. Do not make Kamal depend on a Podman compatibility shim.
+- Phase implementation must not contact production or drill hosts, alter DNS, initialize Restic, install systemd units, send production email, run Kamal deployment commands, or create a production acceptance tag.
+- Remote commands appear only inside operator documentation and remain manual after phase implementation.
 - Production remains one application container on one small Ubuntu server. Do not add Redis, a separate API, SPA, CMS, search service, CDN, or observability platform.
 - `/var/lib/portfolio/storage` is the sole production application bind and is owned by numeric UID/GID `1000:1000`.
 - Only `production.sqlite3` and `active_storage/` are backed up. Queue, cache, and cable databases are recreated and never restored.
@@ -39,12 +41,10 @@
 - `ruby --version` reports Ruby 4.0.6 and `bin/rails --version` reports Rails 8.1.3.1.
 - `bundle exec kamal version` reports 2.12.0.
 - The local development machine has Podman 5.8+ and an external Compose provider.
-- The workstation used for Kamal deploys has Docker and Docker Compose. This may be a different machine from the Podman development machine.
-- The production and quarterly drill hosts are AMD64 Ubuntu 24.04 machines reachable by SSH.
-- `APP_HOST` is the production DNS name without scheme, port, or path; its records point to `DEPLOY_HOST` before setup.
-- `DRILL_APP_HOST` is a separate DNS name that points to `DRILL_HOST` only during a restore drill.
-- TCP ports 22, 80, and 443 are allowed inbound. No application port is public.
-- Backup and restore commands run as root on the Docker production host.
+- No production host, production DNS record, S3 repository, SMTP account, or production secret is required to implement this phase.
+- Local Kamal parsing uses documentation-only addresses and dummy values; local checks must not resolve or connect to them.
+- The future operator workstation uses Docker and Docker Compose. The future production and drill hosts are AMD64 Ubuntu 24.04 machines.
+- Backup and restore commands are designed to run as root on that future Docker host, but are not run there during this phase.
 
 ## File Map
 
@@ -76,7 +76,9 @@
 | `docs/operations.md`                                | Create  | Document provisioning, deployment, backup, restore, failure response, and drills.                               |
 | `README.md`                                         | Replace | Document native development, Podman/Docker Compose development, tests, and deployment.                          |
 
-## Environment Contract
+## Manual Operator Environment Contract
+
+These values are documented and wired into configuration during implementation, but real values are neither required nor used by the phase executor.
 
 ### Kamal deployment workstation
 
@@ -344,19 +346,9 @@ podman compose down
 
 Expected: Compose configuration and build succeed, `/up` returns HTTP 200, and the focused test passes. The warning that `podman compose` delegates to an external provider is expected.
 
-- [ ] **Step 4: Validate the same file on the Docker machine**
+The operator later runs the equivalent `docker compose` commands documented in `README.md`; they are not part of phase execution.
 
-```bash
-docker compose config
-docker compose build
-docker compose up --detach
-curl --fail --silent --show-error http://127.0.0.1:3000/up >/dev/null
-docker compose down
-```
-
-Expected: every command exits 0 without editing `docker-compose.yml`.
-
-- [ ] **Step 5: Commit containerized development**
+- [ ] **Step 4: Commit containerized development**
 
 ```bash
 git add Dockerfile.dev docker-compose.yml
@@ -585,7 +577,7 @@ git commit -m "chore: complete production runtime contract"
 
 ---
 
-### Task 4: Configure the one-host Kamal deployment
+### Task 4: Prepare the one-host Kamal deployment
 
 **Files:**
 
@@ -597,7 +589,7 @@ git commit -m "chore: complete production runtime contract"
 **Interfaces:**
 
 - Consumes: Task 3's health, storage, SMTP, and queue contracts.
-- Produces: one `portfolio-web-*` container, automatic TLS, `/var/lib/portfolio/storage:/rails/storage`, and Docker-based deploys from the Docker workstation.
+- Produces: locally parsed Kamal files that will later create one `portfolio-web-*` container with automatic TLS and `/var/lib/portfolio/storage:/rails/storage` when an operator deploys manually.
 
 - [ ] **Step 1: Write the Kamal configuration**
 
@@ -708,96 +700,45 @@ bin/rails test test/config/production_boot_test.rb
 
 Expected: every check passes. Preserve the existing Dockerfile's jemalloc setup, `vendor/` copy, serial Bootsnap precompile, and dummy-secret asset build.
 
-- [ ] **Step 4: Build and inspect on the Docker workstation**
-
-Do not run this Kamal gate through Podman.
+- [ ] **Step 4: Parse Kamal configuration locally with non-routable dummy values**
 
 ```bash
-docker version
-docker build --platform linux/amd64 -t portfolio:phase-8 .
-docker inspect portfolio:phase-8 --format '{{.Config.User}} {{json .Config.ExposedPorts}} {{json .Config.Cmd}}'
+DEPLOY_HOST=192.0.2.10 \
+APP_HOST=portfolio.invalid \
+RAILS_MASTER_KEY=dummy-master-key \
+ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY=dummy-primary-key \
+ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY=dummy-deterministic-key \
+ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT=dummy-derivation-salt \
+SMTP_ADDRESS=smtp.invalid SMTP_PORT=587 SMTP_DOMAIN=portfolio.invalid \
+SMTP_USERNAME=dummy-smtp-user SMTP_PASSWORD=dummy-smtp-password \
+MAILER_FROM=owner@portfolio.invalid \
+bin/kamal config >/dev/null
 ```
 
-Expected:
+Expected: Kamal accepts the complete configuration and exits 0. `192.0.2.10` and `.invalid` are documentation-only values; this command must not make a network connection.
 
-```text
-1000:1000 {"80/tcp":{}} ["./bin/thrust","./bin/rails","server"]
-```
-
-- [ ] **Step 5: Provision the production host**
+- [ ] **Step 5: Build and inspect the production image locally with Podman**
 
 ```bash
-ssh root@"$DEPLOY_HOST" 'set -eu
-apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io sqlite3 restic rsync curl
-systemctl enable --now docker
-id deploy >/dev/null 2>&1 || useradd --create-home --shell /bin/bash deploy
-usermod -aG docker deploy
-install -d -o deploy -g deploy -m 0700 /home/deploy/.ssh
-install -o deploy -g deploy -m 0600 /root/.ssh/authorized_keys /home/deploy/.ssh/authorized_keys
-install -d -o 1000 -g 1000 -m 0750 /var/lib/portfolio/storage
-install -d -o root -g root -m 0700 /var/lib/portfolio/backup-work /etc/portfolio /opt/portfolio/bin
-'
-ssh deploy@"$DEPLOY_HOST" 'docker version --format "{{.Server.Version}}" && stat -c "%u:%g %a %n" /var/lib/portfolio/storage'
+podman build --platform linux/amd64 -t portfolio:phase-8 .
+podman image inspect portfolio:phase-8 \
+  --format '{{.Config.User}} {{json .Config.ExposedPorts}} {{json .Config.Cmd}}'
 ```
 
-Expected final line:
+Expected output contains numeric user `1000:1000`, exposed port `80/tcp`, and command `./bin/thrust ./bin/rails server`. Do not push the image or run Kamal.
 
-```text
-1000:1000 750 /var/lib/portfolio/storage
-```
-
-- [ ] **Step 6: Check deploy environment and network prerequisites**
-
-```bash
-for name in DEPLOY_HOST APP_HOST RAILS_MASTER_KEY ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT SMTP_ADDRESS SMTP_PORT SMTP_DOMAIN SMTP_USERNAME SMTP_PASSWORD MAILER_FROM; do
-  test -n "${!name:-}" || { echo "missing $name" >&2; exit 1; }
-done
-dig +short "$APP_HOST"
-nc -z "$DEPLOY_HOST" 22
-```
-
-Expected: variable checks are silent, DNS returns at least one address, and SSH is reachable.
-
-- [ ] **Step 7: Deploy and verify production behavior**
-
-```bash
-bin/kamal setup
-bin/kamal app details
-curl --fail --silent --show-error --include "https://$APP_HOST/up"
-bin/kamal app exec 'bin/rails runner '\''puts [Rails.env, Rails.application.config.active_job.queue_adapter, ENV.fetch("SOLID_QUEUE_IN_PUMA")].join(" ")'\'''
-bin/kamal app exec 'bin/rails runner '\''recipient = Profile.current.public_contact_email; ActionMailer::Base.mail(to: recipient, from: ENV.fetch("MAILER_FROM"), subject: "Portfolio production SMTP check", body: "SMTP delivery verified").deliver_now; puts "mail delivered to #{recipient}"'\'''
-ssh deploy@"$DEPLOY_HOST" 'docker ps --filter label=service=portfolio --filter label=role=web --format "{{.Names}}"'
-```
-
-Expected output includes HTTP 200, `production solid_queue true`, `mail delivered`, and one `portfolio-web-` container. Confirm receipt of the SMTP message.
-
-- [ ] **Step 8: Prove bind persistence across restart**
-
-```bash
-PROBE="phase-8-$(date -u +%Y%m%dT%H%M%SZ)"
-bin/kamal app exec "bin/rails runner 'File.write(Rails.root.join(\"storage/persistence-probe\"), \"$PROBE\")'"
-ssh deploy@"$DEPLOY_HOST" 'docker restart $(docker ps -q --filter label=service=portfolio --filter label=role=web) >/dev/null'
-for attempt in $(seq 1 30); do
-  curl --fail --silent "https://$APP_HOST/up" >/dev/null && break
-  sleep 2
-done
-bin/kamal app exec 'bin/rails runner '\''puts File.read(Rails.root.join("storage/persistence-probe"))'\'''
-bin/kamal app exec 'rm /rails/storage/persistence-probe'
-```
-
-Expected: the printed probe exactly matches `PROBE`.
-
-- [ ] **Step 9: Commit deployment configuration**
+- [ ] **Step 6: Commit prepared deployment configuration**
 
 ```bash
 git add config/deploy.yml .kamal/secrets
-git commit -m "chore: deploy portfolio with kamal"
+git commit -m "chore: prepare kamal deployment"
 ```
+
+Host provisioning, DNS checks, `kamal setup`, deployment, SMTP verification, persistence checks, and rollback remain operator-only procedures in `docs/operations.md`.
 
 ---
 
-### Task 5: Implement and prove encrypted nightly backup
+### Task 5: Prepare and locally verify encrypted backup automation
 
 **Files:**
 
@@ -809,7 +750,7 @@ git commit -m "chore: deploy portfolio with kamal"
 **Interfaces:**
 
 - Consumes: the sole running Docker container, `/var/lib/portfolio/storage`, `/etc/portfolio/backup.env`, and `/etc/portfolio/restic-password`.
-- Produces: Restic snapshots tagged `portfolio` and `nightly`, retryable unpause behavior, 7/4/6 retention, and failure email.
+- Produces: locally checked scripts that will create Restic snapshots tagged `portfolio` and `nightly`, retry unpause, enforce 7/4/6 retention, and report failure when the operator installs them.
 
 - [ ] **Step 1: Add a failing executable SQLite backup proof**
 
@@ -1016,6 +957,7 @@ WantedBy=timers.target
 - [ ] **Step 4: Run local static and SQLite checks**
 
 ```bash
+command -v shellcheck >/dev/null || brew install shellcheck
 bash -n bin/backup test/operations/sqlite_backup_test.sh
 shellcheck bin/backup test/operations/sqlite_backup_test.sh
 test/operations/sqlite_backup_test.sh
@@ -1026,113 +968,18 @@ grep -F -- '--keep-daily 7 --keep-weekly 4 --keep-monthly 6' bin/backup
 
 Expected: every command exits 0, ShellCheck prints nothing, and transient database names are absent.
 
-- [ ] **Step 5: Install root-only backup configuration and initialize Restic**
+The SQLite test proves the exact WAL-safe `.backup` operation locally. The Docker pause/unpause path, Restic upload, explicit snapshot restore, failure email, retention, and systemd timer require the real host and remain unchecked operator procedures in `docs/operations.md`.
 
-Generate the Restic password once, save it in the password manager, and export all backup variables in the deployment shell:
-
-```bash
-RESTIC_PASSWORD="$(openssl rand -base64 32)"
-printf '%s\n' "$RESTIC_PASSWORD"
-```
-
-Install configuration:
-
-```bash
-{
-  printf 'RESTIC_REPOSITORY=%q\n' "$RESTIC_REPOSITORY"
-  printf 'RESTIC_PASSWORD_FILE=%q\n' /etc/portfolio/restic-password
-  printf 'AWS_ACCESS_KEY_ID=%q\n' "$AWS_ACCESS_KEY_ID"
-  printf 'AWS_SECRET_ACCESS_KEY=%q\n' "$AWS_SECRET_ACCESS_KEY"
-  printf 'AWS_DEFAULT_REGION=%q\n' "$AWS_DEFAULT_REGION"
-  printf 'OPS_SMTP_URL=%q\n' "$OPS_SMTP_URL"
-  printf 'OPS_SMTP_USERNAME=%q\n' "$OPS_SMTP_USERNAME"
-  printf 'OPS_SMTP_PASSWORD=%q\n' "$OPS_SMTP_PASSWORD"
-  printf 'OPS_EMAIL_FROM=%q\n' "$OPS_EMAIL_FROM"
-  printf 'OPS_EMAIL_TO=%q\n' "$OPS_EMAIL_TO"
-} | ssh deploy@"$DEPLOY_HOST" 'sudo install -o root -g root -m 0600 /dev/stdin /etc/portfolio/backup.env'
-printf '%s' "$RESTIC_PASSWORD" | ssh deploy@"$DEPLOY_HOST" 'sudo install -o root -g root -m 0600 /dev/stdin /etc/portfolio/restic-password'
-scp bin/backup deploy@"$DEPLOY_HOST":/tmp/portfolio-backup
-scp ops/systemd/portfolio-backup.service ops/systemd/portfolio-backup.timer deploy@"$DEPLOY_HOST":/tmp/
-ssh deploy@"$DEPLOY_HOST" 'sudo install -o root -g root -m 0755 /tmp/portfolio-backup /opt/portfolio/bin/backup
-sudo install -o root -g root -m 0644 /tmp/portfolio-backup.service /etc/systemd/system/portfolio-backup.service
-sudo install -o root -g root -m 0644 /tmp/portfolio-backup.timer /etc/systemd/system/portfolio-backup.timer
-sudo bash -c '\''set -a; source /etc/portfolio/backup.env; set +a; restic init'\''
-sudo systemctl daemon-reload
-sudo systemctl enable --now portfolio-backup.timer
-sudo systemctl list-timers portfolio-backup.timer --no-pager'
-```
-
-If `restic init` reports an existing repository, stop and verify it with `restic snapshots`; never reinitialize it.
-
-- [ ] **Step 6: Run a real backup and restore its explicit snapshot to a temporary directory**
-
-```bash
-ssh deploy@"$DEPLOY_HOST" 'sudo systemctl start portfolio-backup.service
-sudo systemctl status portfolio-backup.service --no-pager'
-SNAPSHOT_ID="$(ssh deploy@"$DEPLOY_HOST" 'sudo bash -c '\''set -a; source /etc/portfolio/backup.env; set +a; restic snapshots --tag portfolio --latest 1 --json'\''' | ruby -rjson -e 'snapshots = JSON.parse(STDIN.read); abort "no portfolio snapshot" if snapshots.empty?; puts snapshots.last.fetch("id")')"
-printf 'snapshot=%s\n' "$SNAPSHOT_ID"
-ssh deploy@"$DEPLOY_HOST" "sudo SNAPSHOT_ID='$SNAPSHOT_ID' bash -s" <<'REMOTE'
-set -euo pipefail
-set -a
-source /etc/portfolio/backup.env
-set +a
-verify_dir=$(mktemp -d /var/lib/portfolio/backup-work/verify.XXXXXXXX)
-trap 'rm -rf "$verify_dir"' EXIT
-restic restore "$SNAPSHOT_ID" --target "$verify_dir"
-cd "$verify_dir"
-sha256sum --check SHA256SUMS
-test "$(sqlite3 production.sqlite3 'PRAGMA integrity_check;')" = ok
-test -d active_storage
-for forbidden in production_queue.sqlite3 production_cache.sqlite3 production_cable.sqlite3; do
-  test ! -e "$forbidden"
-done
-restic ls "$SNAPSHOT_ID"
-REMOTE
-```
-
-Expected: systemd reports `status=0/SUCCESS`, every manifest entry is `OK`, SQLite integrity is `ok`, and the snapshot contains only `SHA256SUMS`, `production.sqlite3`, and `active_storage/`.
-
-- [ ] **Step 7: Prove a post-pause failure resumes the app**
-
-Use a temporary fake `rsync` so failure occurs after `docker pause` without changing production data:
-
-```bash
-ssh deploy@"$DEPLOY_HOST" 'sudo bash -s' <<'REMOTE'
-set -euo pipefail
-fake_dir=$(mktemp -d /var/lib/portfolio/backup-work/fail-rsync.XXXXXXXX)
-trap 'rm -rf "$fake_dir"' EXIT
-cat > "$fake_dir/rsync" <<'SCRIPT'
-#!/usr/bin/env bash
-exit 42
-SCRIPT
-chmod 0755 "$fake_dir/rsync"
-set +e
-env PATH="$fake_dir:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" /opt/portfolio/bin/backup
-status=$?
-set -e
-test "$status" -ne 0
-container=$(docker ps -q --filter label=service=portfolio --filter label=role=web)
-test -n "$container"
-test "$(docker inspect --format '{{.State.Paused}}' "$container")" = false
-REMOTE
-```
-
-Expected: the backup exits nonzero, Docker reports `false`, and `OPS_EMAIL_TO` receives a backup-failure message with `resumed=1`. Then rerun the normal service and require success:
-
-```bash
-ssh deploy@"$DEPLOY_HOST" 'sudo systemctl start portfolio-backup.service'
-```
-
-- [ ] **Step 8: Commit backup automation**
+- [ ] **Step 5: Commit prepared backup automation**
 
 ```bash
 git add test/operations/sqlite_backup_test.sh bin/backup ops/systemd/portfolio-backup.service ops/systemd/portfolio-backup.timer
-git commit -m "feat: add verified encrypted backups"
+git commit -m "feat: prepare encrypted backup automation"
 ```
 
 ---
 
-### Task 6: Implement guarded restore and retry behavior
+### Task 6: Prepare guarded restore and retry behavior
 
 **Files:**
 
@@ -1141,7 +988,7 @@ git commit -m "feat: add verified encrypted backups"
 **Interfaces:**
 
 - Consumes: `bin/restore SNAPSHOT_ID`, Task 5 snapshots and environment, and the newest current portfolio web container.
-- Produces: verified primary database/assets, fresh transient databases, retained `storage.before-*` data, a healthy restarted app, and a stopped state after unsafe post-replacement failure.
+- Produces: a statically checked restore command designed to verify primary database/assets, recreate transient databases, retain `storage.before-*` data, restart a healthy app, and stop after unsafe post-replacement failure.
 
 - [ ] **Step 1: Create the restore command**
 
@@ -1333,28 +1180,23 @@ grep -F 'production_queue.sqlite3 production_cache.sqlite3 production_cable.sqli
 
 Expected: every command exits 0 and ShellCheck prints nothing.
 
-- [ ] **Step 3: Install restore and verify refusal without stopping production**
+- [ ] **Step 3: Verify restore remains Docker-host-only**
 
 ```bash
-scp bin/restore deploy@"$DEPLOY_HOST":/tmp/portfolio-restore
-ssh deploy@"$DEPLOY_HOST" 'sudo install -o root -g root -m 0755 /tmp/portfolio-restore /opt/portfolio/bin/restore
-set +e
-sudo /opt/portfolio/bin/restore latest
-status=$?
-set -e
-test "$status" -eq 64
-container=$(docker ps -q --filter label=service=portfolio --filter label=role=web)
-test -n "$container"
-test "$(docker inspect --format "{{.State.Running}}" "$container")" = true'
+grep -F 'bin/restore must run as root' bin/restore
+grep -F 'usage: bin/restore SNAPSHOT_ID' bin/restore
+grep -F 'service=portfolio' bin/restore
+grep -F 'role=web' bin/restore
+! grep -F 'podman ' bin/restore
 ```
 
-Expected: usage error, status 64, and the app remains running.
+Expected: the root, explicit snapshot, and Docker label contracts are present; no Podman-specific production path exists. Do not run the restore command locally or remotely during implementation.
 
-- [ ] **Step 4: Commit restore**
+- [ ] **Step 4: Commit prepared restore**
 
 ```bash
 git add bin/restore
-git commit -m "feat: add guarded portfolio restore"
+git commit -m "feat: prepare guarded portfolio restore"
 ```
 
 ---
@@ -1467,7 +1309,9 @@ bin/bundler-audit check --update
 bin/rubocop
 ```
 
-## Deploy
+## Deploy manually
+
+> These commands are operator-run after Phase 8 implementation. The implementation phase does not connect to a production server.
 
 Deploy from the machine that has Docker, SSH access to the Ubuntu host, and the required production values loaded from the password manager.
 
@@ -1525,6 +1369,8 @@ See [`docs/operations.md`](docs/operations.md) for host provisioning, secret ins
 ````markdown
 # Portfolio operations
 
+> **Operator-only manual runbook.** Phase 8 implementation prepares and locally validates files only. Nothing in this document is executed automatically by the implementation plan.
+
 ## Invariants
 
 - One `portfolio` web container runs on one Ubuntu host behind `kamal-proxy`.
@@ -1545,10 +1391,33 @@ for name in DEPLOY_HOST APP_HOST RAILS_MASTER_KEY ACTIVE_RECORD_ENCRYPTION_PRIMA
 done
 ```
 
+## Provision the production host manually
+
+```bash
+ssh root@"$DEPLOY_HOST" 'set -eu
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io sqlite3 restic rsync curl
+systemctl enable --now docker
+id deploy >/dev/null 2>&1 || useradd --create-home --shell /bin/bash deploy
+usermod -aG docker deploy
+install -d -o deploy -g deploy -m 0700 /home/deploy/.ssh
+install -o deploy -g deploy -m 0600 /root/.ssh/authorized_keys /home/deploy/.ssh/authorized_keys
+install -d -o 1000 -g 1000 -m 0750 /var/lib/portfolio/storage
+install -d -o root -g root -m 0700 /var/lib/portfolio/backup-work /etc/portfolio /opt/portfolio/bin
+'
+ssh deploy@"$DEPLOY_HOST" 'docker version --format "{{.Server.Version}}" && stat -c "%u:%g %a %n" /var/lib/portfolio/storage'
+```
+
+Require the final line to be:
+
+```text
+1000:1000 750 /var/lib/portfolio/storage
+```
+
 ## Initial production setup
 
 1. Point `APP_HOST` A/AAAA records to `DEPLOY_HOST`.
-2. Run Phase 8 Task 4 host provisioning from the Docker workstation.
+2. Run the production-host provisioning section above from the Docker workstation.
 3. Run `bin/kamal setup`.
 4. Require `curl -fsS "https://$APP_HOST/up"` to succeed.
 5. Export `ADMIN_EMAIL` and a password of at least 14 characters, then run:
@@ -1561,9 +1430,8 @@ bin/kamal app exec --interactive --reuse \
 ```
 
 6. Save the TOTP URI and recovery codes, then verify password and TOTP sign-in in a private browser session.
-7. Send the production SMTP check from Phase 8 Task 4 and confirm receipt.
-8. Install Restic configuration and systemd units from Phase 8 Task 5.
-9. Run the first backup and explicit temporary restore verification from Phase 8 Task 5.
+7. Send a production SMTP message and confirm receipt.
+8. Follow the backup installation and first-backup verification sections below.
 
 ## Routine deploy
 
@@ -1600,6 +1468,112 @@ ssh deploy@"$DEPLOY_HOST" 'docker ps --filter label=service=portfolio --filter l
 ```
 
 Configure an external HTTPS uptime check for `https://$APP_HOST/up`.
+
+## Verify production SMTP
+
+```bash
+bin/kamal app exec 'bin/rails runner '\''recipient = Profile.current.public_contact_email; ActionMailer::Base.mail(to: recipient, from: ENV.fetch("MAILER_FROM"), subject: "Portfolio production SMTP check", body: "SMTP delivery verified").deliver_now; puts "mail delivered to #{recipient}"'\'''
+```
+
+Confirm the message arrives before enabling scheduled operations.
+
+## Install backup and restore automation manually
+
+Generate one Restic password and save it in the password manager before continuing:
+
+```bash
+RESTIC_PASSWORD="$(openssl rand -base64 32)"
+printf '%s\n' "$RESTIC_PASSWORD"
+```
+
+Export every backup variable from the manual operator environment contract, then install root-only configuration and scripts:
+
+```bash
+{
+  printf 'RESTIC_REPOSITORY=%q\n' "$RESTIC_REPOSITORY"
+  printf 'RESTIC_PASSWORD_FILE=%q\n' /etc/portfolio/restic-password
+  printf 'AWS_ACCESS_KEY_ID=%q\n' "$AWS_ACCESS_KEY_ID"
+  printf 'AWS_SECRET_ACCESS_KEY=%q\n' "$AWS_SECRET_ACCESS_KEY"
+  printf 'AWS_DEFAULT_REGION=%q\n' "$AWS_DEFAULT_REGION"
+  printf 'OPS_SMTP_URL=%q\n' "$OPS_SMTP_URL"
+  printf 'OPS_SMTP_USERNAME=%q\n' "$OPS_SMTP_USERNAME"
+  printf 'OPS_SMTP_PASSWORD=%q\n' "$OPS_SMTP_PASSWORD"
+  printf 'OPS_EMAIL_FROM=%q\n' "$OPS_EMAIL_FROM"
+  printf 'OPS_EMAIL_TO=%q\n' "$OPS_EMAIL_TO"
+} | ssh deploy@"$DEPLOY_HOST" 'sudo install -o root -g root -m 0600 /dev/stdin /etc/portfolio/backup.env'
+printf '%s' "$RESTIC_PASSWORD" | ssh deploy@"$DEPLOY_HOST" 'sudo install -o root -g root -m 0600 /dev/stdin /etc/portfolio/restic-password'
+scp bin/backup bin/restore deploy@"$DEPLOY_HOST":/tmp/
+scp ops/systemd/portfolio-backup.service ops/systemd/portfolio-backup.timer deploy@"$DEPLOY_HOST":/tmp/
+ssh deploy@"$DEPLOY_HOST" 'sudo install -o root -g root -m 0755 /tmp/backup /opt/portfolio/bin/backup
+sudo install -o root -g root -m 0755 /tmp/restore /opt/portfolio/bin/restore
+sudo install -o root -g root -m 0644 /tmp/portfolio-backup.service /etc/systemd/system/portfolio-backup.service
+sudo install -o root -g root -m 0644 /tmp/portfolio-backup.timer /etc/systemd/system/portfolio-backup.timer
+sudo bash -c '\''set -a; source /etc/portfolio/backup.env; set +a; restic init'\''
+sudo systemctl daemon-reload
+sudo systemctl enable --now portfolio-backup.timer
+sudo systemctl list-timers portfolio-backup.timer --no-pager'
+```
+
+If `restic init` reports an existing repository, stop and verify its password with `restic snapshots`; never reinitialize it.
+
+## Verify the first production backup manually
+
+```bash
+ssh deploy@"$DEPLOY_HOST" 'sudo systemctl start portfolio-backup.service
+sudo systemctl status portfolio-backup.service --no-pager'
+SNAPSHOT_ID="$(ssh deploy@"$DEPLOY_HOST" 'sudo bash -c '\''set -a; source /etc/portfolio/backup.env; set +a; restic snapshots --tag portfolio --latest 1 --json'\''' | ruby -rjson -e 'snapshots = JSON.parse(STDIN.read); abort "no portfolio snapshot" if snapshots.empty?; puts snapshots.last.fetch("id")')"
+printf 'snapshot=%s\n' "$SNAPSHOT_ID"
+ssh deploy@"$DEPLOY_HOST" "sudo SNAPSHOT_ID='$SNAPSHOT_ID' bash -s" <<'REMOTE'
+set -euo pipefail
+set -a
+source /etc/portfolio/backup.env
+set +a
+verify_dir=$(mktemp -d /var/lib/portfolio/backup-work/verify.XXXXXXXX)
+trap 'rm -rf "$verify_dir"' EXIT
+restic restore "$SNAPSHOT_ID" --target "$verify_dir"
+cd "$verify_dir"
+sha256sum --check SHA256SUMS
+test "$(sqlite3 production.sqlite3 'PRAGMA integrity_check;')" = ok
+test -d active_storage
+for forbidden in production_queue.sqlite3 production_cache.sqlite3 production_cable.sqlite3; do
+  test ! -e "$forbidden"
+done
+restic ls "$SNAPSHOT_ID"
+REMOTE
+```
+
+Require `status=0/SUCCESS`, every manifest entry ending in `OK`, SQLite integrity `ok`, and no transient databases in the snapshot.
+
+## Verify post-pause failure recovery manually
+
+Use a temporary fake `rsync` so the command fails after pausing without changing production data:
+
+```bash
+ssh deploy@"$DEPLOY_HOST" 'sudo bash -s' <<'REMOTE'
+set -euo pipefail
+fake_dir=$(mktemp -d /var/lib/portfolio/backup-work/fail-rsync.XXXXXXXX)
+trap 'rm -rf "$fake_dir"' EXIT
+cat > "$fake_dir/rsync" <<'SCRIPT'
+#!/usr/bin/env bash
+exit 42
+SCRIPT
+chmod 0755 "$fake_dir/rsync"
+set +e
+env PATH="$fake_dir:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" /opt/portfolio/bin/backup
+status=$?
+set -e
+test "$status" -ne 0
+container=$(docker ps -q --filter label=service=portfolio --filter label=role=web)
+test -n "$container"
+test "$(docker inspect --format '{{.State.Paused}}' "$container")" = false
+REMOTE
+```
+
+Require Docker to report `false` and the operational address to receive a failure message containing `resumed=1`. Then rerun the normal service and require success:
+
+```bash
+ssh deploy@"$DEPLOY_HOST" 'sudo systemctl start portfolio-backup.service'
+```
 
 ## Manual backup
 
@@ -1723,6 +1697,36 @@ ssh deploy@"$DEPLOY_HOST" 'df -h /var/lib/portfolio; sudo systemctl status portf
 ```
 
 Apply critical updates sooner. After reboot, require health, one running web container, an active timer, and enough free space for the data directory plus backup staging.
+
+## Manual production acceptance and phase tag
+
+Only the operator performs this section after deployment, the first verified backup, the forced failure test, and the clean-server restore drill.
+
+```bash
+curl --fail --silent --show-error --include "https://$APP_HOST/up"
+bin/kamal app details
+ssh deploy@"$DEPLOY_HOST" 'set -eu
+containers=$(docker ps -q --filter label=service=portfolio --filter label=role=web | wc -l)
+test "$containers" -eq 1
+test "$(stat -c %u:%g /var/lib/portfolio/storage)" = 1000:1000
+test -f /var/lib/portfolio/storage/production.sqlite3
+test -d /var/lib/portfolio/storage/active_storage
+test "$(sqlite3 /var/lib/portfolio/storage/production.sqlite3 "PRAGMA integrity_check;")" = ok
+sudo systemctl is-enabled --quiet portfolio-backup.timer
+sudo systemctl is-active --quiet portfolio-backup.timer'
+```
+
+Confirm production SMTP, Solid Queue, persistence across restart, rollback, explicit snapshot restore, post-pause failure recovery, and the clean-server drill. Require recorded RPO at most 24 hours and RTO at most 120 minutes. Keep secrets, host addresses, snapshot IDs, and private drill evidence outside Git.
+
+After every production acceptance item passes:
+
+```bash
+git status --short
+git tag -a portfolio-v4-phase-8 -m "Accept portfolio v4 phase 8 operations"
+git show --stat --oneline portfolio-v4-phase-8
+```
+
+Do not create this tag during implementation or before manual production acceptance.
 ````
 
 - [ ] **Step 3: Verify documentation commands and links**
@@ -1750,7 +1754,7 @@ git commit -m "docs: document development and operations"
 
 ---
 
-### Task 8: Execute acceptance and tag Phase 8
+### Task 8: Complete local acceptance and hand off manual operations
 
 **Files:**
 
@@ -1759,9 +1763,9 @@ git commit -m "docs: document development and operations"
 **Interfaces:**
 
 - Consumes: Tasks 1–7.
-- Produces: annotated `portfolio-v4-phase-8` tag only after every automated and manual gate succeeds.
+- Produces: operations files prepared and locally verified, with production acceptance explicitly left to the operator.
 
-- [ ] **Step 1: Run repository checks on the development machine**
+- [ ] **Step 1: Run local repository checks**
 
 ```bash
 bash -n bin/backup bin/restore test/operations/sqlite_backup_test.sh
@@ -1769,87 +1773,70 @@ shellcheck bin/backup bin/restore test/operations/sqlite_backup_test.sh
 test/operations/sqlite_backup_test.sh
 bin/rails test
 bin/rails test:system
+bin/rails zeitwerk:check
 podman compose config
 podman compose build
+```
+
+Expected: every command exits 0. No command contacts a production or drill host.
+
+- [ ] **Step 2: Run local application and image checks with Podman**
+
+```bash
+podman compose up --detach
+for attempt in $(seq 1 30); do
+  curl --fail --silent http://127.0.0.1:3000/up >/dev/null && break
+  sleep 1
+done
+curl --fail --silent --show-error http://127.0.0.1:3000/up >/dev/null
+podman compose down
+podman build --platform linux/amd64 -t portfolio:phase-8-acceptance .
+podman image inspect portfolio:phase-8-acceptance \
+  --format '{{.Config.User}} {{json .Config.Cmd}}'
+```
+
+Expected: local health succeeds, the production image builds, and inspection contains user `1000:1000` with Thruster/Rails server command.
+
+- [ ] **Step 3: Parse production configuration using dummy values only**
+
+```bash
+DEPLOY_HOST=192.0.2.10 \
+APP_HOST=portfolio.invalid \
+RAILS_MASTER_KEY=dummy-master-key \
+ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY=dummy-primary-key \
+ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY=dummy-deterministic-key \
+ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT=dummy-derivation-salt \
+SMTP_ADDRESS=smtp.invalid SMTP_PORT=587 SMTP_DOMAIN=portfolio.invalid \
+SMTP_USERNAME=dummy-smtp-user SMTP_PASSWORD=dummy-smtp-password \
+MAILER_FROM=owner@portfolio.invalid \
+bin/kamal config >/dev/null
+```
+
+Expected: configuration parsing exits 0 without network access.
+
+- [ ] **Step 4: Verify the manual boundary is explicit**
+
+```bash
+grep -F 'operator-run after Phase 8 implementation' README.md
+grep -F 'Operator-only manual runbook' docs/operations.md
+grep -F 'The implementation phase does not connect to a production server' README.md
+grep -F 'Nothing in this document is executed automatically' docs/operations.md
 git status --short
 ```
 
-Expected: every command exits 0 and Git status is empty.
+Expected: all boundary checks pass and Git status is empty after the planned commits.
 
-- [ ] **Step 2: Run production image checks on the Docker workstation**
+- [ ] **Step 5: Record the handoff without production claims**
 
-```bash
-docker compose config
-docker compose build
-docker build --platform linux/amd64 -t portfolio:phase-8-acceptance .
-docker inspect portfolio:phase-8-acceptance --format '{{.Config.User}} {{json .Config.Cmd}}'
-```
-
-Expected:
+Report exactly:
 
 ```text
-1000:1000 ["./bin/thrust","./bin/rails","server"]
+Phase 8 operations files are prepared and locally verified.
+No production or drill host was contacted.
+Deployment, backup initialization, production backup verification, restore drill, and production acceptance remain manual operator work in docs/operations.md.
 ```
 
-- [ ] **Step 3: Prove rollback keeps the persistent bind**
-
-After at least two production versions exist:
-
-```bash
-bin/kamal app containers
-read -r -p "Paste the prior deployed 40-character Git version: " PREVIOUS_VERSION
-[[ "$PREVIOUS_VERSION" =~ ^[0-9a-f]{40}$ ]]
-bin/kamal rollback "$PREVIOUS_VERSION"
-curl --fail --silent --show-error "https://$APP_HOST/up" >/dev/null
-ssh deploy@"$DEPLOY_HOST" 'stat -c "%u:%g %n" /var/lib/portfolio/storage/production.sqlite3'
-```
-
-Expected: health succeeds and the database remains owned by `1000:1000`.
-
-- [ ] **Step 4: Run production acceptance checks**
-
-```bash
-curl --fail --silent --show-error --include "https://$APP_HOST/up"
-bin/kamal app details
-ssh deploy@"$DEPLOY_HOST" 'set -eu
-containers=$(docker ps -q --filter label=service=portfolio --filter label=role=web | wc -l)
-test "$containers" -eq 1
-test "$(stat -c %u:%g /var/lib/portfolio/storage)" = 1000:1000
-test -f /var/lib/portfolio/storage/production.sqlite3
-test -d /var/lib/portfolio/storage/active_storage
-test "$(sqlite3 /var/lib/portfolio/storage/production.sqlite3 "PRAGMA integrity_check;")" = ok
-sudo systemctl is-enabled --quiet portfolio-backup.timer
-sudo systemctl is-active --quiet portfolio-backup.timer'
-```
-
-Expected: HTTP 200, one web container, correct ownership, SQLite `ok`, and an enabled active timer.
-
-- [ ] **Step 5: Confirm release evidence**
-
-Require all items before tagging:
-
-- Be Vietnam Pro renders on English, French, Vietnamese, and admin pages without CSP errors.
-- Podman Compose starts development on this machine.
-- Docker Compose validates and starts development on the Docker machine.
-- Kamal deploy and one rollback complete without changing primary data or uploads.
-- Host restart preserves primary data and uploads.
-- Production SMTP delivery arrives.
-- Solid Queue processes an email and overdue scheduled publication after restart.
-- A successful explicit snapshot restore contains valid `production.sqlite3` and all Active Storage objects while excluding transient databases.
-- The forced post-pause backup failure resumes the app and sends operational email.
-- The clean-server drill passes manifest, SQLite, exact asset, HTTPS, and full Restic checks.
-- Recorded RPO is at most 24 hours and RTO is at most 120 minutes.
-- Secrets, host addresses, snapshot IDs, and private drill evidence are absent from Git.
-
-- [ ] **Step 6: Tag the accepted phase**
-
-```bash
-git status --short
-git tag -a portfolio-v4-phase-8 -m "Accept portfolio v4 phase 8 operations"
-git show --stat --oneline portfolio-v4-phase-8
-```
-
-Expected: clean status and an annotated tag at the accepted Phase 8 commit. Do not tag if any preceding gate is incomplete.
+Do not run `ssh`, `scp`, `kamal setup`, `kamal deploy`, `kamal rollback`, remote `systemctl`, `restic init`, production SMTP checks, DNS changes, or `git tag` during phase implementation.
 
 ## Risks and Rollback Boundaries
 
@@ -1857,12 +1844,14 @@ Expected: clean status and an annotated tag at the accepted Phase 8 commit. Do n
 - **Compose portability:** only Compose-spec features shared by Podman and Docker are used. Production does not use Compose.
 - **Kamal workstation:** Kamal's builder and localhost registry require Docker. Deploy from the Docker machine rather than introducing a local shim.
 - **Build-time secrets:** `SECRET_KEY_BASE_DUMMY=1` must continue to boot production for asset compilation without `APP_HOST` or encryption keys.
-- **SQLite/asset skew:** Docker pause covers both `.backup` and `rsync`; the post-pause failure drill proves the EXIT trap resumes writes.
-- **Unpause failure:** the backup retries unpause and reports the actual resumed state. An unresolved Docker daemon failure remains an operator incident.
-- **Bind ownership:** Kamal does not repair host bind ownership; numeric `1000:1000` is checked before deploy and after restore.
+- **Phase boundary:** implementation prepares files and performs local checks only. Remote commands are documentation, not executable checklist steps.
+- **SQLite/asset skew:** Docker pause covers both `.backup` and `rsync`; the operator must run the documented post-pause failure drill on the real host.
+- **Unpause failure:** the backup retries unpause and reports the actual resumed state. Actual Docker behavior remains unverified until the operator runs the manual drill.
+- **Bind ownership:** Kamal does not repair host bind ownership; the operator checks numeric `1000:1000` during provisioning and after restore.
 - **Transient duplication:** queue/cache/cable databases are recreated. Durable publication and delivery state remains in the primary database.
 - **Restore data loss:** only an explicit hexadecimal snapshot and exact confirmation are accepted. Old data remains until manual approval.
 - **Restore retry:** a failed replacement leaves the app stopped; the next explicit retry can locate the newest stopped portfolio container.
 - **Forward-only migrations:** image rollback never reverses schema changes. Correct incompatible migrations forward.
-- **Repository cost:** nightly checks validate structure; full data reads occur during initial acceptance and quarterly drills to avoid downloading the entire repository every night.
-- **Single-server downtime:** backup pause, restore, and host updates cause brief downtime by design. Add replication only after measured requirements justify it.
+- **Repository cost:** nightly checks validate structure; the operator runs full data reads during initial acceptance and quarterly drills instead of downloading the repository every night.
+- **Manual acceptance:** local success does not prove DNS, TLS, SMTP, Docker labels, Restic credentials, systemd timing, backup completeness, or restore safety. Do not claim production readiness or tag the phase until the operator completes the runbook.
+- **Single-server downtime:** backup pause, restore, and host updates cause brief downtime by design when the operator eventually runs them. Add replication only after measured requirements justify it.
