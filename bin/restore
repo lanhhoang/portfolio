@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+# bin/restore
+set -euo pipefail
+umask 077
+
+readonly DATA_DIR=/var/lib/portfolio/storage
+readonly WORK_ROOT=/var/lib/portfolio/backup-work
+readonly ENV_FILE=/etc/portfolio/backup.env
+readonly LOCK_FILE=/run/lock/portfolio-backup.lock
+
+SNAPSHOT_ID=${1:-}
+APP_CONTAINER=""
+APP_IMAGE=""
+RESTORE_DIR=""
+ENV_COPY=""
+OLD_DIR=""
+STOPPED_BY_SCRIPT=0
+REPLACED=0
+
+notify_failure() {
+  local message=$1
+  logger -t portfolio-restore -- "$message" || true
+  if [[ -n "${OPS_SMTP_URL:-}" && -n "${OPS_SMTP_USERNAME:-}" && -n "${OPS_SMTP_PASSWORD:-}" && -n "${OPS_EMAIL_FROM:-}" && -n "${OPS_EMAIL_TO:-}" ]]; then
+    printf 'From: %s\r\nTo: %s\r\nSubject: Portfolio restore failed on %s\r\n\r\n%s\r\n' \
+      "$OPS_EMAIL_FROM" "$OPS_EMAIL_TO" "$(hostname -f)" "$message" |
+      curl --silent --show-error --fail --ssl-reqd \
+        --url "$OPS_SMTP_URL" \
+        --user "$OPS_SMTP_USERNAME:$OPS_SMTP_PASSWORD" \
+        --mail-from "$OPS_EMAIL_FROM" \
+        --mail-rcpt "$OPS_EMAIL_TO" \
+        --upload-file - >/dev/null || logger -t portfolio-restore -- "SMTP failure alert could not be sent" || true
+  fi
+}
+
+cleanup() {
+  local status=$?
+  local recovery_state=unchanged
+  trap - EXIT
+  set +e
+
+  if [[ "$status" -ne 0 ]]; then
+    if [[ "$REPLACED" == 0 && "$STOPPED_BY_SCRIPT" == 1 && -n "$APP_CONTAINER" ]]; then
+      if docker start "$APP_CONTAINER" >/dev/null; then
+        recovery_state=original-restarted
+      else
+        recovery_state=original-restart-failed
+      fi
+    elif [[ "$REPLACED" == 1 && -n "$APP_CONTAINER" ]]; then
+      docker stop --time 10 "$APP_CONTAINER" >/dev/null 2>&1 || true
+      recovery_state=replacement-stopped
+    else
+      recovery_state=left-as-found
+    fi
+    notify_failure "bin/restore snapshot=$SNAPSHOT_ID exited=$status replaced=$REPLACED recovery=$recovery_state previous=${OLD_DIR:-not-created}"
+  fi
+
+  [[ -z "$RESTORE_DIR" ]] || rm -rf -- "$RESTORE_DIR"
+  [[ -z "$ENV_COPY" ]] || rm -f -- "$ENV_COPY"
+  exit "$status"
+}
+
+require_command() {
+  command -v "$1" >/dev/null || { echo "missing command: $1" >&2; return 1; }
+}
+
+require_env() {
+  [[ -n "${!1:-}" ]] || { echo "missing environment variable: $1" >&2; return 1; }
+}
+
+trap cleanup EXIT
+
+[[ $EUID -eq 0 ]] || { echo "bin/restore must run as root" >&2; exit 1; }
+[[ $# -eq 1 && "$SNAPSHOT_ID" =~ ^[0-9a-fA-F]{8,64}$ ]] || { echo "usage: bin/restore SNAPSHOT_ID (8-64 hexadecimal characters; latest is forbidden)" >&2; exit 64; }
+[[ -r "$ENV_FILE" ]] || { echo "cannot read $ENV_FILE" >&2; exit 1; }
+set -a
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+set +a
+
+for command_name in curl docker flock logger restic rsync sha256sum sqlite3; do
+  require_command "$command_name"
+done
+for variable_name in RESTIC_REPOSITORY RESTIC_PASSWORD_FILE AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION; do
+  require_env "$variable_name"
+done
+[[ -r "$RESTIC_PASSWORD_FILE" ]] || { echo "cannot read RESTIC_PASSWORD_FILE" >&2; exit 1; }
+
+exec 9>"$LOCK_FILE"
+flock -n 9 || { echo "another backup or restore is running" >&2; exit 75; }
+
+EXPECTED_CONFIRMATION="RESTORE portfolio $SNAPSHOT_ID"
+if [[ "${PORTFOLIO_RESTORE_CONFIRM:-}" != "$EXPECTED_CONFIRMATION" ]]; then
+  printf 'This stops production and replaces %s. Type exactly: %s\n> ' "$DATA_DIR" "$EXPECTED_CONFIRMATION" >&2
+  IFS= read -r confirmation
+  [[ "$confirmation" == "$EXPECTED_CONFIRMATION" ]] || { echo "restore cancelled" >&2; exit 64; }
+fi
+
+mapfile -t running_containers < <(docker ps --filter label=service=portfolio --filter label=role=web --format '{{.ID}}')
+[[ ${#running_containers[@]} -le 1 ]] || { echo "expected at most one running portfolio web container, found ${#running_containers[@]}" >&2; exit 1; }
+if [[ ${#running_containers[@]} -eq 1 ]]; then
+  APP_CONTAINER=${running_containers[0]}
+else
+  APP_CONTAINER=$(docker ps -a --latest --filter label=service=portfolio --filter label=role=web --format '{{.ID}}')
+fi
+[[ -n "$APP_CONTAINER" ]] || { echo "no portfolio web container found" >&2; exit 1; }
+[[ "$(docker inspect --format '{{.State.Paused}}' "$APP_CONTAINER")" == false ]] || { echo "portfolio web container is paused; resolve backup state first" >&2; exit 1; }
+APP_IMAGE=$(docker inspect --format '{{.Config.Image}}' "$APP_CONTAINER")
+
+restic snapshots "$SNAPSHOT_ID" >/dev/null
+install -d -o root -g root -m 0700 "$WORK_ROOT"
+RESTORE_DIR=$(mktemp -d "$WORK_ROOT/restore.XXXXXXXX")
+ENV_COPY=$(mktemp "$WORK_ROOT/container-env.XXXXXXXX")
+docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$APP_CONTAINER" > "$ENV_COPY"
+chmod 0600 "$ENV_COPY"
+
+if [[ "$(docker inspect --format '{{.State.Running}}' "$APP_CONTAINER")" == true ]]; then
+  docker stop --time 30 "$APP_CONTAINER" >/dev/null
+  STOPPED_BY_SCRIPT=1
+fi
+
+restic restore "$SNAPSHOT_ID" --target "$RESTORE_DIR"
+[[ -f "$RESTORE_DIR/production.sqlite3" ]] || { echo "snapshot lacks production.sqlite3" >&2; exit 1; }
+[[ -d "$RESTORE_DIR/active_storage" ]] || { echo "snapshot lacks active_storage" >&2; exit 1; }
+[[ -f "$RESTORE_DIR/SHA256SUMS" ]] || { echo "snapshot lacks SHA256SUMS" >&2; exit 1; }
+for forbidden in production_queue.sqlite3 production_cache.sqlite3 production_cable.sqlite3; do
+  [[ ! -e "$RESTORE_DIR/$forbidden" ]] || { echo "snapshot unsafely contains $forbidden" >&2; exit 1; }
+done
+(
+  cd "$RESTORE_DIR"
+  sha256sum --check SHA256SUMS
+)
+[[ "$(sqlite3 "$RESTORE_DIR/production.sqlite3" 'PRAGMA integrity_check;')" == ok ]] || { echo "SQLite integrity_check failed" >&2; exit 1; }
+
+RESTORE_TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+OLD_DIR="/var/lib/portfolio/storage.before-$RESTORE_TIMESTAMP"
+[[ ! -e "$OLD_DIR" ]] || { echo "safety directory already exists: $OLD_DIR" >&2; exit 1; }
+install -d -o root -g root -m 0700 "$OLD_DIR"
+find "$DATA_DIR" -mindepth 1 -maxdepth 1 -exec mv -t "$OLD_DIR" -- {} +
+chmod 0750 "$DATA_DIR"
+chown 1000:1000 "$DATA_DIR"
+install -o 1000 -g 1000 -m 0640 "$RESTORE_DIR/production.sqlite3" "$DATA_DIR/production.sqlite3"
+install -d -o 1000 -g 1000 -m 0750 "$DATA_DIR/active_storage"
+rsync -a "$RESTORE_DIR/active_storage/" "$DATA_DIR/active_storage/"
+chown -R 1000:1000 "$DATA_DIR/active_storage"
+REPLACED=1
+
+docker run --rm \
+  --volumes-from "$APP_CONTAINER" \
+  --env-file "$ENV_COPY" \
+  --entrypoint /rails/bin/rails \
+  "$APP_IMAGE" db:prepare
+
+docker start "$APP_CONTAINER" >/dev/null
+for _attempt in $(seq 1 60); do
+  if docker exec "$APP_CONTAINER" curl --fail --silent http://127.0.0.1/up >/dev/null 2>&1; then
+    STOPPED_BY_SCRIPT=0
+    logger -t portfolio-restore -- "restored $SNAPSHOT_ID; previous data retained at $OLD_DIR"
+    printf 'restore complete: snapshot=%s previous=%s\n' "$SNAPSHOT_ID" "$OLD_DIR"
+    exit 0
+  fi
+  sleep 1
+done
+
+echo "health check did not pass within 60 seconds" >&2
+false
