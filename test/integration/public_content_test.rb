@@ -142,6 +142,26 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "short indexes skip the search form until a search is underway" do
+    get "/en/projects"
+    assert_select "form[role=search]", count: 0
+
+    get "/en/projects", params: { tag: "anything" }
+    assert_select "form[role=search]"
+
+    6.times do |index|
+      project = Project.new(role: "Lead")
+      project.translations.build(
+        locale: "en", title: "Extra #{index}", slug: "extra-#{index}", summary: "Extra",
+        body_markdown: "Body", state: "published", published_at: index.days.ago
+      )
+      project.save!
+    end
+
+    get "/en/projects"
+    assert_select "form[role=search] input[type=submit].button"
+  end
+
   test "a search with no matches explains it and offers a way back" do
     get "/en/projects", params: { q: "nothing-matches-this" }
 

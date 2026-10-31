@@ -6,18 +6,20 @@
     <p class="type-lede"><%= t("pages.projects.introduction") %></p>
   </header>
 
-  <%= form_with url: localized_projects_path(locale: current_locale), method: :get, class: "search-bar", html: { role: "search" } do |form| %>
-    <div>
-      <%= form.label :q, t("public.search.label") %>
-      <%= form.search_field :q, value: params[:q], class: "min-h-11" %>
-    </div>
-    <div>
-      <%= form.label :tag, t("public.tags.label") %>
-      <%= form.select :tag,
-        options_for_select([[t("public.tags.all"), ""]] + @tag_translations.map { |tag| [tag.name, tag.slug] }, params[:tag]),
-        {}, class: "min-h-11" %>
-    </div>
-    <%= form.submit t("public.search.submit"), class: "min-h-11" %>
+  <% if @search_offered %>
+    <%= form_with url: localized_projects_path(locale: current_locale), method: :get, class: "search-bar", html: { role: "search" } do |form| %>
+      <div>
+        <%= form.label :q, t("public.search.label") %>
+        <%= form.search_field :q, value: params[:q] %>
+      </div>
+      <div>
+        <%= form.label :tag, t("public.tags.label") %>
+        <%= form.select :tag,
+          options_for_select([[t("public.tags.all"), ""]] + @tag_translations.map { |tag| [tag.name, tag.slug] }, params[:tag]),
+          {} %>
+      </div>
+      <%= form.submit t("public.search.submit"), class: "button" %>
+    <% end %>
   <% end %>
 
   <% if @translations.any? %>

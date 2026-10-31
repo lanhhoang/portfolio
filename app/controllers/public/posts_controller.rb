@@ -7,6 +7,7 @@ module Public
         locale: current_locale, query: params[:q], tag_slug: params[:tag]
       )
       @tag_translations = available_tags
+      @search_offered = search_offered?(PostTranslation.publicly_visible(locale: current_locale))
     end
 
     def show

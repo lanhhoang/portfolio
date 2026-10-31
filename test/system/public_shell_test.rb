@@ -49,7 +49,7 @@ class PublicShellTest < ApplicationSystemTestCase
 
   test "public search controls remain visible and usable at mobile width" do
     page.current_window.resize_to(320, 800)
-    visit localized_projects_path(locale: "en")
+    visit localized_projects_path(locale: "en", q: "system")
 
     metrics = page.evaluate_script(<<~JAVASCRIPT)
       Array.from(document.querySelectorAll('form[role="search"] input, form[role="search"] select')).map((control) => {
