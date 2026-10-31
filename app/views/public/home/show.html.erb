@@ -4,10 +4,13 @@
   <% if @profile_translation %>
     <section aria-labelledby="home-heading" class="hero">
       <div class="hero-text">
-        <h1 id="home-heading" class="type-display"><%= @profile_translation.display_name %></h1>
+        <div class="hero-name">
+          <h1 id="home-heading" class="type-display"><%= @profile_translation.display_name %></h1>
+          <p class="hero-role"><%= t("public.home.role") %></p>
+        </div>
         <p class="type-statement"><%= @profile_translation.headline %></p>
         <p class="type-lede"><%= @profile_translation.introduction %></p>
-        <p class="type-meta"><%= @profile_translation.availability_label %></p>
+        <p class="availability"><%= @profile_translation.availability_label %></p>
         <ul class="flex flex-wrap items-center gap-x-6 gap-y-2">
           <li><%= link_to t("public.home.view_work"), localized_projects_path(locale: current_locale), class: "button" %></li>
           <li><%= link_to t("public.home.view_resume"), localized_resume_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %></li>

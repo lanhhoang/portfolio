@@ -12,7 +12,7 @@
       <header class="page-header">
         <h1><%= @translation.display_name %></h1>
         <p class="type-lede"><%= @translation.introduction %></p>
-        <p class="type-meta"><%= @translation.availability_label %></p>
+        <p class="availability"><%= @translation.availability_label %></p>
       </header>
 
       <% if @profile.portrait.attached? %>

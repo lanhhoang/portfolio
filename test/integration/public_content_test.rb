@@ -44,10 +44,12 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'html[data-accent="orange"]'
     assert_select "h1", text: "Demo Owner"
+    assert_select ".hero-role", text: "Product engineer · English, French, Vietnamese"
+    assert_select ".availability", text: "Available"
     assert_select "title", text: "Demo Owner · Product engineer"
     assert_select ".site-mark", text: "Demo Owner"
     assert_select "p", text: "Ideas. Interfaces. Impact."
-    assert_select "a[href=?]", "/en/projects", text: "See case studies"
+    assert_select "a[href=?]", "/en/projects", text: "See the work"
     assert_select "a[href=?]", "/en/resume", text: "Read résumé"
     assert_select "h3", text: "Visible Project"
     assert_select "h3", text: "Visible Post"
@@ -79,7 +81,7 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     assert_select "dl.facts dd", text: /Present/
     assert_select "dl.facts a[href='https://example.test'][rel='noopener noreferrer']"
     assert_select ".page-end-nav a[href='/en/projects/older-project']", text: "Older Project"
-    assert_select ".page-end-nav a[href='/en/projects']", text: "All case studies"
+    assert_select ".page-end-nav a[href='/en/projects']", text: "All work"
     assert_select ".page-end a[href='/en/contact']"
 
     get "/en/projects/older-project"
@@ -241,7 +243,7 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     get "/en/resume"
     assert_response :success
     assert_select "p", text: I18n.t("public.resume.pdf_unavailable", locale: :en)
-    assert_select "a[href='/en/projects']", text: "See case studies"
+    assert_select "a[href='/en/projects']", text: "See the work"
     assert_select "a[href='/en/contact']", text: "Send a message"
 
     get "/en/resume/download"

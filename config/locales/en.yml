@@ -61,12 +61,13 @@ en:
       introduction: "Send a message about a role or a project. It goes straight to my inbox."
   public:
     home:
+      role: "Product engineer · English, French, Vietnamese"
       selected_work: "Selected work"
       recent_writing: "Recent writing"
       contact: "Get in touch"
       contact_prompt: "Have a role or a project in mind?"
       contact_action: "Send a message"
-      view_work: "See case studies"
+      view_work: "See the work"
       view_resume: "Read résumé"
       no_projects: "Featured case studies will appear here soon."
       no_posts: "No articles yet."
@@ -85,8 +86,8 @@ en:
       timeline: "Timeline"
       present: "Present"
       next: "Next case study"
-      more: "More case studies"
-      all: "All case studies"
+      more: "More work"
+      all: "All work"
       gallery_alt: "%{title}, image %{number}"
       links: "Project links"
       live: "Visit live site"
@@ -105,7 +106,7 @@ en:
       updated: "Updated %{date}"
       download: "Download résumé (PDF)"
       pdf_unavailable: "The PDF is not available yet."
-      see_work: "See case studies"
+      see_work: "See the work"
 
   footer:
     rights: "© %{year} %{name}"

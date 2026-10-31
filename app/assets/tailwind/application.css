@@ -474,6 +474,23 @@ input[type="submit"] {
   gap: 1.5rem;
 }
 
+.hero-name {
+  display: grid;
+  gap: var(--space-tight);
+}
+
+.hero-role {
+  color: var(--muted);
+  font-size: var(--text-lede);
+  font-weight: 600;
+  line-height: var(--leading-heading);
+}
+
+/* Availability is what a recruiter scans for: foreground, not muted meta. */
+.availability {
+  font-weight: 600;
+}
+
 .hero-portrait {
   width: 100%;
   max-width: 24rem;

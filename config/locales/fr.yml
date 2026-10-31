@@ -61,12 +61,13 @@ fr:
       introduction: "Écrivez-moi au sujet d’un poste ou d’un projet. Le message arrive directement dans ma boîte de réception."
   public:
     home:
-      selected_work: "Projets sélectionnés"
+      role: "Ingénieur produit · anglais, français, vietnamien"
+      selected_work: "Réalisations choisies"
       recent_writing: "Articles récents"
       contact: "Prendre contact"
       contact_prompt: "Un poste ou un projet en tête ?"
       contact_action: "Envoyer un message"
-      view_work: "Voir les études de cas"
+      view_work: "Voir les réalisations"
       view_resume: "Lire le CV"
       no_projects: "Les études de cas à la une seront bientôt publiées."
       no_posts: "Aucun article pour le moment."
@@ -78,15 +79,15 @@ fr:
       label: "Étiquettes"
       all: "Toutes les étiquettes"
     projects:
-      title: "Projets"
+      title: "Réalisations"
       empty: "Aucune étude de cas n’est encore publiée."
       no_matches: "Aucune étude de cas ne correspond à cette recherche."
       role: "Rôle"
       timeline: "Période"
       present: "Aujourd’hui"
       next: "Étude de cas suivante"
-      more: "Autres études de cas"
-      all: "Toutes les études de cas"
+      more: "Autres réalisations"
+      all: "Toutes les réalisations"
       gallery_alt: "%{title}, image %{number}"
       links: "Liens du projet"
       live: "Voir le site en ligne"
@@ -105,7 +106,7 @@ fr:
       updated: "Mis à jour le %{date}"
       download: "Télécharger le CV (PDF)"
       pdf_unavailable: "Le PDF n’est pas encore disponible."
-      see_work: "Voir les études de cas"
+      see_work: "Voir les réalisations"
 
   footer:
     rights: "© %{year} %{name}"
