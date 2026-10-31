@@ -191,9 +191,9 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
 
     get "/en/projects/visible-project"
 
-    assert_select '.locale-switcher a[href="/fr/projects/projet-visible"]', text: "Français"
-    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"]', text: "Tiếng Việt"
-    assert_select '.locale-switcher a[href="/vi/projects/visible-project"]', count: 0
+    assert_select '.locale-switcher a[href="/fr/projects/projet-visible"] .locale-name', text: "Français"
+    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"] .locale-name', text: "Tiếng Việt"
+    assert_select '.locale-switcher a[href="/vi/projects/visible-project"] .locale-name', count: 0
 
     @post.translations.create!(
       locale: "fr", title: "Article visible", slug: "article-visible", excerpt: "Extrait",
@@ -202,8 +202,8 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
 
     get "/en/blog/visible-post"
 
-    assert_select '.locale-switcher a[href="/fr/blog/article-visible"]', text: "Français"
-    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"]', text: "Tiếng Việt"
+    assert_select '.locale-switcher a[href="/fr/blog/article-visible"] .locale-name', text: "Français"
+    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"] .locale-name', text: "Tiếng Việt"
   end
 
   test "singleton locale switches link existing and disable missing translations" do
@@ -215,12 +215,12 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     @resume.translations.create!(locale: "fr", title: "CV", description: "CV actuel")
 
     get "/en/about"
-    assert_select '.locale-switcher a[href="/fr/about"]', text: "Français"
-    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"]', text: "Tiếng Việt"
+    assert_select '.locale-switcher a[href="/fr/about"] .locale-name', text: "Français"
+    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"] .locale-name', text: "Tiếng Việt"
 
     get "/en/resume"
-    assert_select '.locale-switcher a[href="/fr/resume"]', text: "Français"
-    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"]', text: "Tiếng Việt"
+    assert_select '.locale-switcher a[href="/fr/resume"] .locale-name', text: "Français"
+    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"] .locale-name', text: "Tiếng Việt"
   end
 
   test "French and Vietnamese dates render without missing translations" do

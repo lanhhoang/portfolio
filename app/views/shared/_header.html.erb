@@ -37,12 +37,14 @@
       <% PublicController::SUPPORTED_LOCALES.each do |locale| %>
         <% switch_path = locale_switch_path(locale) %>
         <% if switch_path %>
-          <%= link_to t("locales.#{locale}"), switch_path,
+          <%= link_to switch_path,
             lang: locale,
             hreflang: locale,
-            aria: { current: ("true" if locale == current_locale) } %>
+            aria: { current: ("true" if locale == current_locale) } do %>
+            <span class="locale-code" aria-hidden="true"><%= locale.upcase %></span><span class="locale-name"><%= t("locales.#{locale}") %></span>
+          <% end %>
         <% else %>
-          <span lang="<%= locale %>" aria-disabled="true"><%= t("locales.#{locale}") %></span>
+          <span lang="<%= locale %>" aria-disabled="true"><span class="locale-code" aria-hidden="true"><%= locale.upcase %></span><span class="locale-name"><%= t("locales.#{locale}") %></span></span>
         <% end %>
       <% end %>
     </nav>

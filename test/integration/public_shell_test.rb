@@ -32,7 +32,7 @@ class PublicShellTest < ActionDispatch::IntegrationTest
     assert_select "html[lang='fr']"
     assert_select "nav[aria-label='Navigation principale']"
     assert_select "a[aria-current='page']", text: "Réalisations"
-    assert_select "a[href='#{localized_projects_path(locale: "vi")}']", text: "Tiếng Việt"
+    assert_select "a[href='#{localized_projects_path(locale: "vi")}'] .locale-name", text: "Tiếng Việt"
   end
 
   test "Vietnamese shell translates both theme actions" do
