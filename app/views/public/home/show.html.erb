@@ -6,7 +6,14 @@
       <div class="hero-text">
         <div class="hero-name">
           <h1 id="home-heading" class="type-display"><%= @profile_translation.display_name %></h1>
-          <p class="hero-role"><%= t("public.home.role") %></p>
+          <% languages = PublicController::SUPPORTED_LOCALES.map do |locale|
+            if locale == current_locale.to_s
+              content_tag(:strong, t("locales.#{locale}"), lang: locale)
+            else
+              link_to t("locales.#{locale}"), localized_root_path(locale: locale), lang: locale, hreflang: locale
+            end
+          end %>
+          <p class="hero-role"><%= t("public.home.role_html", languages: safe_join(languages, content_tag(:span, " · ", class: "hero-role-sep", aria: { hidden: true }))) %></p>
         </div>
         <p class="type-statement"><%= @profile_translation.headline %></p>
         <p class="type-lede"><%= @profile_translation.introduction %></p>

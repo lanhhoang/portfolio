@@ -44,7 +44,10 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'html[data-accent="orange"]'
     assert_select "h1", text: "Demo Owner"
-    assert_select ".hero-role", text: "Product engineer · English, French, Vietnamese"
+    assert_select ".hero-role", text: "Product engineer · works in English · Français · Tiếng Việt"
+    assert_select ".hero-role strong[lang=en]", text: "English"
+    assert_select ".hero-role a[href='/fr'][hreflang=fr]", text: "Français"
+    assert_select ".hero-role a[href='/vi'][hreflang=vi]", text: "Tiếng Việt"
     assert_select ".availability", text: "Available"
     assert_select "title", text: "Demo Owner · Product engineer"
     assert_select ".site-mark", text: "Demo Owner"

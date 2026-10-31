@@ -61,7 +61,7 @@ en:
       introduction: "Send a message about a role or a project. It goes straight to my inbox."
   public:
     home:
-      role: "Product engineer · English, French, Vietnamese"
+      role_html: "Product engineer · works in %{languages}"
       selected_work: "Selected work"
       recent_writing: "Recent writing"
       contact: "Get in touch"

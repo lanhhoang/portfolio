@@ -61,7 +61,7 @@ fr:
       introduction: "Écrivez-moi au sujet d’un poste ou d’un projet. Le message arrive directement dans ma boîte de réception."
   public:
     home:
-      role: "Ingénieur produit · anglais, français, vietnamien"
+      role_html: "Ingénieur produit · travaille en %{languages}"
       selected_work: "Réalisations choisies"
       recent_writing: "Articles récents"
       contact: "Prendre contact"

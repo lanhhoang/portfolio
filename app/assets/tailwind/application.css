@@ -479,11 +479,22 @@ input[type="submit"] {
   gap: var(--space-tight);
 }
 
+/* Languages are the identity, so they carry foreground weight in a muted line. */
 .hero-role {
   color: var(--muted);
   font-size: var(--text-lede);
   font-weight: 600;
   line-height: var(--leading-heading);
+}
+
+.hero-role :is(a, strong) {
+  color: var(--foreground);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.hero-role a:hover {
+  color: var(--accent);
 }
 
 /* Availability is what a recruiter scans for: foreground, not muted meta. */

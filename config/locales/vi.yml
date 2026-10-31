@@ -61,7 +61,7 @@ vi:
       introduction: "Gửi tin nhắn về một vị trí hoặc dự án. Tin nhắn sẽ đến thẳng hộp thư của tôi."
   public:
     home:
-      role: "Kỹ sư sản phẩm · tiếng Anh, tiếng Pháp, tiếng Việt"
+      role_html: "Kỹ sư sản phẩm · làm việc bằng %{languages}"
       selected_work: "Dự án nổi bật"
       recent_writing: "Bài viết gần đây"
       contact: "Liên hệ"
