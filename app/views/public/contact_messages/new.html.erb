@@ -1,45 +1,49 @@
 <% page_metadata(title: t("seo.contact.title"), description: t("seo.contact.description")) %>
 
-<main id="main-content" class="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6" tabindex="-1" aria-labelledby="contact-title">
-  <h1 id="contact-title" class="text-4xl font-bold sm:text-6xl"><%= t("pages.contact.title") %></h1>
-  <p class="mt-4 max-w-prose"><%= t("pages.contact.introduction") %></p>
+<main id="main-content" class="site-container page-shell" tabindex="-1" aria-labelledby="contact-title">
+  <div class="grid max-w-2xl gap-12">
+    <header class="page-header">
+      <h1 id="contact-title" class="text-4xl font-bold"><%= t("pages.contact.title") %></h1>
+      <p class="max-w-prose text-lg"><%= t("pages.contact.introduction") %></p>
+    </header>
 
-  <% if notice.present? %><p role="status" class="mt-6 border p-4"><%= notice %></p><% end %>
-  <% if alert.present? %><p role="alert" class="mt-6 border border-red-600 p-4"><%= alert %></p><% end %>
+    <% if notice.present? %><p role="status" class="border p-4"><%= notice %></p><% end %>
+    <% if alert.present? %><p role="alert" class="border border-red-600 p-4"><%= alert %></p><% end %>
 
-  <%= form_with model: @contact_message, url: localized_contact_path(locale: I18n.locale), class: "mt-8 space-y-6" do |form| %>
-    <% if @contact_message.errors.any? %>
-      <div role="alert" class="border border-red-600 p-4">
-        <p class="font-semibold"><%= t("contact.errors", count: @contact_message.errors.count) %></p>
-        <ul class="mt-2 list-disc pl-5">
-          <% @contact_message.errors.full_messages.each do |message| %>
-            <li><%= message %></li>
-          <% end %>
-        </ul>
+    <%= form_with model: @contact_message, url: localized_contact_path(locale: I18n.locale), class: "space-y-6" do |form| %>
+      <% if @contact_message.errors.any? %>
+        <div role="alert" class="border border-red-600 p-4">
+          <p class="font-semibold"><%= t("contact.errors", count: @contact_message.errors.count) %></p>
+          <ul class="mt-2 list-disc pl-5">
+            <% @contact_message.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <div class="absolute -left-[10000px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
+        <%= label_tag "contact_message_website", t("contact.fields.website") %>
+        <%= text_field_tag "contact_message[website]", nil, id: "contact_message_website", tabindex: -1, autocomplete: "off" %>
       </div>
-    <% end %>
 
-    <div class="absolute -left-[10000px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
-      <%= label_tag "contact_message_website", t("contact.fields.website") %>
-      <%= text_field_tag "contact_message[website]", nil, id: "contact_message_website", tabindex: -1, autocomplete: "off" %>
-    </div>
+      <% {
+        sender_name: [ "text", 120 ],
+        sender_email: [ "email", 254 ],
+        subject: [ "text", 200 ]
+      }.each do |field, (type, maxlength)| %>
+        <div>
+          <%= form.label field, t("contact.fields.#{field}"), class: "block font-semibold" %>
+          <%= form.public_send("#{type}_field", field, required: true, maxlength: maxlength, class: "mt-2 min-h-12 w-full border bg-transparent px-3 py-2") %>
+        </div>
+      <% end %>
 
-    <% {
-      sender_name: [ "text", 120 ],
-      sender_email: [ "email", 254 ],
-      subject: [ "text", 200 ]
-    }.each do |field, (type, maxlength)| %>
       <div>
-        <%= form.label field, t("contact.fields.#{field}"), class: "block font-semibold" %>
-        <%= form.public_send("#{type}_field", field, required: true, maxlength: maxlength, class: "mt-2 min-h-12 w-full border bg-transparent px-3 py-2") %>
+        <%= form.label :body, t("contact.fields.body"), class: "block font-semibold" %>
+        <%= form.text_area :body, required: true, rows: 8, maxlength: 10_000, class: "mt-2 w-full border bg-transparent px-3 py-2" %>
       </div>
+
+      <%= form.submit t("contact.submit"), class: "min-h-12 cursor-pointer bg-[var(--accent)] px-6 py-3 font-semibold text-[var(--accent-foreground)]" %>
     <% end %>
-
-    <div>
-      <%= form.label :body, t("contact.fields.body"), class: "block font-semibold" %>
-      <%= form.text_area :body, required: true, rows: 8, maxlength: 10_000, class: "mt-2 w-full border bg-transparent px-3 py-2" %>
-    </div>
-
-    <%= form.submit t("contact.submit"), class: "min-h-12 cursor-pointer bg-[var(--accent)] px-6 py-3 font-semibold text-[var(--accent-foreground)]" %>
-  <% end %>
+  </div>
 </main>

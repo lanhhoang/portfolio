@@ -13,10 +13,20 @@ module Public
       @translation = ProjectTranslation.publicly_visible(locale: current_locale)
         .includes(project: { tags: :translations })
         .find_by!(slug: params[:slug])
+      @next_translation = next_translation
       build_locale_switch_paths
     end
 
     private
+
+    # The case study after this one in index order, wrapping to the first.
+    def next_translation
+      ordered = ProjectTranslation.publicly_visible(locale: current_locale).order(published_at: :desc, id: :desc)
+      ids = ordered.pluck(:id)
+      return if ids.size < 2
+
+      ordered.find(ids[(ids.index(@translation.id) + 1) % ids.size])
+    end
 
     def available_tags
       visible_ids = ProjectTranslation.publicly_visible(locale: current_locale).select(:project_id)

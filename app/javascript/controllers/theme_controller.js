@@ -46,8 +46,6 @@ export default class extends Controller {
       "aria-label",
       dark ? this.lightLabelValue : this.darkLabelValue,
     );
-    this.toggleTarget.textContent = dark
-      ? this.lightLabelValue
-      : this.darkLabelValue;
+    this.toggleTarget.title = dark ? this.lightLabelValue : this.darkLabelValue;
   }
 }

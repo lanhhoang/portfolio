@@ -62,6 +62,34 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     assert_select "h2", text: "Secret Draft", count: 0
   end
 
+  test "project page leads with case study facts and links to the next case study" do
+    @project.update!(started_on: Date.new(2024, 3, 1), live_url: "https://example.test")
+    other = Project.new(role: "Lead")
+    other.translations.build(
+      locale: "en", title: "Older Project", slug: "older-project", summary: "Older",
+      body_markdown: "Body", state: "published", published_at: 5.days.ago
+    )
+    other.save!
+
+    get "/en/projects/visible-project"
+
+    assert_select "dl.facts dt", text: "Role"
+    assert_select "dl.facts dd", text: "Engineer"
+    assert_select "dl.facts time[datetime='2024-03-01']", text: "2024"
+    assert_select "dl.facts dd", text: /Present/
+    assert_select "dl.facts a[href='https://example.test'][rel='noopener noreferrer']"
+    assert_select "nav.case-next a[href='/en/projects/older-project']", text: "Older Project"
+
+    get "/en/projects/older-project"
+    assert_select "nav.case-next a[href='/en/projects/visible-project']"
+  end
+
+  test "project page omits the next link when it is the only case study" do
+    get "/en/projects/visible-project"
+
+    assert_select "nav.case-next", count: 0
+  end
+
   test "a search with no matches explains it and offers a way back" do
     get "/en/projects", params: { q: "nothing-matches-this" }
 

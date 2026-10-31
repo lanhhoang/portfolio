@@ -1,44 +1,52 @@
 <% page_metadata(title: t("seo.home.title", name: site_name), description: t("seo.home.description")) %>
 
-<main id="main-content" class="site-container page-shell space-y-16" tabindex="-1">
+<main id="main-content" class="site-container page-shell page-stack" tabindex="-1">
   <% if @profile_translation %>
-    <section aria-labelledby="home-heading" class="space-y-6">
-      <h1 id="home-heading" class="text-5xl font-bold"><%= @profile_translation.display_name %></h1>
-      <p class="max-w-prose text-2xl font-bold"><%= @profile_translation.headline %></p>
-      <p class="max-w-prose text-lg"><%= @profile_translation.introduction %></p>
-      <p><%= @profile_translation.availability_label %></p>
-      <ul class="flex flex-wrap gap-x-6 gap-y-2">
-        <li><%= link_to t("public.home.view_work"), localized_projects_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %></li>
-        <li><%= link_to t("public.home.view_resume"), localized_resume_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %></li>
-      </ul>
+    <section aria-labelledby="home-heading" class="hero">
+      <div class="hero-text">
+        <h1 id="home-heading" class="text-5xl font-bold"><%= @profile_translation.display_name %></h1>
+        <p class="max-w-prose text-2xl font-bold"><%= @profile_translation.headline %></p>
+        <p class="max-w-prose text-lg"><%= @profile_translation.introduction %></p>
+        <p><%= @profile_translation.availability_label %></p>
+        <ul class="flex flex-wrap gap-x-6 gap-y-2">
+          <li><%= link_to t("public.home.view_work"), localized_projects_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %></li>
+          <li><%= link_to t("public.home.view_resume"), localized_resume_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %></li>
+        </ul>
+      </div>
       <% if @profile.portrait.attached? %>
-        <%= responsive_image_tag(
-          @profile.portrait,
-          alt: @profile_translation.display_name,
-          sizes: "(min-width: 64rem) 24rem, 100vw",
-          widths: [320, 480, 640, 960],
-          class: "max-w-full"
-        ) %>
+        <div class="hero-portrait">
+          <%= responsive_image_tag(
+            @profile.portrait,
+            alt: @profile_translation.display_name,
+            sizes: "(min-width: 56rem) 24rem, 100vw",
+            widths: [320, 480, 640, 960],
+            class: "max-w-full"
+          ) %>
+        </div>
       <% end %>
     </section>
   <% end %>
 
-  <section aria-labelledby="selected-work-heading" class="space-y-6">
+  <section aria-labelledby="selected-work-heading" class="rail">
     <h2 id="selected-work-heading" class="text-sm uppercase"><%= t("public.home.selected_work") %></h2>
     <% if @projects.any? %>
-      <div class="grid gap-8 md:grid-cols-2">
+      <div class="entry-list">
         <% @projects.each do |translation| %>
-          <article class="space-y-3">
+          <article class="entry">
             <% if translation.project.cover_image.attached? %>
-              <%= responsive_image_tag(
-                translation.project.cover_image,
-                alt: translation.title,
-                sizes: "(min-width: 80rem) 40rem, (min-width: 48rem) 50vw, 100vw",
-                class: "max-w-full"
-              ) %>
+              <div class="entry-media">
+                <%= responsive_image_tag(
+                  translation.project.cover_image,
+                  alt: translation.title,
+                  sizes: "(min-width: 80rem) 24rem, (min-width: 56rem) 30vw, 100vw",
+                  class: "max-w-full"
+                ) %>
+              </div>
             <% end %>
-            <h3 class="text-2xl font-bold"><%= link_to translation.title, localized_project_path(locale: current_locale, slug: translation.slug) %></h3>
-            <p><%= translation.summary %></p>
+            <div class="entry-text">
+              <h3 class="text-2xl font-bold"><%= link_to translation.title, localized_project_path(locale: current_locale, slug: translation.slug) %></h3>
+              <p class="max-w-prose"><%= translation.summary %></p>
+            </div>
           </article>
         <% end %>
       </div>
@@ -47,14 +55,17 @@
     <% end %>
   </section>
 
-  <section aria-labelledby="recent-writing-heading" class="space-y-6">
+  <section aria-labelledby="recent-writing-heading" class="rail">
     <h2 id="recent-writing-heading" class="text-sm uppercase"><%= t("public.home.recent_writing") %></h2>
     <% if @posts.any? %>
-      <ol class="space-y-4">
+      <ol class="entry-list">
         <% @posts.each do |translation| %>
-          <li>
-            <h3 class="text-xl font-bold"><%= link_to translation.title, localized_post_path(locale: current_locale, slug: translation.slug) %></h3>
-            <p><%= translation.excerpt %></p>
+          <li class="entry">
+            <%= time_tag translation.published_at.to_date, l(translation.published_at.to_date, format: :long), class: "entry-meta" %>
+            <div class="entry-text">
+              <h3 class="text-xl font-bold"><%= link_to translation.title, localized_post_path(locale: current_locale, slug: translation.slug) %></h3>
+              <p class="max-w-prose"><%= translation.excerpt %></p>
+            </div>
           </li>
         <% end %>
       </ol>
@@ -63,9 +74,11 @@
     <% end %>
   </section>
 
-  <section aria-labelledby="contact-heading" class="space-y-4">
+  <section aria-labelledby="contact-heading" class="rail">
     <h2 id="contact-heading" class="text-sm uppercase"><%= t("public.home.contact") %></h2>
-    <p class="max-w-prose"><%= t("public.home.contact_prompt") %></p>
-    <%= link_to t("public.home.contact_action"), localized_contact_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %>
+    <div class="grid justify-items-start gap-3">
+      <p class="max-w-prose text-2xl font-bold"><%= t("public.home.contact_prompt") %></p>
+      <%= link_to t("public.home.contact_action"), localized_contact_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %>
+    </div>
   </section>
 </main>

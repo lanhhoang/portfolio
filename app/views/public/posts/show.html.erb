@@ -8,9 +8,9 @@
 ) %>
 
 <main id="main-content" class="site-container page-shell" tabindex="-1">
-  <article class="space-y-8">
-    <header class="space-y-3">
-      <p><%= l(@translation.published_at.to_date, format: :long) %></p>
+  <article class="grid gap-12">
+    <header class="page-header">
+      <%= time_tag @translation.published_at.to_date, l(@translation.published_at.to_date, format: :long), class: "entry-meta" %>
       <h1 class="text-4xl font-bold"><%= @translation.title %></h1>
       <p class="max-w-prose text-lg"><%= @translation.excerpt %></p>
       <%= render "public/shared/tags", taggable: @translation.post %>

@@ -5,19 +5,56 @@
   image_url: (@translation.project.cover_image.attached? ? url_for(@translation.project.cover_image) : nil),
   json_ld: project_json_ld(@translation)
 ) %>
+<% project = @translation.project %>
 
 <main id="main-content" class="site-container page-shell" tabindex="-1">
-  <article class="space-y-8">
-    <header class="space-y-3">
-      <h1 class="text-4xl font-bold"><%= @translation.title %></h1>
-      <p class="max-w-prose text-lg"><%= @translation.summary %></p>
-      <p><%= t("public.projects.role", role: @translation.project.role) %></p>
-      <%= render "public/shared/tags", taggable: @translation.project %>
+  <article class="page-stack">
+    <header class="case-header">
+      <div class="page-header">
+        <h1 class="text-4xl font-bold"><%= @translation.title %></h1>
+        <p class="max-w-prose text-lg"><%= @translation.summary %></p>
+      </div>
+
+      <dl class="facts">
+        <div>
+          <dt><%= t("public.projects.role") %></dt>
+          <dd><%= project.role %></dd>
+        </div>
+        <% if project.started_on %>
+          <div>
+            <dt><%= t("public.projects.timeline") %></dt>
+            <dd>
+              <%= time_tag project.started_on, project.started_on.year %><% if project.ended_on.nil? %>–<%= t("public.projects.present") %><% elsif project.ended_on.year != project.started_on.year %>–<%= time_tag project.ended_on, project.ended_on.year %><% end %>
+            </dd>
+          </div>
+        <% end %>
+        <% if project.tags.any? %>
+          <div>
+            <dt><%= t("public.tags.label") %></dt>
+            <dd><%= render "public/shared/tags", taggable: project %></dd>
+          </div>
+        <% end %>
+        <% if project.live_url.present? || project.source_url.present? %>
+          <div>
+            <dt><%= t("public.projects.links") %></dt>
+            <dd>
+              <ul class="grid justify-items-start">
+                <% if project.live_url.present? %>
+                  <li><%= link_to t("public.projects.live"), project.live_url, rel: "noopener noreferrer", class: "inline-flex min-h-11 items-center" %></li>
+                <% end %>
+                <% if project.source_url.present? %>
+                  <li><%= link_to t("public.projects.source"), project.source_url, rel: "noopener noreferrer", class: "inline-flex min-h-11 items-center" %></li>
+                <% end %>
+              </ul>
+            </dd>
+          </div>
+        <% end %>
+      </dl>
     </header>
 
-    <% if @translation.project.cover_image.attached? %>
+    <% if project.cover_image.attached? %>
       <%= responsive_image_tag(
-        @translation.project.cover_image,
+        project.cover_image,
         alt: @translation.title,
         sizes: "(min-width: 80rem) 80rem, 100vw",
         widths: [640, 960, 1280, 1600],
@@ -27,25 +64,27 @@
       ) %>
     <% end %>
 
-    <div class="rich-text"><%= sanitize @translation.body_html %></div>
+    <div class="case-body rail-offset rail">
+      <div class="rich-text"><%= sanitize @translation.body_html %></div>
 
-    <% if @translation.project.gallery_images.attached? %>
-      <ul class="grid gap-4 md:grid-cols-2">
-        <% @translation.project.gallery_images.each_with_index do |image, index| %>
-          <li><%= responsive_image_tag(
-            image,
-            alt: t("public.projects.gallery_alt", title: @translation.title, number: index + 1),
-            sizes: "(min-width: 48rem) 50vw, 100vw",
-            class: "max-w-full"
-          ) %></li>
-        <% end %>
-      </ul>
-    <% end %>
+      <% if project.gallery_images.attached? %>
+        <ul class="grid gap-4 md:grid-cols-2">
+          <% project.gallery_images.each_with_index do |image, index| %>
+            <li><%= responsive_image_tag(
+              image,
+              alt: t("public.projects.gallery_alt", title: @translation.title, number: index + 1),
+              sizes: "(min-width: 80rem) 30rem, (min-width: 48rem) 40vw, 100vw",
+              class: "max-w-full"
+            ) %></li>
+          <% end %>
+        </ul>
+      <% end %>
+    </div>
 
-    <% if @translation.project.live_url.present? || @translation.project.source_url.present? %>
-      <nav aria-label="<%= t("public.projects.links") %>" class="flex gap-4">
-        <%= link_to t("public.projects.live"), @translation.project.live_url, rel: "noopener" if @translation.project.live_url.present? %>
-        <%= link_to t("public.projects.source"), @translation.project.source_url, rel: "noopener" if @translation.project.source_url.present? %>
+    <% if @next_translation %>
+      <nav class="case-next" aria-label="<%= t("public.projects.next") %>">
+        <p class="entry-meta"><%= t("public.projects.next") %></p>
+        <%= link_to @next_translation.title, localized_project_path(locale: current_locale, slug: @next_translation.slug), class: "text-2xl font-bold" %>
       </nav>
     <% end %>
   </article>
