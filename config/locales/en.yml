@@ -85,6 +85,8 @@ en:
       timeline: "Timeline"
       present: "Present"
       next: "Next case study"
+      more: "More case studies"
+      all: "All case studies"
       gallery_alt: "%{title}, image %{number}"
       links: "Project links"
       live: "Visit live site"
@@ -93,12 +95,17 @@ en:
       title: "Writing"
       empty: "No articles are published yet."
       no_matches: "No articles match this search."
+      more: "More articles"
+      older: "Older article"
+      newer: "Newer article"
+      all: "All articles"
     about:
       email: "Email me at %{email}"
     resume:
       updated: "Updated %{date}"
       download: "Download résumé (PDF)"
       pdf_unavailable: "The PDF is not available yet."
+      see_work: "See case studies"
 
   footer:
     rights: "© %{year} %{name}"

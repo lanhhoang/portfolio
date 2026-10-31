@@ -78,16 +78,53 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     assert_select "dl.facts time[datetime='2024-03-01']", text: "2024"
     assert_select "dl.facts dd", text: /Present/
     assert_select "dl.facts a[href='https://example.test'][rel='noopener noreferrer']"
-    assert_select "nav.case-next a[href='/en/projects/older-project']", text: "Older Project"
+    assert_select ".page-end-nav a[href='/en/projects/older-project']", text: "Older Project"
+    assert_select ".page-end-nav a[href='/en/projects']", text: "All case studies"
+    assert_select ".page-end a[href='/en/contact']"
 
     get "/en/projects/older-project"
-    assert_select "nav.case-next a[href='/en/projects/visible-project']"
+    assert_select ".page-end-nav a[href='/en/projects/visible-project']"
   end
 
   test "project page omits the next link when it is the only case study" do
     get "/en/projects/visible-project"
 
-    assert_select "nav.case-next", count: 0
+    assert_select ".page-end-nav a[href^='/en/projects/']", count: 0
+    assert_select ".page-end-nav a[href='/en/projects']"
+  end
+
+  test "work rows show role and years before the summary" do
+    @project.update!(started_on: Date.new(2021, 1, 1), ended_on: Date.new(2023, 6, 1))
+
+    get "/en/projects"
+    assert_select ".entry .entry-meta", text: /Engineer · 2021–2023/
+
+    get "/en"
+    assert_select "ul.entry-list li .entry-meta", text: /Engineer · 2021–2023/
+  end
+
+  test "post page links to older and newer articles and back to the index" do
+    older = Post.new
+    older.translations.build(
+      locale: "en", title: "Older Post", slug: "older-post", excerpt: "Earlier",
+      body_markdown: "Body", state: "published", published_at: 3.days.ago
+    )
+    older.save!
+
+    get "/en/blog/visible-post"
+    assert_select ".page-end-nav a[href='/en/blog/older-post']", text: "Older Post"
+    assert_select ".page-end-nav", text: /Newer article/, count: 0
+    assert_select ".page-end-nav a[href='/en/blog']", text: "All articles"
+
+    get "/en/blog/older-post"
+    assert_select ".page-end-nav a[href='/en/blog/visible-post']", text: "Visible Post"
+  end
+
+  test "footer lists the owner's social links" do
+    @profile.update!(social_links: { "GitHub" => "https://github.com/demo" })
+
+    get "/en"
+    assert_select ".site-footer a[href='https://github.com/demo'][rel~=me]", text: "GitHub"
   end
 
   test "a search with no matches explains it and offers a way back" do
@@ -204,6 +241,8 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     get "/en/resume"
     assert_response :success
     assert_select "p", text: I18n.t("public.resume.pdf_unavailable", locale: :en)
+    assert_select "a[href='/en/projects']", text: "See case studies"
+    assert_select "a[href='/en/contact']", text: "Send a message"
 
     get "/en/resume/download"
     assert_response :not_found

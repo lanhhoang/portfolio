@@ -85,6 +85,8 @@ vi:
       timeline: "Thời gian"
       present: "Hiện tại"
       next: "Dự án tiếp theo"
+      more: "Các dự án khác"
+      all: "Tất cả dự án"
       gallery_alt: "%{title}, hình %{number}"
       links: "Liên kết dự án"
       live: "Xem trang trực tuyến"
@@ -93,12 +95,17 @@ vi:
       title: "Bài viết"
       empty: "Chưa có bài viết nào được đăng."
       no_matches: "Không có bài viết nào phù hợp với tìm kiếm này."
+      more: "Các bài viết khác"
+      older: "Bài cũ hơn"
+      newer: "Bài mới hơn"
+      all: "Tất cả bài viết"
     about:
       email: "Gửi email cho tôi: %{email}"
     resume:
       updated: "Cập nhật %{date}"
       download: "Tải hồ sơ (PDF)"
       pdf_unavailable: "Bản PDF chưa có sẵn."
+      see_work: "Xem dự án"
 
   footer:
     rights: "© %{year} %{name}"

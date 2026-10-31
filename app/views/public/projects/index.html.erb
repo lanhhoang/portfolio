@@ -21,27 +21,11 @@
   <% end %>
 
   <% if @translations.any? %>
-    <div class="entry-list">
+    <ul class="entry-list">
       <% @translations.each do |translation| %>
-        <article class="entry">
-          <% if translation.project.cover_image.attached? %>
-            <div class="entry-media">
-              <%= responsive_image_tag(
-                translation.project.cover_image,
-                alt: translation.title,
-                sizes: "(min-width: 80rem) 32rem, (min-width: 56rem) 40vw, 100vw",
-                class: "max-w-full"
-              ) %>
-            </div>
-          <% end %>
-          <div class="entry-text">
-            <h2 class="type-heading"><%= link_to translation.title, localized_project_path(locale: current_locale, slug: translation.slug) %></h2>
-            <p class="max-w-prose"><%= translation.summary %></p>
-            <%= render "public/shared/tags", taggable: translation.project %>
-          </div>
-        </article>
+        <li><%= render "public/projects/entry", translation: translation, heading: :h2, tags: true %></li>
       <% end %>
-    </div>
+    </ul>
   <% else %>
     <% if params[:q].present? || params[:tag].present? %>
       <p><%= t("public.projects.no_matches") %></p>

@@ -13,10 +13,22 @@ module Public
       @translation = PostTranslation.publicly_visible(locale: current_locale)
         .includes(post: { tags: :translations })
         .find_by!(slug: params[:slug])
+      @newer_translation, @older_translation = adjacent_translations
       build_locale_switch_paths
     end
 
     private
+
+    # Neighbours in index order (newest first); nil at either end.
+    def adjacent_translations
+      ordered = PostTranslation.publicly_visible(locale: current_locale).order(published_at: :desc, id: :desc)
+      ids = ordered.pluck(:id)
+      position = ids.index(@translation.id)
+      newer_id = ids[position - 1] if position.positive?
+      older_id = ids[position + 1]
+      found = ordered.where(id: [ newer_id, older_id ].compact).index_by(&:id)
+      [ found[newer_id], found[older_id] ]
+    end
 
     def available_tags
       visible_ids = PostTranslation.publicly_visible(locale: current_locale).select(:post_id)

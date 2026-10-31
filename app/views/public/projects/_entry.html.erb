@@ -1,0 +1,26 @@
+<%# Text-first case study row: title, role and years, summary; cover image supports. %>
+<% project = translation.project %>
+<article class="entry">
+  <div class="entry-text">
+    <%= content_tag heading, class: "type-heading" do %>
+      <%= link_to translation.title, localized_project_path(locale: current_locale, slug: translation.slug) %>
+    <% end %>
+    <p class="entry-meta">
+      <%= project.role %><% if project.started_on %> · <%= project_timeline(project) %><% end %>
+    </p>
+    <p class="max-w-prose"><%= translation.summary %></p>
+    <% if local_assigns[:tags] %>
+      <%= render "public/shared/tags", taggable: project %>
+    <% end %>
+  </div>
+  <% if project.cover_image.attached? %>
+    <div class="entry-media">
+      <%= responsive_image_tag(
+        project.cover_image,
+        alt: "",
+        sizes: "(min-width: 80rem) 24rem, (min-width: 56rem) 30vw, 100vw",
+        class: "max-w-full"
+      ) %>
+    </div>
+  <% end %>
+</article>

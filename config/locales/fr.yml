@@ -85,6 +85,8 @@ fr:
       timeline: "Période"
       present: "Aujourd’hui"
       next: "Étude de cas suivante"
+      more: "Autres études de cas"
+      all: "Toutes les études de cas"
       gallery_alt: "%{title}, image %{number}"
       links: "Liens du projet"
       live: "Voir le site en ligne"
@@ -93,12 +95,17 @@ fr:
       title: "Articles"
       empty: "Aucun article n’est encore publié."
       no_matches: "Aucun article ne correspond à cette recherche."
+      more: "Autres articles"
+      older: "Article précédent"
+      newer: "Article suivant"
+      all: "Tous les articles"
     about:
       email: "M’écrire à %{email}"
     resume:
       updated: "Mis à jour le %{date}"
       download: "Télécharger le CV (PDF)"
       pdf_unavailable: "Le PDF n’est pas encore disponible."
+      see_work: "Voir les études de cas"
 
   footer:
     rights: "© %{year} %{name}"

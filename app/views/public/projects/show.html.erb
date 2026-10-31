@@ -23,9 +23,7 @@
         <% if project.started_on %>
           <div>
             <dt><%= t("public.projects.timeline") %></dt>
-            <dd>
-              <%= time_tag project.started_on, project.started_on.year %><% if project.ended_on.nil? %>–<%= t("public.projects.present") %><% elsif project.ended_on.year != project.started_on.year %>–<%= time_tag project.ended_on, project.ended_on.year %><% end %>
-            </dd>
+            <dd><%= project_timeline(project) %></dd>
           </div>
         <% end %>
         <% if project.tags.any? %>
@@ -60,7 +58,7 @@
         widths: [640, 960, 1280, 1600],
         loading: "eager",
         fetchpriority: "high",
-        class: "max-w-full"
+        class: "w-full"
       ) %>
     <% end %>
 
@@ -81,11 +79,17 @@
       <% end %>
     </div>
 
-    <% if @next_translation %>
-      <nav class="case-next" aria-label="<%= t("public.projects.next") %>">
-        <p class="entry-meta"><%= t("public.projects.next") %></p>
-        <%= link_to @next_translation.title, localized_project_path(locale: current_locale, slug: @next_translation.slug), class: "type-statement" %>
+    <footer class="page-end">
+      <nav class="page-end-nav" aria-label="<%= t("public.projects.more") %>">
+        <% if @next_translation %>
+          <div>
+            <p class="entry-meta"><%= t("public.projects.next") %></p>
+            <%= link_to @next_translation.title, localized_project_path(locale: current_locale, slug: @next_translation.slug), class: "type-heading" %>
+          </div>
+        <% end %>
+        <%= link_to t("public.projects.all"), localized_projects_path(locale: current_locale), class: "page-end-back" %>
       </nav>
-    <% end %>
+      <%= render "public/shared/next_step" %>
+    </footer>
   </article>
 </main>

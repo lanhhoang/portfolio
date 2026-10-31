@@ -24,10 +24,29 @@
         widths: [640, 960, 1280, 1600],
         loading: "eager",
         fetchpriority: "high",
-        class: "max-w-full"
+        class: "w-full"
       ) %>
     <% end %>
 
     <div class="rich-text"><%= sanitize @translation.body_html %></div>
+
+    <footer class="page-end">
+      <nav class="page-end-nav" aria-label="<%= t("public.posts.more") %>">
+        <% if @older_translation %>
+          <div>
+            <p class="entry-meta"><%= t("public.posts.older") %></p>
+            <%= link_to @older_translation.title, localized_post_path(locale: current_locale, slug: @older_translation.slug), class: "type-heading" %>
+          </div>
+        <% end %>
+        <% if @newer_translation %>
+          <div>
+            <p class="entry-meta"><%= t("public.posts.newer") %></p>
+            <%= link_to @newer_translation.title, localized_post_path(locale: current_locale, slug: @newer_translation.slug), class: "type-heading" %>
+          </div>
+        <% end %>
+        <%= link_to t("public.posts.all"), localized_blog_path(locale: current_locale), class: "page-end-back" %>
+      </nav>
+      <%= render "public/shared/next_step" %>
+    </footer>
   </article>
 </main>

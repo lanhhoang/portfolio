@@ -185,12 +185,12 @@ a:hover {
 
 /* Titles in lists are clearly clickable rows; underline only on intent. */
 .entry-text :is(h2, h3) a,
-.case-next a {
+.page-end-nav .type-heading {
   text-decoration-line: none;
 }
 
 .entry-text :is(h2, h3) a:hover,
-.case-next a:hover {
+.page-end-nav .type-heading:hover {
   text-decoration-line: underline;
 }
 
@@ -484,6 +484,12 @@ input[type="submit"] {
   width: 100%;
 }
 
+/* List thumbnails share one frame so rows keep an even rhythm. */
+.entry-media img {
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
 /* Divided index rows for case studies and articles. */
 .entry-list {
   display: grid;
@@ -612,11 +618,50 @@ input[type="submit"] {
   list-style: disc;
 }
 
-.case-next {
+/* Every article ends with somewhere to go: siblings, the index, then contact. */
+.page-end {
   display: grid;
-  gap: 0.5rem;
+  gap: var(--space-section);
+}
+
+.page-end-nav {
+  display: grid;
+  gap: 1.5rem;
   padding-top: var(--space-group);
   border-top: 1px solid var(--border);
+}
+
+.page-end-nav > div {
+  display: grid;
+  gap: 0.25rem;
+  justify-items: start;
+}
+
+.page-end-back {
+  justify-self: start;
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+}
+
+.next-step {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-tight);
+}
+
+.button-meta {
+  margin-left: 0.5em;
+  font-weight: 500;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
 }
 
 h1 {
@@ -694,6 +739,15 @@ h1 {
   margin: 0;
 }
 
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .footer-grid a {
   min-height: 2.75rem;
   display: inline-flex;
@@ -725,8 +779,8 @@ h1 {
   }
 
   .entry:has(> .entry-media) {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-    column-gap: 2rem;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    column-gap: clamp(2rem, 4vw, 3rem);
   }
 
   .entry:has(> .entry-meta) {
@@ -736,6 +790,11 @@ h1 {
 
   .case-header {
     grid-template-columns: minmax(0, 2fr) minmax(14rem, 1fr);
+  }
+
+  .page-end-nav {
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    align-items: end;
   }
 
   .header-grid {

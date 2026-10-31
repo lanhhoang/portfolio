@@ -1,0 +1,5 @@
+<%# Closing invitation shared by pages that would otherwise dead-end. %>
+<div class="next-step">
+  <p class="type-statement"><%= t("public.home.contact_prompt") %></p>
+  <%= link_to t("public.home.contact_action"), localized_contact_path(locale: current_locale), class: "button" %>
+</div>
