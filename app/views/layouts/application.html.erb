@@ -11,6 +11,7 @@
 
     <%= theme_bootstrap_script %>
     <%= yield :head %>
+    <link rel="preload" href="/fonts/BeVietnamPro-Variable.ttf" as="font" type="font/ttf" crossorigin>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
 

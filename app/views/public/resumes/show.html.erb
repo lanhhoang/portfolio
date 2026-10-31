@@ -6,9 +6,9 @@
 
 <main id="main-content" class="site-container page-shell" tabindex="-1">
   <article class="page-header justify-items-start">
-    <h1 class="text-4xl font-bold"><%= @translation.title %></h1>
-    <p class="max-w-prose"><%= @translation.description %></p>
-    <p><%= t("public.resume.updated", date: l(@resume.updated_on, format: :long)) %></p>
+    <h1><%= @translation.title %></h1>
+    <p class="type-lede"><%= @translation.description %></p>
+    <p class="type-meta"><%= t("public.resume.updated", date: l(@resume.updated_on, format: :long)) %></p>
     <% if @translation.pdf.attached? %>
       <%= link_to t("public.resume.download"), localized_resume_download_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %>
     <% else %>

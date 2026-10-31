@@ -2,8 +2,8 @@
 
 <main id="main-content" class="site-container page-shell grid gap-12" tabindex="-1">
   <header class="page-header">
-    <h1 class="text-4xl font-bold"><%= t("public.posts.title") %></h1>
-    <p class="max-w-prose text-lg"><%= t("pages.blog.introduction") %></p>
+    <h1><%= t("public.posts.title") %></h1>
+    <p class="type-lede"><%= t("pages.blog.introduction") %></p>
   </header>
 
   <%= form_with url: localized_blog_path(locale: current_locale), method: :get, class: "search-bar", html: { role: "search" } do |form| %>
@@ -27,7 +27,7 @@
           <article class="entry">
             <%= time_tag translation.published_at.to_date, l(translation.published_at.to_date, format: :long), class: "entry-meta" %>
             <div class="entry-text">
-              <h2 class="text-2xl font-bold"><%= link_to translation.title, localized_post_path(locale: current_locale, slug: translation.slug) %></h2>
+              <h2 class="type-heading"><%= link_to translation.title, localized_post_path(locale: current_locale, slug: translation.slug) %></h2>
               <p class="max-w-prose"><%= translation.excerpt %></p>
               <%= render "public/shared/tags", taggable: translation.post %>
             </div>

@@ -2,7 +2,7 @@
 <% if translations.any? %>
   <ul aria-label="<%= t("public.tags.label") %>" class="flex flex-wrap gap-2">
     <% translations.each do |translation| %>
-      <li><span class="text-sm uppercase"><%= translation.name %></span></li>
+      <li><span class="type-label"><%= translation.name %></span></li>
     <% end %>
   </ul>
 <% end %>

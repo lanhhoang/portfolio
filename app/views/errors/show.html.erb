@@ -9,8 +9,8 @@
 
 <main id="main-content" class="site-container page-shell" tabindex="-1">
   <div class="page-header justify-items-start">
-    <h1 class="text-4xl font-bold"><%= t("errors.pages.#{code}.title") %></h1>
-    <p class="max-w-prose text-lg"><%= t("errors.pages.#{code}.message") %></p>
+    <h1><%= t("errors.pages.#{code}.title") %></h1>
+    <p class="type-lede"><%= t("errors.pages.#{code}.message") %></p>
     <%= link_to t("errors.pages.home"), localized_root_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %>
   </div>
 </main>

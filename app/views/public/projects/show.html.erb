@@ -11,8 +11,8 @@
   <article class="page-stack">
     <header class="case-header">
       <div class="page-header">
-        <h1 class="text-4xl font-bold"><%= @translation.title %></h1>
-        <p class="max-w-prose text-lg"><%= @translation.summary %></p>
+        <h1><%= @translation.title %></h1>
+        <p class="type-lede"><%= @translation.summary %></p>
       </div>
 
       <dl class="facts">
@@ -84,7 +84,7 @@
     <% if @next_translation %>
       <nav class="case-next" aria-label="<%= t("public.projects.next") %>">
         <p class="entry-meta"><%= t("public.projects.next") %></p>
-        <%= link_to @next_translation.title, localized_project_path(locale: current_locale, slug: @next_translation.slug), class: "text-2xl font-bold" %>
+        <%= link_to @next_translation.title, localized_project_path(locale: current_locale, slug: @next_translation.slug), class: "type-statement" %>
       </nav>
     <% end %>
   </article>
