@@ -100,8 +100,10 @@ en:
       older: "Older article"
       newer: "Newer article"
       all: "All articles"
+    contact:
+      direct: "Other ways to reach me"
     about:
-      email: "Email me at %{email}"
+      links: "Email and profiles"
     resume:
       updated: "Updated %{date}"
       download: "Download résumé (PDF)"

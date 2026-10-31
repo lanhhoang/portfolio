@@ -485,7 +485,7 @@ input[type="submit"] {
 .hero {
   display: grid;
   gap: var(--space-group);
-  align-items: end;
+  align-items: start;
 }
 
 .hero-text {
@@ -578,6 +578,33 @@ input[type="submit"] {
   padding-inline: 1.5rem;
   border-color: var(--foreground);
   font-weight: 700;
+}
+
+/* Main content with a narrow aside of direct links (contact, about). */
+.with-aside {
+  display: grid;
+  gap: var(--space-group);
+  align-items: start;
+}
+
+.with-aside-main {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 40rem;
+}
+
+.aside-links {
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.aside-links a {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  overflow-wrap: anywhere;
 }
 
 /* Case study header: story on the left, facts on the right. */
@@ -822,9 +849,6 @@ h1 {
     grid-column: 2;
   }
 
-  .hero:has(> .hero-portrait) {
-    grid-template-columns: minmax(0, 1fr) minmax(16rem, 24rem);
-  }
 
   .hero-portrait {
     order: 0;
@@ -842,8 +866,11 @@ h1 {
     column-gap: 2rem;
   }
 
-  .case-header {
-    grid-template-columns: minmax(0, 2fr) minmax(14rem, 1fr);
+  /* One shared side column so portraits, facts and asides line up across pages. */
+  .hero:has(> .hero-portrait),
+  .case-header,
+  .with-aside {
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, 24rem);
   }
 
   .page-end-nav {

@@ -7,7 +7,7 @@
 ) %>
 
 <main id="main-content" class="site-container page-shell" tabindex="-1">
-  <article class="grid gap-12">
+  <article class="page-stack">
     <div class="hero">
       <header class="page-header">
         <h1><%= @translation.display_name %></h1>
@@ -29,15 +29,18 @@
       <% end %>
     </div>
 
-    <div class="rich-text"><%= sanitize @translation.biography_html %></div>
+    <div class="with-aside">
+      <div class="rich-text"><%= sanitize @translation.biography_html %></div>
 
-    <% if @profile.social_links.any? %>
-      <ul class="flex flex-wrap gap-4">
-        <% @profile.social_links.sort.each do |label, url| %>
-          <li><%= link_to label, url, rel: "me noopener" %></li>
-        <% end %>
-      </ul>
-    <% end %>
-    <p><%= mail_to @profile.public_contact_email, t("public.about.email", email: @profile.public_contact_email), class: "inline-flex min-h-11 items-center" %></p>
+      <aside class="aside-links" aria-labelledby="about-links-title">
+        <h2 id="about-links-title" class="type-label"><%= t("public.about.links") %></h2>
+        <ul>
+          <li><%= mail_to @profile.public_contact_email %></li>
+          <% @profile.social_links.sort.each do |label, url| %>
+            <li><%= link_to label, url, rel: "me noopener" %></li>
+          <% end %>
+        </ul>
+      </aside>
+    </div>
   </article>
 </main>

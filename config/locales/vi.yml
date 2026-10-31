@@ -100,8 +100,10 @@ vi:
       older: "Bài cũ hơn"
       newer: "Bài mới hơn"
       all: "Tất cả bài viết"
+    contact:
+      direct: "Cách liên hệ khác"
     about:
-      email: "Gửi email cho tôi: %{email}"
+      links: "Email và hồ sơ trực tuyến"
     resume:
       updated: "Cập nhật %{date}"
       download: "Tải hồ sơ (PDF)"

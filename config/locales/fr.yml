@@ -100,8 +100,10 @@ fr:
       older: "Article précédent"
       newer: "Article suivant"
       all: "Tous les articles"
+    contact:
+      direct: "Autres moyens de me joindre"
     about:
-      email: "M’écrire à %{email}"
+      links: "E-mail et profils"
     resume:
       updated: "Mis à jour le %{date}"
       download: "Télécharger le CV (PDF)"

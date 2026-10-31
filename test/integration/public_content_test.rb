@@ -132,6 +132,16 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     assert_select ".site-footer a[href='https://github.com/demo'][rel~=me]", text: "GitHub"
   end
 
+  test "contact and about pages offer direct channels beside the main content" do
+    @profile.update!(social_links: { "GitHub" => "https://github.com/demo" })
+
+    [ "/en/contact", "/en/about" ].each do |path|
+      get path
+      assert_select ".with-aside .aside-links a[href^='mailto:']"
+      assert_select ".with-aside .aside-links a[href='https://github.com/demo'][rel~=me]", text: "GitHub"
+    end
+  end
+
   test "a search with no matches explains it and offers a way back" do
     get "/en/projects", params: { q: "nothing-matches-this" }
 
