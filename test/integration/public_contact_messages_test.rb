@@ -56,6 +56,19 @@ class PublicContactMessagesTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "n’est pas valide"
   end
 
+  test "ties each validation error to its field and links the summary to it" do
+    params = valid_params
+    params[:contact_message][:sender_email] = "invalid"
+
+    post localized_contact_path(locale: :en), params: params
+
+    assert_response :unprocessable_entity
+    assert_select "[role=alert] a[href='#contact_message_sender_email']", text: "Email is invalid"
+    assert_select "input#contact_message_sender_email[aria-invalid=true][aria-describedby='contact_message_sender_email_error'][autocomplete=email]"
+    assert_select "p#contact_message_sender_email_error", text: "is invalid"
+    assert_select "input#contact_message_sender_name:not([aria-invalid])"
+  end
+
   test "persists before returning receipt feedback and enqueues one id-only job" do
     assert_difference("ContactMessage.count", 1) do
       assert_enqueued_with(job: ContactNotificationJob) do

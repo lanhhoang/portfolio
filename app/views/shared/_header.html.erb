@@ -20,8 +20,7 @@
       id="primary-navigation"
       class="primary-navigation"
       aria-label="<%= t("navigation.label") %>"
-      data-menu-target="panel"
-      hidden>
+      data-menu-target="panel">
       <% [
         ["public/projects", nil, t("navigation.work"), localized_projects_path(locale: current_locale)],
         ["public/posts", nil, t("navigation.writing"), localized_blog_path(locale: current_locale)],

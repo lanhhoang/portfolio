@@ -8,7 +8,7 @@ class PublicShellTest < ActionDispatch::IntegrationTest
     assert_select "html[lang='en'][data-accent='lime']"
     assert_select "a.skip-link[href='#main-content']", text: "Skip to content"
     assert_select "header.site-header"
-    assert_select "nav#primary-navigation[aria-label='Primary navigation']"
+    assert_select "nav#primary-navigation[aria-label='Primary navigation']:not([hidden])"
     assert_select "button[aria-controls='primary-navigation'][aria-expanded='false']"
     assert_select "nav.locale-switcher[aria-label='Choose language'] a", count: 3
     assert_select "button[data-controller='theme'][data-theme-target='toggle']"

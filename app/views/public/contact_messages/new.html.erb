@@ -16,8 +16,8 @@
           <div role="alert" class="form-message">
             <p class="font-semibold"><%= t("contact.errors", count: @contact_message.errors.count) %></p>
             <ul>
-              <% @contact_message.errors.full_messages.each do |message| %>
-                <li><%= message %></li>
+              <% @contact_message.errors.each do |error| %>
+                <li><a href="#contact_message_<%= error.attribute %>"><%= error.full_message %></a></li>
               <% end %>
             </ul>
           </div>
@@ -29,20 +29,21 @@
         </div>
 
         <% {
-          sender_name: [ "text", 120 ],
-          sender_email: [ "email", 254 ],
-          subject: [ "text", 200 ]
-        }.each do |field, (type, maxlength)| %>
+          sender_name: [ :text_field, { maxlength: 120, autocomplete: "name" } ],
+          sender_email: [ :email_field, { maxlength: 254, autocomplete: "email", spellcheck: false } ],
+          subject: [ :text_field, { maxlength: 200 } ],
+          body: [ :text_area, { maxlength: 10_000, rows: 8 } ]
+        }.each do |field, (input, options)| %>
+          <% errors = @contact_message.errors.messages_for(field) %>
           <div>
             <%= form.label field, t("contact.fields.#{field}") %>
-            <%= form.public_send("#{type}_field", field, required: true, maxlength: maxlength) %>
+            <%= form.public_send(input, field, required: true, **options,
+              aria: ({ invalid: true, describedby: "contact_message_#{field}_error" } if errors.any?)) %>
+            <% if errors.any? %>
+              <p id="contact_message_<%= field %>_error" class="field-error"><%= errors.to_sentence %></p>
+            <% end %>
           </div>
         <% end %>
-
-        <div>
-          <%= form.label :body, t("contact.fields.body") %>
-          <%= form.text_area :body, required: true, rows: 8, maxlength: 10_000 %>
-        </div>
 
         <%= form.submit t("contact.submit"), class: "button justify-self-start" %>
       <% end %>

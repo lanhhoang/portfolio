@@ -358,6 +358,14 @@ input[type="submit"] {
   text-transform: uppercase;
 }
 
+/* Without JS the nav stays open and the toggles are inert; with JS it stays
+   collapsed until the menu controller takes over, so it never flashes open. */
+html:not(.js) .menu-button,
+html:not(.js) .theme-button,
+html.js .site-header:not([data-menu-connected]) .primary-navigation {
+  display: none;
+}
+
 .primary-navigation {
   grid-column: 1 / -1;
   display: flex;
@@ -462,6 +470,16 @@ input[type="submit"] {
 }
 
 /* Page rhythm: generous between sections, tight inside groups. */
+/* Grid children default to min-width: auto, so one unbroken word (a URL, a
+   German compound, a pasted hash) would push the page sideways. */
+:where(.page-stack, .page-header, .hero, .hero-text, .hero-name, .entry-list,
+  .entry, .entry-text, .search-bar, .with-aside, .with-aside-main, .case-header,
+  .facts, .case-body, .form-stack, .page-end, .page-end-nav, .next-step,
+  .action-row) > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .page-stack {
   display: grid;
   gap: var(--space-section);
@@ -648,6 +666,7 @@ input[type="submit"] {
 
 .tag-list a {
   display: inline-flex;
+  max-width: 100%;
   min-height: 2rem;
   align-items: center;
   padding: 0.125rem 0.625rem;
@@ -656,6 +675,7 @@ input[type="submit"] {
   color: var(--muted);
   font-size: var(--text-label);
   font-weight: 600;
+  overflow-wrap: anywhere;
   text-decoration: none;
   transition: border-color 150ms ease-out, color 150ms ease-out;
 }
@@ -685,6 +705,13 @@ input[type="submit"] {
 
 .form-message[role="alert"] {
   border-top-color: var(--danger);
+}
+
+.field-error {
+  margin-top: 0.375rem;
+  color: var(--danger);
+  font-size: var(--text-meta);
+  font-weight: 600;
 }
 
 .form-message ul {
@@ -749,7 +776,7 @@ h1 {
 }
 
 .type-display {
-  max-width: 14ch;
+  max-width: min(14ch, 100%);
   font-size: var(--text-display);
   letter-spacing: -0.035em;
 }
@@ -759,7 +786,7 @@ h1 {
 }
 
 .type-statement {
-  max-width: 28ch;
+  max-width: min(28ch, 100%);
   font-size: var(--text-statement);
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -767,7 +794,7 @@ h1 {
 }
 
 .type-lede {
-  max-width: 60ch;
+  max-width: min(60ch, 100%);
   font-size: var(--text-lede);
   line-height: 1.55;
 }
@@ -889,7 +916,8 @@ h1 {
   }
 
   .primary-navigation,
-  .primary-navigation[hidden] {
+  .primary-navigation[hidden],
+  html.js .site-header:not([data-menu-connected]) .primary-navigation {
     grid-column: auto;
     display: flex !important;
     flex-direction: row;
