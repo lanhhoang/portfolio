@@ -1,9 +1,9 @@
 <% page_metadata(title: t("seo.blog.title"), description: t("seo.blog.description")) %>
 
 <main id="main-content" class="site-container page-shell space-y-8" tabindex="-1">
-  <header>
-    <p class="text-sm uppercase"><%= t("navigation.journal") %></p>
+  <header class="space-y-3">
     <h1 class="text-4xl font-bold"><%= t("public.posts.title") %></h1>
+    <p class="max-w-prose text-lg"><%= t("pages.blog.introduction") %></p>
   </header>
 
   <%= form_with url: localized_blog_path(locale: current_locale), method: :get, class: "grid gap-4", html: { role: "search" } do |form| %>
@@ -30,6 +30,11 @@
       <% end %>
     </ol>
   <% else %>
-    <p><%= t("public.posts.empty") %></p>
+    <% if params[:q].present? || params[:tag].present? %>
+      <p><%= t("public.posts.no_matches") %></p>
+      <%= link_to t("public.search.clear"), localized_blog_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %>
+    <% else %>
+      <p><%= t("public.posts.empty") %></p>
+    <% end %>
   <% end %>
 </main>

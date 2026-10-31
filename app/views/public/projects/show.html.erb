@@ -9,9 +9,9 @@
 <main id="main-content" class="site-container page-shell" tabindex="-1">
   <article class="space-y-8">
     <header class="space-y-3">
-      <p class="text-sm uppercase"><%= @translation.project.role %></p>
       <h1 class="text-4xl font-bold"><%= @translation.title %></h1>
       <p class="max-w-prose text-lg"><%= @translation.summary %></p>
+      <p><%= t("public.projects.role", role: @translation.project.role) %></p>
       <%= render "public/shared/tags", taggable: @translation.project %>
     </header>
 

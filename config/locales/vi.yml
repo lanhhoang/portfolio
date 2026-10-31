@@ -1,26 +1,25 @@
 vi:
   seo:
-    site_name: "Portfolio"
     home:
-      title: "Ý tưởng. Giao diện. Tác động."
-      description: "Kỹ thuật phần mềm độc lập, thiết kế giao diện và bài viết kỹ thuật."
+      title: "%{name} · Kỹ sư sản phẩm"
+      description: "Các dự án tiêu biểu về kỹ thuật sản phẩm, bài viết kỹ thuật và hồ sơ bằng tiếng Anh, tiếng Pháp và tiếng Việt."
     projects:
       title: "Dự án"
-      description: "Các dự án tiêu biểu về kỹ thuật phần mềm và thiết kế giao diện."
+      description: "Các dự án kỹ thuật sản phẩm: vấn đề, vai trò của tôi và kết quả."
     blog:
-      title: "Nhật ký"
-      description: "Ghi chép về kỹ thuật phần mềm, thiết kế sản phẩm và phát triển web."
+      title: "Bài viết"
+      description: "Bài viết kỹ thuật về phát triển sản phẩm và xây dựng web."
     about:
       title: "Giới thiệu"
     contact:
       title: "Liên hệ"
-      description: "Trao đổi về kỹ thuật phần mềm và phát triển sản phẩm."
+      description: "Liên hệ với tôi về vị trí hoặc dự án kỹ thuật sản phẩm."
   site:
     name: "Portfolio"
   navigation:
     label: "Điều hướng chính"
     work: "Dự án"
-    journal: "Nhật ký"
+    writing: "Bài viết"
     about: "Giới thiệu"
     resume: "Hồ sơ"
     contact: "Liên hệ"
@@ -44,11 +43,11 @@ vi:
     projects:
       eyebrow: "Dự án tiêu biểu"
       title: "Dự án"
-      introduction: "Các dự án tiêu biểu, kết quả và quyết định kỹ thuật."
+      introduction: "Từng dự án: vấn đề, vai trò của tôi và kết quả."
     blog:
       eyebrow: "Bài viết kỹ thuật"
-      title: "Nhật ký"
-      introduction: "Bài viết kỹ thuật, ghi chú thực tiễn và bài học kỹ nghệ."
+      title: "Bài viết"
+      introduction: "Bài viết kỹ thuật và ghi chú từ quá trình xây dựng sản phẩm."
     about:
       eyebrow: "Hồ sơ cá nhân"
       title: "Giới thiệu"
@@ -58,37 +57,48 @@ vi:
       title: "Hồ sơ"
       introduction: "Kinh nghiệm theo ngôn ngữ cùng bản hồ sơ tải trực tiếp."
     contact:
-      eyebrow: "Bắt đầu trò chuyện"
       title: "Liên hệ"
-      introduction: "Một cách trực tiếp và an toàn để bắt đầu trò chuyện."
+      introduction: "Gửi tin nhắn về một vị trí hoặc dự án. Tin nhắn sẽ đến thẳng hộp thư của tôi."
   public:
     home:
       selected_work: "Dự án nổi bật"
       recent_writing: "Bài viết gần đây"
       contact: "Liên hệ"
+      contact_prompt: "Bạn có vị trí hoặc dự án muốn trao đổi?"
+      contact_action: "Gửi tin nhắn"
+      view_work: "Xem dự án"
+      view_resume: "Xem hồ sơ"
+      no_projects: "Các dự án nổi bật sẽ sớm được đăng."
+      no_posts: "Chưa có bài viết nào."
     search:
       label: "Tìm kiếm"
-      submit: "Áp dụng"
+      submit: "Tìm kiếm"
+      clear: "Xóa tìm kiếm và bộ lọc"
     tags:
       label: "Thẻ"
       all: "Tất cả thẻ"
     projects:
       title: "Dự án"
-      empty: "Không có dự án đã xuất bản phù hợp với bộ lọc."
+      empty: "Chưa có dự án nào được đăng."
+      no_matches: "Không có dự án nào phù hợp với tìm kiếm này."
+      role: "Vai trò: %{role}"
       gallery_alt: "%{title}, hình %{number}"
       links: "Liên kết dự án"
-      live: "Xem dự án"
+      live: "Xem trang trực tuyến"
       source: "Xem mã nguồn"
     posts:
-      title: "Nhật ký"
-      empty: "Không có bài viết đã xuất bản phù hợp với bộ lọc."
+      title: "Bài viết"
+      empty: "Chưa có bài viết nào được đăng."
+      no_matches: "Không có bài viết nào phù hợp với tìm kiếm này."
+    about:
+      email: "Gửi email cho tôi: %{email}"
     resume:
       updated: "Cập nhật %{date}"
-      download: "Tải PDF"
+      download: "Tải hồ sơ (PDF)"
       pdf_unavailable: "Bản PDF chưa có sẵn."
 
   footer:
-    rights: "Được xây dựng cẩn thận."
+    rights: "© %{year} %{name}"
   accessibility:
     skip_to_content: "Chuyển đến nội dung"
   date:
@@ -105,9 +115,9 @@ vi:
     errors:
       one: "Vui lòng sửa 1 lỗi."
       other: "Vui lòng sửa %{count} lỗi."
-    received: "Tin nhắn của bạn đã được lưu."
-    spam_rejected: "Chúng tôi không thể chấp nhận nội dung gửi này."
-    rate_limited: "Đã gửi quá nhiều tin nhắn. Vui lòng thử lại sau."
+    received: "Cảm ơn bạn, tin nhắn đã được gửi."
+    spam_rejected: "Không thể gửi tin nhắn của bạn. Vui lòng thử lại."
+    rate_limited: "Bạn đã gửi nhiều tin nhắn trong thời gian ngắn. Vui lòng đợi 10 phút rồi thử lại."
   activerecord:
     attributes:
       contact_message:

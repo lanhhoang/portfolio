@@ -9,9 +9,9 @@
 <main id="main-content" class="site-container page-shell" tabindex="-1">
   <article class="space-y-8">
     <header class="space-y-3">
-      <p class="text-sm uppercase"><%= @translation.availability_label %></p>
       <h1 class="text-4xl font-bold"><%= @translation.display_name %></h1>
       <p class="max-w-prose text-lg"><%= @translation.introduction %></p>
+      <p><%= @translation.availability_label %></p>
     </header>
 
     <% if @profile.portrait.attached? %>
@@ -34,6 +34,6 @@
         <% end %>
       </ul>
     <% end %>
-    <%= mail_to @profile.public_contact_email %>
+    <p><%= mail_to @profile.public_contact_email, t("public.about.email", email: @profile.public_contact_email), class: "inline-flex min-h-11 items-center" %></p>
   </article>
 </main>

@@ -1,6 +1,6 @@
 <footer class="site-footer">
   <div class="site-container footer-grid">
-    <p><%= t("footer.rights") %></p>
+    <p><%= t("footer.rights", year: Date.current.year, name: site_name) %></p>
     <%= link_to t("navigation.contact"), localized_contact_path(locale: current_locale) %>
   </div>
 </footer>

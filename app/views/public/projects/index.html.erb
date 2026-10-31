@@ -1,9 +1,9 @@
 <% page_metadata(title: t("seo.projects.title"), description: t("seo.projects.description")) %>
 
 <main id="main-content" class="site-container page-shell space-y-8" tabindex="-1">
-  <header>
-    <p class="text-sm uppercase"><%= t("navigation.work") %></p>
+  <header class="space-y-3">
     <h1 class="text-4xl font-bold"><%= t("public.projects.title") %></h1>
+    <p class="max-w-prose text-lg"><%= t("pages.projects.introduction") %></p>
   </header>
 
   <%= form_with url: localized_projects_path(locale: current_locale), method: :get, class: "grid gap-4", html: { role: "search" } do |form| %>
@@ -35,6 +35,11 @@
       <% end %>
     </div>
   <% else %>
-    <p><%= t("public.projects.empty") %></p>
+    <% if params[:q].present? || params[:tag].present? %>
+      <p><%= t("public.projects.no_matches") %></p>
+      <%= link_to t("public.search.clear"), localized_projects_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %>
+    <% else %>
+      <p><%= t("public.projects.empty") %></p>
+    <% end %>
   <% end %>
 </main>

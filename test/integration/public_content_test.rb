@@ -43,9 +43,14 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select 'html[data-accent="orange"]'
-    assert_select "h1", text: "Ideas. Interfaces. Impact."
-    assert_select "h2", text: "Visible Project"
-    assert_select "h2", text: "Visible Post"
+    assert_select "h1", text: "Demo Owner"
+    assert_select "title", text: "Demo Owner · Product engineer"
+    assert_select ".site-mark", text: "Demo Owner"
+    assert_select "p", text: "Ideas. Interfaces. Impact."
+    assert_select "a[href=?]", "/en/projects", text: "See case studies"
+    assert_select "a[href=?]", "/en/resume", text: "Read résumé"
+    assert_select "h3", text: "Visible Project"
+    assert_select "h3", text: "Visible Post"
     assert_select "img", count: 0
   end
 
@@ -55,6 +60,14 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "h2", text: "Visible Project"
     assert_select "h2", text: "Secret Draft", count: 0
+  end
+
+  test "a search with no matches explains it and offers a way back" do
+    get "/en/projects", params: { q: "nothing-matches-this" }
+
+    assert_response :success
+    assert_select "p", text: "No case studies match this search."
+    assert_select "a[href=?]", "/en/projects", text: "Clear search and filters"
   end
 
   test "draft and absent locale detail routes return 404" do
