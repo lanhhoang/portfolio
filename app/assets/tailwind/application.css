@@ -26,6 +26,7 @@
   --border: #b9b2a4;
   --accent: var(--accent-light);
   --accent-foreground: #ffffff;
+  --danger: #a3261b;
   --focus: var(--accent);
   --accent-brown: #7a4e35;
   --accent-green: #216e46;
@@ -87,6 +88,7 @@
     --border: #45433e;
     --accent: var(--accent-dark);
     --accent-foreground: #151512;
+    --danger: #ff8f7f;
   }
 }
 
@@ -99,6 +101,7 @@
   --border: #b9b2a4;
   --accent: var(--accent-light);
   --accent-foreground: #ffffff;
+  --danger: #a3261b;
 }
 
 :root[data-theme="dark"] {
@@ -110,6 +113,7 @@
   --border: #45433e;
   --accent: var(--accent-dark);
   --accent-foreground: #151512;
+  --danger: #ff8f7f;
 }
 
 *,
@@ -125,6 +129,9 @@ html {
   line-height: 1.6;
   text-rendering: optimizeLegibility;
   font-optical-sizing: auto;
+  accent-color: var(--accent);
+  caret-color: var(--accent);
+  scrollbar-color: var(--border) var(--background);
 }
 
 h1,
@@ -161,14 +168,57 @@ video {
   height: auto;
 }
 
+/* Links read as links: a quiet underline that takes the accent on hover. */
 a {
   color: inherit;
-  text-decoration-thickness: 0.12em;
-  text-underline-offset: 0.2em;
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.22em;
+  transition: color 150ms ease-out, text-decoration-color 150ms ease-out;
 }
 
 a:hover {
   color: var(--accent);
+  text-decoration-color: currentColor;
+}
+
+/* Titles in lists are clearly clickable rows; underline only on intent. */
+.entry-text :is(h2, h3) a,
+.case-next a {
+  text-decoration-line: none;
+}
+
+.entry-text :is(h2, h3) a:hover,
+.case-next a:hover {
+  text-decoration-line: underline;
+}
+
+/* The one filled action per view. */
+.button,
+input[type="submit"].button {
+  display: inline-flex;
+  width: auto;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1.25rem;
+  border: 1px solid var(--foreground);
+  background: var(--foreground);
+  color: var(--background);
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out;
+}
+
+.button:hover {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.button:active {
+  transform: translateY(1px);
 }
 
 button,
@@ -184,6 +234,11 @@ button {
   color: inherit;
   font: inherit;
   cursor: pointer;
+  transition: border-color 150ms ease-out, color 150ms ease-out;
+}
+
+button:hover {
+  border-color: var(--foreground);
 }
 
 input,
@@ -198,6 +253,20 @@ textarea {
   background: transparent;
   color: inherit;
   font: inherit;
+  transition: border-color 150ms ease-out;
+}
+
+:is(input, select, textarea):hover {
+  border-color: var(--muted);
+}
+
+:is(input, select, textarea)::placeholder {
+  color: var(--muted);
+}
+
+:is(input, select, textarea):user-invalid,
+.field_with_errors :is(input, select, textarea) {
+  border-color: var(--danger);
 }
 
 input[type="checkbox"],
@@ -311,6 +380,10 @@ input[type="submit"] {
 
 .primary-navigation a[aria-current="page"] {
   color: var(--accent);
+  text-decoration-line: underline;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 0.15em;
+  text-underline-offset: 0.45em;
 }
 
 .locale-switcher {
@@ -330,13 +403,19 @@ input[type="submit"] {
   font-weight: 700;
 }
 
+.locale-switcher a {
+  text-decoration-line: none;
+}
+
 .locale-switcher span[aria-disabled="true"] {
   color: var(--muted);
 }
 
 .locale-switcher a[aria-current="true"] {
   color: var(--accent);
-  text-decoration-thickness: 0.2em;
+  text-decoration-line: underline;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 0.15em;
 }
 
 .theme-button {
@@ -361,10 +440,6 @@ input[type="submit"] {
 .page-shell {
   min-height: min(68vh, 48rem);
   padding-block: clamp(3rem, 12vw, 8rem);
-}
-
-.page-hero {
-  max-width: 68rem;
 }
 
 /* Page rhythm: generous between sections, tight inside groups. */
@@ -481,6 +556,60 @@ input[type="submit"] {
 .case-body {
   display: grid;
   gap: var(--space-group);
+}
+
+/* Tags are filters: each one opens the index narrowed to it. */
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag-list a {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: var(--text-label);
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 150ms ease-out, color 150ms ease-out;
+}
+
+.tag-list a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Form feedback: status reads in foreground, problems in the danger tone. */
+.form-stack {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.form-stack label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-weight: 600;
+}
+
+.form-message {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--foreground);
+}
+
+.form-message[role="alert"] {
+  border-top-color: var(--danger);
+}
+
+.form-message ul {
+  margin-top: 0.5rem;
+  padding-inline-start: 1.25rem;
+  list-style: disc;
 }
 
 .case-next {

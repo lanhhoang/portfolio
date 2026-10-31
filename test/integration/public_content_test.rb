@@ -106,6 +106,20 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "tags link to their filtered index" do
+    tag = Tag.new
+    tag.translations.build(locale: "en", name: "Ruby", slug: "ruby")
+    tag.save!
+    @project.tags << tag
+    @post.tags << tag
+
+    get "/en/projects/visible-project"
+    assert_select "dl.facts .tag-list a[href='/en/projects?tag=ruby']", text: "Ruby"
+
+    get "/en/blog/visible-post"
+    assert_select ".tag-list a[href='/en/blog?tag=ruby']", text: "Ruby"
+  end
+
   test "post detail renders stored HTML" do
     get "/en/blog/visible-post"
 

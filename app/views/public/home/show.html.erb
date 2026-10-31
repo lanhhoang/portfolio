@@ -8,8 +8,8 @@
         <p class="type-statement"><%= @profile_translation.headline %></p>
         <p class="type-lede"><%= @profile_translation.introduction %></p>
         <p class="type-meta"><%= @profile_translation.availability_label %></p>
-        <ul class="flex flex-wrap gap-x-6 gap-y-2">
-          <li><%= link_to t("public.home.view_work"), localized_projects_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %></li>
+        <ul class="flex flex-wrap items-center gap-x-6 gap-y-2">
+          <li><%= link_to t("public.home.view_work"), localized_projects_path(locale: current_locale), class: "button" %></li>
           <li><%= link_to t("public.home.view_resume"), localized_resume_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %></li>
         </ul>
       </div>
@@ -78,7 +78,7 @@
     <h2 id="contact-heading" class="type-label"><%= t("public.home.contact") %></h2>
     <div class="grid justify-items-start gap-3">
       <p class="type-statement"><%= t("public.home.contact_prompt") %></p>
-      <%= link_to t("public.home.contact_action"), localized_contact_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %>
+      <%= link_to t("public.home.contact_action"), localized_contact_path(locale: current_locale), class: "button" %>
     </div>
   </section>
 </main>

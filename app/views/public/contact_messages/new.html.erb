@@ -7,14 +7,14 @@
       <p class="type-lede"><%= t("pages.contact.introduction") %></p>
     </header>
 
-    <% if notice.present? %><p role="status" class="border p-4"><%= notice %></p><% end %>
-    <% if alert.present? %><p role="alert" class="border border-red-600 p-4"><%= alert %></p><% end %>
+    <% if notice.present? %><p role="status" class="form-message"><%= notice %></p><% end %>
+    <% if alert.present? %><p role="alert" class="form-message"><%= alert %></p><% end %>
 
-    <%= form_with model: @contact_message, url: localized_contact_path(locale: I18n.locale), class: "space-y-6" do |form| %>
+    <%= form_with model: @contact_message, url: localized_contact_path(locale: I18n.locale), class: "form-stack" do |form| %>
       <% if @contact_message.errors.any? %>
-        <div role="alert" class="border border-red-600 p-4">
+        <div role="alert" class="form-message">
           <p class="font-semibold"><%= t("contact.errors", count: @contact_message.errors.count) %></p>
-          <ul class="mt-2 list-disc pl-5">
+          <ul>
             <% @contact_message.errors.full_messages.each do |message| %>
               <li><%= message %></li>
             <% end %>
@@ -33,17 +33,17 @@
         subject: [ "text", 200 ]
       }.each do |field, (type, maxlength)| %>
         <div>
-          <%= form.label field, t("contact.fields.#{field}"), class: "block font-semibold" %>
-          <%= form.public_send("#{type}_field", field, required: true, maxlength: maxlength, class: "mt-2 min-h-12 w-full border bg-transparent px-3 py-2") %>
+          <%= form.label field, t("contact.fields.#{field}") %>
+          <%= form.public_send("#{type}_field", field, required: true, maxlength: maxlength) %>
         </div>
       <% end %>
 
       <div>
-        <%= form.label :body, t("contact.fields.body"), class: "block font-semibold" %>
-        <%= form.text_area :body, required: true, rows: 8, maxlength: 10_000, class: "mt-2 w-full border bg-transparent px-3 py-2" %>
+        <%= form.label :body, t("contact.fields.body") %>
+        <%= form.text_area :body, required: true, rows: 8, maxlength: 10_000 %>
       </div>
 
-      <%= form.submit t("contact.submit"), class: "min-h-12 cursor-pointer bg-[var(--accent)] px-6 py-3 font-semibold text-[var(--accent-foreground)]" %>
+      <%= form.submit t("contact.submit"), class: "button justify-self-start" %>
     <% end %>
   </div>
 </main>
