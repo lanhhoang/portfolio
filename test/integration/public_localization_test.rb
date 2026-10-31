@@ -83,7 +83,7 @@ class PublicLocalizationTest < ActionDispatch::IntegrationTest
     }.each do |locale, display_name|
       get localized_about_path(locale: locale)
 
-      assert_select "h1", text: display_name
+      assert_select ".site-mark", text: display_name
     end
   end
 

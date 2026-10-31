@@ -56,19 +56,19 @@
       </dl>
     </header>
 
-    <% if project.cover_image.attached? %>
-      <%= responsive_image_tag(
-        project.cover_image,
-        alt: @translation.title,
-        sizes: "(min-width: 80rem) 80rem, 100vw",
-        widths: [640, 960, 1280, 1600],
-        loading: "eager",
-        fetchpriority: "high",
-        class: "case-cover"
-      ) %>
-    <% end %>
-
     <div class="case-body rail-offset rail">
+      <% if project.cover_image.attached? %>
+        <%= responsive_image_tag(
+          project.cover_image,
+          alt: "",
+          sizes: "(min-width: 80rem) 60rem, (min-width: 56rem) 75vw, 100vw",
+          widths: [640, 960, 1280, 1600],
+          loading: "eager",
+          fetchpriority: "high",
+          class: "case-cover"
+        ) %>
+      <% end %>
+
       <div class="rich-text"><%= sanitize @translation.body_html %></div>
 
       <% if project.gallery_images.attached? %>

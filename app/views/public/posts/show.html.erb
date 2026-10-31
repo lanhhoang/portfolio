@@ -19,12 +19,12 @@
     <% if @translation.post.cover_image.attached? %>
       <%= responsive_image_tag(
         @translation.post.cover_image,
-        alt: @translation.title,
-        sizes: "(min-width: 80rem) 80rem, 100vw",
+        alt: "",
+        sizes: "(min-width: 56rem) 50rem, 100vw",
         widths: [640, 960, 1280, 1600],
         loading: "eager",
         fetchpriority: "high",
-        class: "case-cover"
+        class: "case-cover reading-cover"
       ) %>
     <% end %>
 

@@ -469,7 +469,7 @@ html.js .site-header:not([data-menu-connected]) .primary-navigation {
    German compound, a pasted hash) would push the page sideways. */
 :where(.page-stack, .page-header, .hero, .hero-text, .hero-name, .entry-list,
   .entry, .entry-text, .search-bar, .with-aside, .with-aside-main, .case-header,
-  .facts, .case-body, .form-stack, .page-end, .page-end-nav, .next-step,
+  .facts, .case-body, .about-aside, .form-stack, .page-end, .page-end-nav, .next-step,
   .action-row) > * {
   min-width: 0;
   max-width: 100%;
@@ -609,6 +609,16 @@ html.js .site-header:not([data-menu-connected]) .primary-navigation {
   max-width: 40rem;
 }
 
+.about-aside {
+  display: grid;
+  gap: var(--space-group);
+  align-content: start;
+}
+
+.about-portrait {
+  width: clamp(6rem, 28vw, 9rem);
+}
+
 .aside-links {
   display: grid;
   gap: 0.5rem;
@@ -645,8 +655,14 @@ html.js .site-header:not([data-menu-connected]) .primary-navigation {
 /* A tall cover must not push the story several screens down. */
 .case-cover {
   width: 100%;
-  max-height: min(80svh, 48rem);
+  max-height: min(60svh, 36rem);
   object-fit: cover;
+}
+
+/* An article cover sits on the text measure so the column reads as one. */
+.reading-cover {
+  max-width: 68ch;
+  font-size: 1.0625rem;
 }
 
 .case-body {
@@ -878,6 +894,11 @@ h1 {
     padding-top: 0.25rem;
   }
 
+  .about-portrait {
+    width: 100%;
+    max-width: 18rem;
+  }
+
   .rail-offset > * {
     grid-column: 2;
   }
@@ -889,8 +910,9 @@ h1 {
     max-width: 24rem;
   }
 
+  /* The thumbnail supports the text; capping it keeps a sparse list from reading as empty space. */
   .entry:has(> .entry-media) {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 18rem);
     column-gap: clamp(2rem, 4vw, 3rem);
   }
 

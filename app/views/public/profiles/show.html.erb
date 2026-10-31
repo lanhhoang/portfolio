@@ -8,38 +8,35 @@
 
 <main id="main-content" class="site-container page-shell" tabindex="-1">
   <article class="page-stack">
-    <div class="hero">
-      <header class="page-header">
-        <h1><%= @translation.display_name %></h1>
-        <p class="type-lede"><%= @translation.introduction %></p>
-        <p class="availability"><%= @translation.availability_label %></p>
-      </header>
-
-      <% if @profile.portrait.attached? %>
-        <div class="hero-portrait">
-          <%= responsive_image_tag(
-            @profile.portrait,
-            alt: @translation.display_name,
-            sizes: "(min-width: 56rem) 24rem, 100vw",
-            widths: [320, 480, 640, 960],
-            loading: "eager",
-            class: "max-w-full"
-          ) %>
-        </div>
-      <% end %>
-    </div>
+    <header class="page-header">
+      <h1><%= t("pages.about.title") %></h1>
+      <p class="type-lede"><%= @translation.introduction %></p>
+      <p class="availability"><%= @translation.availability_label %></p>
+    </header>
 
     <div class="with-aside">
       <div class="rich-text"><%= sanitize @translation.biography_html %></div>
 
-      <aside class="aside-links" aria-labelledby="about-links-title">
-        <h2 id="about-links-title" class="type-label"><%= t("public.about.links") %></h2>
-        <ul>
-          <li><%= mail_to @profile.public_contact_email %></li>
-          <% @profile.social_links.sort.each do |label, url| %>
-            <li><%= link_to label, url, rel: "me noopener" %></li>
-          <% end %>
-        </ul>
+      <aside class="about-aside" aria-labelledby="about-links-title">
+        <% if @profile.portrait.attached? %>
+          <%= responsive_image_tag(
+            @profile.portrait,
+            alt: @translation.display_name,
+            sizes: "(min-width: 56rem) 24rem, 9rem",
+            widths: [320, 480, 640, 960],
+            loading: "eager",
+            class: "about-portrait"
+          ) %>
+        <% end %>
+        <div class="aside-links">
+          <h2 id="about-links-title" class="type-label"><%= t("public.about.links") %></h2>
+          <ul>
+            <li><%= mail_to @profile.public_contact_email %></li>
+            <% @profile.social_links.sort.each do |label, url| %>
+              <li><%= link_to label, url, rel: "me noopener" %></li>
+            <% end %>
+          </ul>
+        </div>
       </aside>
     </div>
   </article>
