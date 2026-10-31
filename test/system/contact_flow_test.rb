@@ -16,7 +16,7 @@ class ContactFlowTest < ApplicationSystemTestCase
 
     assert_difference("ContactMessage.count", 1) do
       click_button "Envoyer le message"
-      assert_text "Votre message a été enregistré."
+      assert_text "Merci, votre message a bien été envoyé."
     end
 
     message = ContactMessage.order(:id).last
