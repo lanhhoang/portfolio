@@ -637,6 +637,13 @@ html.js .site-header:not([data-menu-connected]) .primary-navigation {
   margin: 0.125rem 0 0;
 }
 
+/* A tall cover must not push the story several screens down. */
+.case-cover {
+  width: 100%;
+  max-height: min(80svh, 48rem);
+  object-fit: cover;
+}
+
 .case-body {
   display: grid;
   gap: var(--space-group);
