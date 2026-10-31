@@ -221,6 +221,20 @@ input[type="submit"].button {
   transform: translateY(1px);
 }
 
+/* The single primary action per view carries the accent; hover inverts to ink. */
+.button-primary,
+input[type="submit"].button-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.button-primary:hover {
+  border-color: var(--foreground);
+  background: var(--foreground);
+  color: var(--background);
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;
@@ -523,6 +537,17 @@ html.js .site-header:not([data-menu-connected]) .primary-navigation {
   color: var(--foreground);
   font-weight: 800;
   white-space: nowrap;
+}
+
+/* Extends the language links' hit area past the line box to 24px+. */
+.hero-role a {
+  position: relative;
+}
+
+.hero-role a::before {
+  position: absolute;
+  inset: -0.375rem -0.125rem;
+  content: "";
 }
 
 .hero-role a:hover {

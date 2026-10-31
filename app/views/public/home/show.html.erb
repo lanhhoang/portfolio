@@ -19,7 +19,7 @@
         <p class="type-lede"><%= @profile_translation.introduction %></p>
         <p class="availability"><%= @profile_translation.availability_label %></p>
         <ul class="flex flex-wrap items-center gap-x-6 gap-y-2">
-          <li><%= link_to t("public.home.view_work"), localized_projects_path(locale: current_locale), class: "button" %></li>
+          <li><%= link_to t("public.home.view_work"), localized_projects_path(locale: current_locale), class: "button button-primary" %></li>
           <li>
             <% if @resume_pdf %>
               <span class="inline-flex min-h-11 items-center gap-2">
