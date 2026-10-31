@@ -112,6 +112,21 @@ vi:
       pdf_unavailable: "Bản PDF chưa có sẵn."
       see_work: "Xem dự án"
 
+  number:
+    format:
+      separator: ","
+      delimiter: "."
+    human:
+      storage_units:
+        format: "%n %u"
+        units:
+          byte:
+            one: "byte"
+            other: "byte"
+          kb: "KB"
+          mb: "MB"
+          gb: "GB"
+          tb: "TB"
   footer:
     rights: "© %{year} %{name}"
   accessibility:

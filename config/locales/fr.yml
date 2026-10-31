@@ -112,6 +112,21 @@ fr:
       pdf_unavailable: "Le PDF n’est pas encore disponible."
       see_work: "Voir les réalisations"
 
+  number:
+    format:
+      separator: ","
+      delimiter: "\u202F"
+    human:
+      storage_units:
+        format: "%n %u"
+        units:
+          byte:
+            one: "octet"
+            other: "octets"
+          kb: "Ko"
+          mb: "Mo"
+          gb: "Go"
+          tb: "To"
   footer:
     rights: "© %{year} %{name}"
   accessibility:

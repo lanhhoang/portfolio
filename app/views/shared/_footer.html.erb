@@ -1,11 +1,12 @@
 <footer class="site-footer">
   <div class="site-container footer-grid">
     <p><%= t("footer.rights", year: Date.current.year, name: site_name) %></p>
-    <ul class="footer-links">
-      <% site_profile&.social_links&.sort&.each do |label, url| %>
-        <li><%= link_to label, url, rel: "me noopener" %></li>
-      <% end %>
-      <li><%= link_to t("navigation.contact"), localized_contact_path(locale: current_locale) %></li>
-    </ul>
+    <% if site_profile&.social_links.present? %>
+      <ul class="footer-links">
+        <% site_profile.social_links.sort.each do |label, url| %>
+          <li><%= link_to label, url, rel: "me noopener" %></li>
+        <% end %>
+      </ul>
+    <% end %>
   </div>
 </footer>

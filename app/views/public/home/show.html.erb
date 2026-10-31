@@ -20,7 +20,16 @@
         <p class="availability"><%= @profile_translation.availability_label %></p>
         <ul class="flex flex-wrap items-center gap-x-6 gap-y-2">
           <li><%= link_to t("public.home.view_work"), localized_projects_path(locale: current_locale), class: "button" %></li>
-          <li><%= link_to t("public.home.view_resume"), localized_resume_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %></li>
+          <li>
+            <% if @resume_pdf %>
+              <span class="inline-flex min-h-11 items-center gap-2">
+                <%= link_to t("public.resume.download"), localized_resume_download_path(locale: current_locale) %>
+                <span class="type-meta"><%= number_to_human_size(@resume_pdf.byte_size, precision: 2) %></span>
+              </span>
+            <% else %>
+              <%= link_to t("public.home.view_resume"), localized_resume_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %>
+            <% end %>
+          </li>
         </ul>
       </div>
       <% if @profile.portrait.attached? %>

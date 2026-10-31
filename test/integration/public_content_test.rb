@@ -146,6 +146,7 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
 
     get "/en/blog/older-post"
     assert_select ".page-end-nav a[href='/en/blog/visible-post']", text: "Visible Post"
+    assert_select ".next-step", count: 0
   end
 
   test "footer lists the owner's social links" do
@@ -153,6 +154,22 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
 
     get "/en"
     assert_select ".site-footer a[href='https://github.com/demo'][rel~=me]", text: "GitHub"
+    assert_select ".site-footer a[href='/en/contact']", count: 0
+  end
+
+  test "home links straight to the résumé PDF when one is attached" do
+    translation = @resume.translations.first
+    translation.update!(title: "Jane-CV-final-v3")
+    translation.pdf.attach(
+      io: file_fixture("resume.pdf").open, filename: "resume.pdf", content_type: "application/pdf"
+    )
+
+    get "/en"
+    assert_select "a[href='/en/resume/download']", text: /Download résumé \(PDF\)/
+
+    get "/en/resume"
+    assert_select "h1", text: "Résumé"
+    assert_select "h1", text: "Jane-CV-final-v3", count: 0
   end
 
   test "contact and about pages offer direct channels beside the main content" do

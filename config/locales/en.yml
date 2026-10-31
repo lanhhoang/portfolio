@@ -112,6 +112,13 @@ en:
       pdf_unavailable: "The PDF is not available yet."
       see_work: "See the work"
 
+  number:
+    human:
+      storage_units:
+        units:
+          byte:
+            one: "byte"
+            other: "bytes"
   footer:
     rights: "© %{year} %{name}"
   accessibility:

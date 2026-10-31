@@ -1,5 +1,5 @@
 <% page_metadata(
-  title: @translation.title,
+  title: t("pages.resume.title"),
   description: @translation.description,
   alternates: alternate_locale_links(locale_switch_paths: @locale_switch_paths)
 ) %>
@@ -7,7 +7,7 @@
 <main id="main-content" class="site-container page-shell" tabindex="-1">
   <article class="page-stack">
     <header class="page-header justify-items-start">
-      <h1><%= @translation.title %></h1>
+      <h1><%= t("pages.resume.title") %></h1>
       <p class="type-lede"><%= @translation.description %></p>
       <p class="type-meta"><%= t("public.resume.updated", date: l(@resume.updated_on, format: :long)) %></p>
       <div class="action-row">
