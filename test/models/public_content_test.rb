@@ -5,7 +5,7 @@ require "test_helper"
 class PublicContentTest < ActiveSupport::TestCase
   test "every shared localized record requires an English translation" do
     records = [
-      Project.new(role: "Designer"),
+      Project.new,
       Post.new,
       Tag.new,
       Profile.new(public_contact_email: "owner@example.test"),
@@ -19,9 +19,9 @@ class PublicContentTest < ActiveSupport::TestCase
   end
 
   test "French and Vietnamese translations remain optional" do
-    project = Project.new(role: "Designer")
+    project = Project.new
     project.translations.build(
-      locale: "en", title: "Demo", slug: "demo", summary: "Summary",
+      locale: "en", title: "Demo", slug: "demo", role: "Engineer", summary: "Summary",
       body_markdown: "Body", state: "draft"
     )
 
@@ -38,7 +38,7 @@ class PublicContentTest < ActiveSupport::TestCase
     assert_includes second.translations.first.errors[:slug], "has already been taken"
 
     first.translations.create!(
-      locale: "fr", title: "Démo", slug: "shared-slug", summary: "Résumé",
+      locale: "fr", title: "Démo", slug: "shared-slug", role: "Engineer", summary: "Résumé",
       body_markdown: "Corps", state: "draft"
     )
     assert_equal 2, first.translations.count
@@ -50,7 +50,7 @@ class PublicContentTest < ActiveSupport::TestCase
     future = build_project(slug: "future", state: "published", published_at: 1.day.from_now)
     [ visible, draft, future ].each(&:save!)
     visible.translations.create!(
-      locale: "fr", title: "Visible", slug: "visible-fr", summary: "Résumé",
+      locale: "fr", title: "Visible", slug: "visible-fr", role: "Engineer", summary: "Résumé",
       body_markdown: "Corps", state: "published", published_at: 1.day.ago
     )
 
@@ -63,7 +63,7 @@ class PublicContentTest < ActiveSupport::TestCase
     profile.translations.build(
       locale: "en", display_name: "Demo Owner", headline: "Ideas. Interfaces. Impact.",
       introduction: "A demonstration profile.", biography_markdown: "Biography",
-      availability_label: "Available"
+      job_title: "Product engineer", availability_label: "Available"
     )
     profile.save!
 
@@ -120,7 +120,7 @@ class PublicContentTest < ActiveSupport::TestCase
     profile.translations.build(
       locale: "en", display_name: "Demo", headline: "Headline",
       introduction: "Introduction", biography_markdown: "Biography",
-      availability_label: "Available"
+      job_title: "Product engineer", availability_label: "Available"
     )
     project = build_project(slug: "invalid-links")
     project.live_url = "ftp://example.test/project"
@@ -139,7 +139,7 @@ class PublicContentTest < ActiveSupport::TestCase
     profile.translations.build(
       locale: "en", display_name: "Demo", headline: "Headline",
       introduction: "Introduction", biography_markdown: "Biography",
-      availability_label: "Available"
+      job_title: "Product engineer", availability_label: "Available"
     )
 
     assert_not profile.valid?
@@ -159,9 +159,9 @@ class PublicContentTest < ActiveSupport::TestCase
   private
 
   def build_project(slug:, state: "draft", published_at: nil)
-    Project.new(role: "Designer").tap do |project|
+    Project.new.tap do |project|
       project.translations.build(
-        locale: "en", title: slug.humanize, slug: slug, summary: "Summary",
+        locale: "en", title: slug.humanize, slug: slug, role: "Engineer", summary: "Summary",
         body_markdown: "Body", state: state, published_at: published_at
       )
     end

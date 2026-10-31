@@ -51,10 +51,10 @@ class Admin::ProjectsController < Admin::BaseController
 
   def project_params
     params.expect(project: [
-      :role, :started_on, :ended_on, :live_url, :source_url, :featured_position, :cover_image,
+      :started_on, :ended_on, :live_url, :source_url, :featured_position, :cover_image,
       {
         gallery_images: [], tag_ids: [],
-        translations_attributes: [ %i[id locale title slug summary body_markdown _destroy] ]
+        translations_attributes: [ %i[id locale title slug role summary outcome body_markdown _destroy] ]
       }
     ])
   end

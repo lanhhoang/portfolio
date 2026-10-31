@@ -8,7 +8,7 @@ class SearchTextTest < ActiveSupport::TestCase
     create_project_translation(slug: "draft-match", summary: "Uses SQLite safely", state: "draft")
     french = matching.project.translations.create!(
       locale: "fr", title: "SQLite français", slug: "sqlite-fr",
-      summary: "SQLite en français", body_markdown: "Corps", state: "published",
+      role: "Engineer", summary: "SQLite en français", body_markdown: "Corps", state: "published",
       published_at: 2.days.ago
     )
 
@@ -59,9 +59,9 @@ class SearchTextTest < ActiveSupport::TestCase
   private
 
   def create_project_translation(slug:, summary:, state: "published")
-    project = Project.new(role: "Engineer")
+    project = Project.new
     project.translations.build(
-      locale: "en", title: slug.humanize, slug: slug, summary: summary,
+      locale: "en", title: slug.humanize, slug: slug, role: "Engineer", summary: summary,
       body_markdown: "Technical body", state: state,
       published_at: (2.days.ago if state == "published")
     )

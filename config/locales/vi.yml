@@ -1,7 +1,8 @@
 vi:
   seo:
     home:
-      title: "%{name} · Kỹ sư sản phẩm"
+      title: "%{name} · %{title}"
+      fallback_title: "Hồ sơ năng lực"
       description: "Các dự án tiêu biểu về kỹ thuật sản phẩm, bài viết kỹ thuật và hồ sơ bằng tiếng Anh, tiếng Pháp và tiếng Việt."
     projects:
       title: "Dự án"
@@ -61,7 +62,7 @@ vi:
       introduction: "Gửi tin nhắn về một vị trí hoặc dự án. Tin nhắn sẽ đến thẳng hộp thư của tôi."
   public:
     home:
-      role_html: "Kỹ sư sản phẩm · làm việc bằng %{languages}"
+      role_html: "%{title} · làm việc bằng %{languages}"
       selected_work: "Dự án nổi bật"
       recent_writing: "Bài viết gần đây"
       contact: "Liên hệ"
@@ -83,6 +84,7 @@ vi:
       empty: "Chưa có dự án nào được đăng."
       no_matches: "Không có dự án nào phù hợp với tìm kiếm này."
       role: "Vai trò"
+      outcome: "Kết quả"
       timeline: "Thời gian"
       present: "Hiện tại"
       next: "Dự án tiếp theo"

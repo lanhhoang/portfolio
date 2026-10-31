@@ -107,10 +107,9 @@ class PublishDueTranslationsJobTest < ActiveJob::TestCase
 
   def create_project(slug, optional_locales: [])
     Project.create!(
-      role: "Developer",
       started_on: Date.new(2026, 1, 1),
       translations_attributes: ([ "en" ] + optional_locales).map do |locale|
-        { locale: locale, title: "#{slug} #{locale}", slug: "#{slug}-#{locale}", summary: "Summary", body_markdown: "Body" }
+        { locale: locale, title: "#{slug} #{locale}", slug: "#{slug}-#{locale}", role: "Engineer", summary: "Summary", body_markdown: "Body" }
       end
     )
   end

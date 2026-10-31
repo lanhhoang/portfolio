@@ -8,7 +8,7 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     @profile.translations.build(
       locale: "en", display_name: "Demo Owner", headline: "Ideas. Interfaces. Impact.",
       introduction: "A demonstration introduction.", biography_markdown: "## Biography",
-      availability_label: "Available"
+      job_title: "Senior product engineer", availability_label: "Available"
     )
     @profile.save!
 
@@ -16,16 +16,16 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     @resume.translations.build(locale: "en", title: "Résumé", description: "Current résumé")
     @resume.save!
 
-    @project = Project.new(role: "Engineer", featured_position: 1)
+    @project = Project.new(featured_position: 1)
     @project.translations.build(
-      locale: "en", title: "Visible Project", slug: "visible-project", summary: "SQLite search target",
+      locale: "en", title: "Visible Project", slug: "visible-project", role: "Engineer", summary: "SQLite search target",
       body_markdown: "Project body", state: "published", published_at: 2.days.ago
     )
     @project.save!
 
-    @draft = Project.new(role: "Engineer")
+    @draft = Project.new
     @draft.translations.build(
-      locale: "en", title: "Secret Draft", slug: "secret-draft", summary: "Private",
+      locale: "en", title: "Secret Draft", slug: "secret-draft", role: "Engineer", summary: "Private",
       body_markdown: "Draft body", state: "draft"
     )
     @draft.save!
@@ -44,12 +44,12 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select 'html[data-accent="orange"]'
     assert_select "h1", text: "Demo Owner"
-    assert_select ".hero-role", text: "Product engineer · works in English · Français · Tiếng Việt"
+    assert_select ".hero-role", text: "Senior product engineer · works in English · Français · Tiếng Việt"
     assert_select ".hero-role strong[lang=en]", text: "English"
     assert_select ".hero-role a[href='/fr'][hreflang=fr]", text: "Français"
     assert_select ".hero-role a[href='/vi'][hreflang=vi]", text: "Tiếng Việt"
     assert_select ".availability", text: "Available"
-    assert_select "title", text: "Demo Owner · Product engineer"
+    assert_select "title", text: "Demo Owner · Senior product engineer"
     assert_select ".site-mark", text: "Demo Owner"
     assert_select "p", text: "Ideas. Interfaces. Impact."
     assert_select "a[href=?]", "/en/projects", text: "See the work"
@@ -69,9 +69,9 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
 
   test "project page leads with case study facts and links to the next case study" do
     @project.update!(started_on: Date.new(2024, 3, 1), live_url: "https://example.test")
-    other = Project.new(role: "Lead")
+    other = Project.new
     other.translations.build(
-      locale: "en", title: "Older Project", slug: "older-project", summary: "Older",
+      locale: "en", title: "Older Project", slug: "older-project", role: "Engineer", summary: "Older",
       body_markdown: "Body", state: "published", published_at: 5.days.ago
     )
     other.save!
@@ -106,6 +106,29 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
 
     get "/en"
     assert_select "ul.entry-list li .entry-meta", text: /Engineer · 2021–2023/
+  end
+
+  test "project role and outcome follow the page locale" do
+    @project.translations.find_by!(locale: "en").update!(outcome: "Cut checkout time in half.")
+    @project.translations.create!(
+      locale: "fr", title: "Projet visible", slug: "projet-visible", role: "Ingénieur principal",
+      summary: "Résumé", body_markdown: "Corps", state: "published", published_at: 1.day.ago
+    )
+
+    get "/fr/projects/projet-visible"
+    assert_select ".facts dd", text: "Ingénieur principal"
+    assert_select ".facts dd", text: "Engineer", count: 0
+    assert_select ".facts dt", text: "Résultat", count: 0
+
+    get "/fr/projects"
+    assert_select ".entry .entry-meta", text: /Ingénieur principal/
+
+    get "/en/projects/visible-project"
+    assert_select ".facts div:first-child dt", text: "Outcome"
+    assert_select ".facts div:first-child dd", text: "Cut checkout time in half."
+
+    get "/en/projects"
+    assert_select ".entry .entry-outcome", text: "Cut checkout time in half."
   end
 
   test "post page links to older and newer articles and back to the index" do
@@ -150,9 +173,9 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     assert_select "form[role=search]"
 
     6.times do |index|
-      project = Project.new(role: "Lead")
+      project = Project.new
       project.translations.build(
-        locale: "en", title: "Extra #{index}", slug: "extra-#{index}", summary: "Extra",
+        locale: "en", title: "Extra #{index}", slug: "extra-#{index}", role: "Engineer", summary: "Extra",
         body_markdown: "Body", state: "published", published_at: index.days.ago
       )
       project.save!
@@ -211,11 +234,11 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
 
   test "detail locale switches use published sibling slugs and disable unavailable translations" do
     @project.translations.create!(
-      locale: "fr", title: "Projet visible", slug: "projet-visible", summary: "Résumé",
+      locale: "fr", title: "Projet visible", slug: "projet-visible", role: "Engineer", summary: "Résumé",
       body_markdown: "Corps", state: "published", published_at: 1.day.ago
     )
     @project.translations.create!(
-      locale: "vi", title: "Dự án nháp", slug: "du-an-nhap", summary: "Tóm tắt",
+      locale: "vi", title: "Dự án nháp", slug: "du-an-nhap", role: "Engineer", summary: "Tóm tắt",
       body_markdown: "Nội dung", state: "draft"
     )
 
@@ -240,7 +263,7 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     @profile.translations.create!(
       locale: "fr", display_name: "Propriétaire démo", headline: "Titre",
       introduction: "Introduction", biography_markdown: "Biographie",
-      availability_label: "Disponible"
+      job_title: "Product engineer", availability_label: "Disponible"
     )
     @resume.translations.create!(locale: "fr", title: "CV", description: "CV actuel")
 
@@ -285,11 +308,11 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
 
   test "publication transitions expose only the selected locale" do
     french = @project.translations.create!(
-      locale: "fr", title: "Projet", slug: "projet", summary: "Résumé",
+      locale: "fr", title: "Projet", slug: "projet", role: "Engineer", summary: "Résumé",
       body_markdown: "Corps"
     )
     vietnamese = @project.translations.create!(
-      locale: "vi", title: "Dự án", slug: "du-an", summary: "Tóm tắt",
+      locale: "vi", title: "Dự án", slug: "du-an", role: "Engineer", summary: "Tóm tắt",
       body_markdown: "Nội dung"
     )
 

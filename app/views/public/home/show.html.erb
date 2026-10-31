@@ -1,4 +1,4 @@
-<% page_metadata(title: t("seo.home.title", name: site_name), description: t("seo.home.description")) %>
+<% page_metadata(title: t("seo.home.title", name: site_name, title: @profile_translation&.job_title.presence || t("seo.home.fallback_title")), description: t("seo.home.description")) %>
 
 <main id="main-content" class="site-container page-shell page-stack" tabindex="-1">
   <% if @profile_translation %>
@@ -13,7 +13,7 @@
               link_to t("locales.#{locale}"), localized_root_path(locale: locale), lang: locale, hreflang: locale
             end
           end %>
-          <p class="hero-role"><%= t("public.home.role_html", languages: safe_join(languages, content_tag(:span, " · ", class: "hero-role-sep", aria: { hidden: true }))) %></p>
+          <p class="hero-role"><%= t("public.home.role_html", title: @profile_translation.job_title, languages: safe_join(languages, content_tag(:span, " · ", class: "hero-role-sep", aria: { hidden: true }))) %></p>
         </div>
         <p class="type-statement"><%= @profile_translation.headline %></p>
         <p class="type-lede"><%= @profile_translation.introduction %></p>

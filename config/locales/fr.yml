@@ -1,7 +1,8 @@
 fr:
   seo:
     home:
-      title: "%{name} · Ingénierie produit"
+      title: "%{name} · %{title}"
+      fallback_title: "Portfolio"
       description: "Études de cas en ingénierie produit, articles techniques et CV, en anglais, en français et en vietnamien."
     projects:
       title: "Réalisations"
@@ -61,7 +62,7 @@ fr:
       introduction: "Écrivez-moi au sujet d’un poste ou d’un projet. Le message arrive directement dans ma boîte de réception."
   public:
     home:
-      role_html: "Ingénieur produit · travaille en %{languages}"
+      role_html: "%{title} · travaille en %{languages}"
       selected_work: "Réalisations choisies"
       recent_writing: "Articles récents"
       contact: "Prendre contact"
@@ -83,6 +84,7 @@ fr:
       empty: "Aucune étude de cas n’est encore publiée."
       no_matches: "Aucune étude de cas ne correspond à cette recherche."
       role: "Rôle"
+      outcome: "Résultat"
       timeline: "Période"
       present: "Aujourd’hui"
       next: "Étude de cas suivante"

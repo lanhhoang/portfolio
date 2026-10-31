@@ -2,10 +2,6 @@
 <%= form_with model: [:admin, project] do |form| %>
   <div class="grid gap-4 md:grid-cols-2">
     <div>
-      <%= form.label :role %>
-      <%= form.text_field :role, required: true %>
-    </div>
-    <div>
       <%= form.label :featured_position %>
       <%= form.number_field :featured_position, min: 1 %>
     </div>

@@ -1,4 +1,4 @@
-<%# Text-first case study row: title, role and years, summary; cover image supports. %>
+<%# Text-first case study row: title, role and years, summary, optional outcome; cover image supports. %>
 <% project = translation.project %>
 <article class="entry">
   <div class="entry-text">
@@ -6,9 +6,12 @@
       <%= link_to translation.title, localized_project_path(locale: current_locale, slug: translation.slug) %>
     <% end %>
     <p class="entry-meta">
-      <%= project.role %><% if project.started_on %> · <%= project_timeline(project) %><% end %>
+      <%= translation.role %><% if project.started_on %> · <%= project_timeline(project) %><% end %>
     </p>
     <p class="max-w-prose"><%= translation.summary %></p>
+    <% if translation.outcome.present? %>
+      <p class="entry-outcome max-w-prose"><%= translation.outcome %></p>
+    <% end %>
     <% if local_assigns[:tags] %>
       <%= render "public/shared/tags", taggable: project %>
     <% end %>

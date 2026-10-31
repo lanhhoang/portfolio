@@ -16,9 +16,15 @@
       </div>
 
       <dl class="facts">
+        <% if @translation.outcome.present? %>
+          <div>
+            <dt><%= t("public.projects.outcome") %></dt>
+            <dd><%= @translation.outcome %></dd>
+          </div>
+        <% end %>
         <div>
           <dt><%= t("public.projects.role") %></dt>
-          <dd><%= project.role %></dd>
+          <dd><%= @translation.role %></dd>
         </div>
         <% if project.started_on %>
           <div>

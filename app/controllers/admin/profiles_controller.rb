@@ -25,7 +25,7 @@ class Admin::ProfilesController < Admin::BaseController
       :public_contact_email, :accent, :portrait,
       {
         social_links: %i[github linkedin website],
-        translations_attributes: [ %i[id locale display_name headline introduction biography_markdown availability_label _destroy] ]
+        translations_attributes: [ %i[id locale display_name job_title headline introduction biography_markdown availability_label _destroy] ]
       }
     ])
   end

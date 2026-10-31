@@ -11,22 +11,22 @@ class SitemapTest < ActionDispatch::IntegrationTest
     profile.translations.build(
       locale: "en", display_name: "Owner", headline: "Headline",
       introduction: "Introduction", biography_markdown: "Biography",
-      availability_label: "Available"
+      job_title: "Product engineer", availability_label: "Available"
     )
     profile.save!
 
-    project = Project.new(role: "Engineer")
+    project = Project.new
     project.translations.build(
-      locale: "en", title: "Visible", slug: "visible", summary: "Summary",
+      locale: "en", title: "Visible", slug: "visible", role: "Engineer", summary: "Summary",
       body_markdown: "Body", state: "published", published_at: 1.day.ago
     )
     project.save!
     project.translations.create!(
-      locale: "fr", title: "Brouillon", slug: "brouillon", summary: "Résumé",
+      locale: "fr", title: "Brouillon", slug: "brouillon", role: "Engineer", summary: "Résumé",
       body_markdown: "Corps", state: "draft"
     )
     project.translations.create!(
-      locale: "vi", title: "Đã lên lịch", slug: "da-len-lich", summary: "Tóm tắt",
+      locale: "vi", title: "Đã lên lịch", slug: "da-len-lich", role: "Engineer", summary: "Tóm tắt",
       body_markdown: "Nội dung", state: "scheduled", scheduled_at: 1.day.from_now
     )
 

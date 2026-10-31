@@ -6,11 +6,11 @@ class ProfileTranslation < ApplicationRecord
   before_validation :render_biography_html, if: :will_save_change_to_biography_markdown?
 
   validates :locale, inclusion: { in: %w[en fr vi] }, uniqueness: { scope: :profile_id }
-  validates :display_name, :headline, :introduction, :biography_markdown,
+  validates :display_name, :job_title, :headline, :introduction, :biography_markdown,
     :availability_label, presence: true
 
   def complete?
-    display_name.present? && headline.present? && introduction.present? &&
+    display_name.present? && job_title.present? && headline.present? && introduction.present? &&
       biography_markdown.present? && availability_label.present?
   end
 

@@ -12,14 +12,14 @@ class Admin::ProjectsTest < ActionDispatch::IntegrationTest
     assert_difference "Project.count", 1 do
       assert_difference "ProjectTranslation.count", 2 do
         post admin_projects_path, params: { project: {
-          role: "Lead developer", started_on: "2026-01-01", ended_on: "2026-06-01",
+          started_on: "2026-01-01", ended_on: "2026-06-01",
           live_url: "https://example.test", source_url: "https://github.com/example/work",
           featured_position: "1", tag_ids: [ @tag.id ],
           cover_image: image_upload,
           translations_attributes: {
-            "0" => { locale: "en", title: "Useful Work", slug: "", summary: "English summary", body_markdown: "# English" },
-            "1" => { locale: "fr", title: "Travail utile", slug: "travail-utile", summary: "Résumé", body_markdown: "# Français" },
-            "2" => { locale: "vi", title: "", slug: "", summary: "", body_markdown: "" }
+            "0" => { locale: "en", title: "Useful Work", slug: "", role: "Engineer", summary: "English summary", body_markdown: "# English" },
+            "1" => { locale: "fr", title: "Travail utile", slug: "travail-utile", role: "Engineer", summary: "Résumé", body_markdown: "# Français" },
+            "2" => { locale: "vi", title: "", slug: "", role: "", summary: "", body_markdown: "" }
           }
         } }
       end
@@ -37,8 +37,7 @@ class Admin::ProjectsTest < ActionDispatch::IntegrationTest
     project = create_project
     translation = project.translations.find_by!(locale: "en")
     patch admin_project_path(project), params: { project: {
-      role: project.role,
-      translations_attributes: { "0" => { id: translation.id, locale: "en", title: "New title", slug: translation.slug, summary: "Summary", body_markdown: "Body" } }
+      translations_attributes: { "0" => { id: translation.id, locale: "en", title: "New title", slug: translation.slug, role: "Engineer", summary: "Summary", body_markdown: "Body" } }
     } }
     assert_redirected_to edit_admin_project_path(project)
     assert_equal "existing-project", translation.reload.slug
@@ -47,13 +46,12 @@ class Admin::ProjectsTest < ActionDispatch::IntegrationTest
   test "does not let nested updates move a persisted translation to another locale" do
     project = create_project
     translation = project.translations.create!(
-      locale: "fr", title: "Projet", slug: "projet", summary: "Résumé", body_markdown: "Corps"
+      locale: "fr", title: "Projet", slug: "projet", role: "Engineer", summary: "Résumé", body_markdown: "Corps"
     )
     patch admin_project_path(project), params: { project: {
-      role: project.role,
       translations_attributes: { "0" => {
         id: translation.id, locale: "vi", title: "Projet", slug: "projet",
-        summary: "Résumé", body_markdown: "Corps"
+        role: "Engineer", summary: "Résumé", body_markdown: "Corps"
       } }
     } }
     assert_response :see_other
@@ -62,8 +60,8 @@ class Admin::ProjectsTest < ActionDispatch::IntegrationTest
 
   test "renders entered translations and upload errors with 422" do
     post admin_projects_path, params: { project: {
-      role: "Lead", cover_image: invalid_upload,
-      translations_attributes: { "0" => { locale: "en", title: "Entered title", summary: "Entered summary", body_markdown: "Entered body" } }
+      cover_image: invalid_upload,
+      translations_attributes: { "0" => { locale: "en", title: "Entered title", role: "Engineer", summary: "Entered summary", body_markdown: "Entered body" } }
     } }
     assert_response :unprocessable_entity
     assert_select "input[value='Entered title']"
@@ -119,7 +117,6 @@ class Admin::ProjectsTest < ActionDispatch::IntegrationTest
     project.gallery_images.attach(io: Rails.root.join("public/icon.png").open, filename: "one.png", content_type: "image/png")
 
     patch admin_project_path(project), params: { project: {
-      role: project.role,
       gallery_images: [ image_upload ]
     } }
 
@@ -149,8 +146,8 @@ class Admin::ProjectsTest < ActionDispatch::IntegrationTest
   end
 
   def create_project(slug: "existing-project")
-    Project.create!(role: "Engineer", translations_attributes: {
-      "0" => { locale: "en", title: slug.humanize, slug:, summary: "Summary", body_markdown: "Body" }
+    Project.create!(translations_attributes: {
+      "0" => { locale: "en", title: slug.humanize, slug:, role: "Engineer", summary: "Summary", body_markdown: "Body" }
     })
   end
 

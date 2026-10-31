@@ -4,7 +4,7 @@ class ProfileTranslationTest < ActiveSupport::TestCase
   test "reports whether authored content is complete" do
     attributes = {
       display_name: "Owner", headline: "Headline", introduction: "Introduction",
-      biography_markdown: "Biography", availability_label: "Available"
+      biography_markdown: "Biography", job_title: "Product engineer", availability_label: "Available"
     }
 
     assert ProfileTranslation.new(attributes).complete?

@@ -576,6 +576,11 @@ html.js .site-header:not([data-menu-connected]) .primary-navigation {
   font-variant-numeric: tabular-nums;
 }
 
+/* The result reads as the payoff of the row: foreground and heavier than the summary. */
+.entry-outcome {
+  font-weight: 600;
+}
+
 .search-bar {
   display: grid;
   gap: 1rem;

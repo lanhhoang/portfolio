@@ -1,7 +1,8 @@
 en:
   seo:
     home:
-      title: "%{name} · Product engineer"
+      title: "%{name} · %{title}"
+      fallback_title: "Portfolio"
       description: "Product engineering case studies, technical writing, and résumé in English, French, and Vietnamese."
     projects:
       title: "Work"
@@ -61,7 +62,7 @@ en:
       introduction: "Send a message about a role or a project. It goes straight to my inbox."
   public:
     home:
-      role_html: "Product engineer · works in %{languages}"
+      role_html: "%{title} · works in %{languages}"
       selected_work: "Selected work"
       recent_writing: "Recent writing"
       contact: "Get in touch"
@@ -83,6 +84,7 @@ en:
       empty: "No case studies are published yet."
       no_matches: "No case studies match this search."
       role: "Role"
+      outcome: "Outcome"
       timeline: "Timeline"
       present: "Present"
       next: "Next case study"

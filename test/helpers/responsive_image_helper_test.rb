@@ -42,10 +42,10 @@ class ResponsiveImageHelperTest < ActionView::TestCase
   private
 
   def attached_icon
-    project = Project.new(role: "Engineer")
+    project = Project.new
     project.translations.build(
       locale: "en", title: "Image test", slug: "image-test",
-      summary: "Summary", body_markdown: "Body", state: "draft"
+      role: "Engineer", summary: "Summary", body_markdown: "Body", state: "draft"
     )
     project.save!
     project.cover_image.attach(

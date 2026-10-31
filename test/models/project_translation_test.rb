@@ -2,7 +2,7 @@ require "test_helper"
 
 class ProjectTranslationTest < ActiveSupport::TestCase
   test "reports whether authored content is complete" do
-    attributes = { title: "Work", summary: "Summary", body_markdown: "Body" }
+    attributes = { title: "Work", role: "Engineer", summary: "Summary", body_markdown: "Body" }
 
     assert ProjectTranslation.new(attributes).complete?
     attributes.each_key do |attribute|
@@ -11,8 +11,8 @@ class ProjectTranslationTest < ActiveSupport::TestCase
   end
 
   test "generates slug once and does not change it when title changes" do
-    project = Project.create!(role: "Engineer", translations_attributes: {
-      "0" => { locale: "en", title: "First Title", summary: "Summary", body_markdown: "Body" }
+    project = Project.create!(translations_attributes: {
+      "0" => { locale: "en", title: "First Title", role: "Engineer", summary: "Summary", body_markdown: "Body" }
     })
     translation = project.translations.find_by!(locale: "en")
     assert_equal "first-title", translation.slug
