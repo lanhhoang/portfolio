@@ -111,6 +111,8 @@ fr:
       download: "Télécharger le CV (PDF)"
       pdf_unavailable: "Le PDF n’est pas encore disponible."
       see_work: "Voir les réalisations"
+      other_languages: "Autres langues"
+      download_in: "PDF en %{language}"
 
   number:
     format:

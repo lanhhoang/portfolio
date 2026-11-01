@@ -111,6 +111,8 @@ en:
       download: "Download résumé (PDF)"
       pdf_unavailable: "The PDF is not available yet."
       see_work: "See the work"
+      other_languages: "Other languages"
+      download_in: "%{language} PDF"
 
   number:
     human:

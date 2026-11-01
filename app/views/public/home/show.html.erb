@@ -50,8 +50,8 @@
     <h2 id="selected-work-heading" class="type-label"><%= t("public.home.selected_work") %></h2>
     <% if @projects.any? %>
       <ul class="entry-list">
-        <% @projects.each do |translation| %>
-          <li><%= render "public/projects/entry", translation: translation, heading: :h3 %></li>
+        <% @projects.each_with_index do |translation, index| %>
+          <li><%= render "public/projects/entry", translation: translation, heading: :h3, lead: index.zero? %></li>
         <% end %>
       </ul>
     <% else %>
@@ -81,7 +81,7 @@
   <section aria-labelledby="contact-heading" class="rail">
     <h2 id="contact-heading" class="type-label"><%= t("public.home.contact") %></h2>
     <div class="grid justify-items-start gap-3">
-      <p class="type-statement"><%= t("public.home.contact_prompt") %></p>
+      <p class="type-prompt"><%= t("public.home.contact_prompt") %></p>
       <%= link_to t("public.home.contact_action"), localized_contact_path(locale: current_locale), class: "button" %>
     </div>
   </section>

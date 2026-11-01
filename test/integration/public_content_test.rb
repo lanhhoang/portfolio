@@ -118,17 +118,17 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     get "/fr/projects/projet-visible"
     assert_select ".facts dd", text: "Ingénieur principal"
     assert_select ".facts dd", text: "Engineer", count: 0
-    assert_select ".facts dt", text: "Résultat", count: 0
+    assert_select ".case-outcome", count: 0
 
     get "/fr/projects"
     assert_select ".entry .entry-meta", text: /Ingénieur principal/
 
     get "/en/projects/visible-project"
-    assert_select ".facts div:first-child dt", text: "Outcome"
-    assert_select ".facts div:first-child dd", text: "Cut checkout time in half."
+    assert_select "header .case-outcome", text: /Cut checkout time in half\./
+    assert_select ".case-outcome .sr-only", text: /Outcome/
 
     get "/en/projects"
-    assert_select ".entry .entry-outcome", text: "Cut checkout time in half."
+    assert_select ".entry .entry-outcome", text: /Cut checkout time in half\./
   end
 
   test "post page links to older and newer articles and back to the index" do
@@ -170,6 +170,20 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     get "/en/resume"
     assert_select "h1", text: "Résumé"
     assert_select "h1", text: "Jane-CV-final-v3", count: 0
+  end
+
+  test "résumé page links to the PDFs in other languages" do
+    @resume.translations.first.pdf.attach(
+      io: file_fixture("resume.pdf").open, filename: "resume.pdf", content_type: "application/pdf"
+    )
+    french = @resume.translations.create!(locale: "fr", title: "CV", description: "CV actuel")
+    french.pdf.attach(io: file_fixture("resume.pdf").open, filename: "cv.pdf", content_type: "application/pdf")
+    @resume.translations.create!(locale: "vi", title: "Hồ sơ", description: "Hồ sơ hiện tại")
+
+    get "/en/resume"
+    assert_select "aside a[href='/fr/resume/download'][hreflang='fr']", text: /Français PDF/
+    assert_select "aside a[href='/vi/resume/download']", count: 0
+    assert_select "aside a[href='/en/resume/download']", count: 0
   end
 
   test "contact and about pages offer direct channels beside the main content" do

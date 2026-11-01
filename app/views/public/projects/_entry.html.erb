@@ -1,6 +1,6 @@
 <%# Text-first case study row: title, role and years, summary, optional outcome; cover image supports. %>
 <% project = translation.project %>
-<article class="entry">
+<article class="<%= class_names("entry", "entry-lead": local_assigns[:lead]) %>">
   <div class="entry-text">
     <%= content_tag heading, class: "type-heading" do %>
       <%= link_to translation.title, localized_project_path(locale: current_locale, slug: translation.slug) %>
@@ -10,7 +10,10 @@
     </p>
     <p class="max-w-prose"><%= translation.summary %></p>
     <% if translation.outcome.present? %>
-      <p class="entry-outcome max-w-prose"><%= translation.outcome %></p>
+      <p class="entry-outcome max-w-prose">
+        <span class="type-label"><%= t("public.projects.outcome") %></span>
+        <%= translation.outcome %>
+      </p>
     <% end %>
     <% if local_assigns[:tags] %>
       <%= render "public/shared/tags", taggable: project %>
@@ -21,7 +24,7 @@
       <%= responsive_image_tag(
         project.cover_image,
         alt: "",
-        sizes: "(min-width: 80rem) 24rem, (min-width: 56rem) 30vw, 100vw",
+        sizes: local_assigns[:lead] ? "(min-width: 80rem) 28rem, (min-width: 56rem) 35vw, 100vw" : "(min-width: 80rem) 18rem, (min-width: 56rem) 25vw, 100vw",
         class: "max-w-full"
       ) %>
     </div>

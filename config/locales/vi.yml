@@ -111,6 +111,8 @@ vi:
       download: "Tải hồ sơ (PDF)"
       pdf_unavailable: "Bản PDF chưa có sẵn."
       see_work: "Xem dự án"
+      other_languages: "Ngôn ngữ khác"
+      download_in: "PDF %{language}"
 
   number:
     format:

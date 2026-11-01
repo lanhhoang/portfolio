@@ -482,8 +482,8 @@ html.js .site-header:not([data-menu-connected]) .primary-navigation {
 /* Grid children default to min-width: auto, so one unbroken word (a URL, a
    German compound, a pasted hash) would push the page sideways. */
 :where(.page-stack, .page-header, .hero, .hero-text, .hero-name, .entry-list,
-  .entry, .entry-text, .search-bar, .with-aside, .with-aside-main, .case-header,
-  .facts, .case-body, .about-aside, .form-stack, .page-end, .page-end-nav, .next-step,
+  .entry, .entry-text, .search-bar, .with-aside, .with-aside-main,
+  .facts, .case-body, .case-main, .about-aside, .form-stack, .page-end, .page-end-nav, .next-step,
   .action-row) > * {
   min-width: 0;
   max-width: 100%;
@@ -601,9 +601,27 @@ html.js .site-header:not([data-menu-connected]) .primary-navigation {
   font-variant-numeric: tabular-nums;
 }
 
-/* The result reads as the payoff of the row: foreground and heavier than the summary. */
+/* The result is the payoff of the row: labelled, ruled in the accent, heavier than the summary. */
 .entry-outcome {
+  display: grid;
+  gap: 0.125rem;
+  justify-self: start;
+  margin-top: 0.5rem;
+  padding-top: 0.625rem;
+  border-top: 2px solid var(--accent);
   font-weight: 600;
+}
+
+/* The first featured case study leads the list: larger title, outcome and cover. */
+.entry-lead .type-heading {
+  font-size: var(--text-statement);
+  letter-spacing: -0.02em;
+}
+
+.entry-lead .entry-outcome {
+  font-size: var(--text-heading);
+  letter-spacing: -0.015em;
+  line-height: var(--leading-heading);
 }
 
 .search-bar {
@@ -658,11 +676,17 @@ html.js .site-header:not([data-menu-connected]) .primary-navigation {
   overflow-wrap: anywhere;
 }
 
-/* Case study header: story on the left, facts on the right. */
-.case-header {
-  display: grid;
-  gap: var(--space-group);
-  align-items: start;
+/* The case outcome is the claim the page proves, so it follows the summary at statement size. */
+.case-outcome {
+  justify-self: start;
+  max-width: min(32ch, 100%);
+  margin-top: 0.75rem;
+  padding-top: var(--space-tight);
+  border-top: 3px solid var(--accent);
+  font-size: var(--text-statement);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: var(--leading-heading);
 }
 
 .facts {
@@ -680,7 +704,7 @@ html.js .site-header:not([data-menu-connected]) .primary-navigation {
 /* A tall cover must not push the story several screens down. */
 .case-cover {
   width: 100%;
-  max-height: min(60svh, 36rem);
+  max-height: min(70svh, 40rem);
   object-fit: cover;
 }
 
@@ -690,9 +714,16 @@ html.js .site-header:not([data-menu-connected]) .primary-navigation {
   font-size: 1.0625rem;
 }
 
-.case-body {
+.case-main {
   display: grid;
   gap: var(--space-group);
+}
+
+.aside-links li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.5rem;
 }
 
 /* Tags are filters: each one opens the index narrowed to it. */
@@ -845,6 +876,15 @@ h1 {
   line-height: 1.55;
 }
 
+/* Closing invitations sit a step below the hero statement so the opening claim leads. */
+.type-prompt {
+  max-width: min(28ch, 100%);
+  font-size: var(--text-heading);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: var(--leading-heading);
+}
+
 .type-heading {
   font-size: var(--text-heading);
   font-weight: 700;
@@ -924,8 +964,11 @@ h1 {
     max-width: 18rem;
   }
 
-  .rail-offset > * {
-    grid-column: 2;
+  /* Case facts stay beside the story while it scrolls. */
+  .case-facts {
+    position: sticky;
+    top: 1.5rem;
+    align-self: start;
   }
 
 
@@ -941,6 +984,10 @@ h1 {
     column-gap: clamp(2rem, 4vw, 3rem);
   }
 
+  .entry-lead:has(> .entry-media) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 28rem);
+  }
+
   .entry:has(> .entry-meta) {
     grid-template-columns: 10rem minmax(0, 1fr);
     column-gap: 2rem;
@@ -948,7 +995,6 @@ h1 {
 
   /* One shared side column so portraits, facts and asides line up across pages. */
   .hero:has(> .hero-portrait),
-  .case-header,
   .with-aside {
     grid-template-columns: minmax(0, 1fr) minmax(16rem, 24rem);
   }

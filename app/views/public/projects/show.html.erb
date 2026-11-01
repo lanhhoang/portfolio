@@ -9,19 +9,28 @@
 
 <main id="main-content" class="site-container page-shell" tabindex="-1">
   <article class="page-stack">
-    <header class="case-header">
-      <div class="page-header">
-        <h1><%= @translation.title %></h1>
-        <p class="type-lede"><%= @translation.summary %></p>
-      </div>
+    <header class="page-header">
+      <h1><%= @translation.title %></h1>
+      <p class="type-lede"><%= @translation.summary %></p>
+      <% if @translation.outcome.present? %>
+        <p class="case-outcome"><span class="sr-only"><%= t("public.projects.outcome") %>: </span><%= @translation.outcome %></p>
+      <% end %>
+    </header>
 
-      <dl class="facts">
-        <% if @translation.outcome.present? %>
-          <div>
-            <dt><%= t("public.projects.outcome") %></dt>
-            <dd><%= @translation.outcome %></dd>
-          </div>
-        <% end %>
+    <% if project.cover_image.attached? %>
+      <%= responsive_image_tag(
+        project.cover_image,
+        alt: "",
+        sizes: "(min-width: 80rem) 80rem, 100vw",
+        widths: [640, 960, 1280, 1600],
+        loading: "eager",
+        fetchpriority: "high",
+        class: "case-cover"
+      ) %>
+    <% end %>
+
+    <div class="case-body rail">
+      <dl class="facts case-facts">
         <div>
           <dt><%= t("public.projects.role") %></dt>
           <dd><%= @translation.role %></dd>
@@ -54,35 +63,23 @@
           </div>
         <% end %>
       </dl>
-    </header>
 
-    <div class="case-body rail-offset rail">
-      <% if project.cover_image.attached? %>
-        <%= responsive_image_tag(
-          project.cover_image,
-          alt: "",
-          sizes: "(min-width: 80rem) 60rem, (min-width: 56rem) 75vw, 100vw",
-          widths: [640, 960, 1280, 1600],
-          loading: "eager",
-          fetchpriority: "high",
-          class: "case-cover"
-        ) %>
-      <% end %>
+      <div class="case-main">
+        <div class="rich-text"><%= sanitize @translation.body_html %></div>
 
-      <div class="rich-text"><%= sanitize @translation.body_html %></div>
-
-      <% if project.gallery_images.attached? %>
-        <ul class="grid gap-4 md:grid-cols-2">
-          <% project.gallery_images.each_with_index do |image, index| %>
-            <li><%= responsive_image_tag(
-              image,
-              alt: t("public.projects.gallery_alt", title: @translation.title, number: index + 1),
-              sizes: "(min-width: 80rem) 30rem, (min-width: 48rem) 40vw, 100vw",
-              class: "max-w-full"
-            ) %></li>
-          <% end %>
-        </ul>
-      <% end %>
+        <% if project.gallery_images.attached? %>
+          <ul class="grid gap-4 md:grid-cols-2">
+            <% project.gallery_images.each_with_index do |image, index| %>
+              <li><%= responsive_image_tag(
+                image,
+                alt: t("public.projects.gallery_alt", title: @translation.title, number: index + 1),
+                sizes: "(min-width: 80rem) 30rem, (min-width: 48rem) 40vw, 100vw",
+                class: "max-w-full"
+              ) %></li>
+            <% end %>
+          </ul>
+        <% end %>
+      </div>
     </div>
 
     <footer class="page-end">
