@@ -4,6 +4,8 @@ class PublicShellTest < ApplicationSystemTestCase
   driven_by :selenium, using: :headless_chrome, screen_size: [ 320, 800 ]
 
   test "locale choice survives navigation and a root reload" do
+    # Another test in this class widens the shared window; languages live in the menu below 64rem.
+    page.current_window.resize_to(320, 800)
     visit localized_root_path(locale: "en")
     find("button[aria-controls='site-menu']").click
 
