@@ -17,6 +17,7 @@ module ThemeHelper
     javascript_tag nonce: true do
       <<~JAVASCRIPT.html_safe
         (() => {
+          document.documentElement.classList.add("js");
           const theme = localStorage.getItem("portfolio-theme");
           if (theme === "light" || theme === "dark") {
             document.documentElement.dataset.theme = theme;

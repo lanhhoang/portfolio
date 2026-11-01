@@ -11,7 +11,7 @@ class PublicLocalizationTest < ActionDispatch::IntegrationTest
       profile.translations.build(
         locale: locale, display_name: display_name, headline: headline,
         introduction: "A demonstration profile.", biography_markdown: "Biography",
-        availability_label: "Available"
+        job_title: "Product engineer", availability_label: "Available"
       )
     end
     profile.save!
@@ -83,7 +83,7 @@ class PublicLocalizationTest < ActionDispatch::IntegrationTest
     }.each do |locale, display_name|
       get localized_about_path(locale: locale)
 
-      assert_select "h1", text: display_name
+      assert_select ".site-mark", text: display_name
     end
   end
 

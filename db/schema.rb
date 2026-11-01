@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_06_043317) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_01_013919) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -116,6 +116,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_06_043317) do
     t.string "display_name", null: false
     t.string "headline", null: false
     t.text "introduction", null: false
+    t.string "job_title", default: "", null: false
     t.string "locale", null: false
     t.integer "profile_id", null: false
     t.datetime "updated_at", null: false
@@ -139,9 +140,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_06_043317) do
     t.text "body_html", default: "", null: false
     t.text "body_markdown", null: false
     t.datetime "created_at", null: false
+    t.text "gallery_captions", default: "", null: false
     t.string "locale", null: false
+    t.text "outcome", default: "", null: false
     t.integer "project_id", null: false
     t.datetime "published_at"
+    t.string "role", default: "", null: false
     t.datetime "scheduled_at"
     t.text "search_text", default: "", null: false
     t.string "slug", null: false
@@ -161,10 +165,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_06_043317) do
     t.date "ended_on"
     t.integer "featured_position"
     t.string "live_url"
-    t.string "role", null: false
     t.string "source_url"
     t.date "started_on"
     t.datetime "updated_at", null: false
+    t.json "working_languages", default: [], null: false
     t.index ["featured_position"], name: "index_projects_on_featured_position"
     t.check_constraint "featured_position IS NULL OR featured_position > 0", name: "projects_featured_position_positive"
   end

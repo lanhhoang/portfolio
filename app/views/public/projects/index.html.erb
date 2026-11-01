@@ -1,40 +1,39 @@
 <% page_metadata(title: t("seo.projects.title"), description: t("seo.projects.description")) %>
 
-<main id="main-content" class="site-container page-shell space-y-8" tabindex="-1">
-  <header>
-    <p class="text-sm uppercase"><%= t("navigation.work") %></p>
-    <h1 class="text-4xl font-bold"><%= t("public.projects.title") %></h1>
+<main id="main-content" class="site-container page-shell grid gap-12" tabindex="-1">
+  <header class="page-header">
+    <h1><%= t("public.projects.title") %></h1>
+    <p class="type-lede"><%= t("pages.projects.introduction") %></p>
   </header>
 
-  <%= form_with url: localized_projects_path(locale: current_locale), method: :get, class: "grid gap-4", html: { role: "search" } do |form| %>
-    <%= form.label :q, t("public.search.label") %>
-    <%= form.search_field :q, value: params[:q], class: "min-h-11" %>
-    <%= form.label :tag, t("public.tags.label") %>
-    <%= form.select :tag,
-      options_for_select([[t("public.tags.all"), ""]] + @tag_translations.map { |tag| [tag.name, tag.slug] }, params[:tag]),
-      {}, class: "min-h-11" %>
-    <%= form.submit t("public.search.submit"), class: "min-h-11" %>
+  <% if @search_offered %>
+    <%= form_with url: localized_projects_path(locale: current_locale), method: :get, class: "search-bar", html: { role: "search" } do |form| %>
+      <div>
+        <%= form.label :q, t("public.search.label") %>
+        <%= form.search_field :q, value: params[:q] %>
+      </div>
+      <div>
+        <%= form.label :tag, t("public.tags.label") %>
+        <%= form.select :tag,
+          options_for_select([[t("public.tags.all"), ""]] + @tag_translations.map { |tag| [tag.name, tag.slug] }, params[:tag]),
+          {} %>
+      </div>
+      <%= form.submit t("public.search.submit"), class: "button" %>
+    <% end %>
   <% end %>
 
   <% if @translations.any? %>
-    <div class="grid gap-8 md:grid-cols-2">
+    <ul class="entry-list">
       <% @translations.each do |translation| %>
-        <article class="space-y-3">
-          <% if translation.project.cover_image.attached? %>
-            <%= responsive_image_tag(
-              translation.project.cover_image,
-              alt: translation.title,
-              sizes: "(min-width: 80rem) 40rem, (min-width: 48rem) 50vw, 100vw",
-              class: "max-w-full"
-            ) %>
-          <% end %>
-          <h2 class="text-2xl font-bold"><%= link_to translation.title, localized_project_path(locale: current_locale, slug: translation.slug) %></h2>
-          <p><%= translation.summary %></p>
-          <%= render "public/shared/tags", taggable: translation.project %>
-        </article>
+        <li><%= render "public/projects/entry", translation: translation, heading: :h2, tags: true %></li>
       <% end %>
-    </div>
+    </ul>
   <% else %>
-    <p><%= t("public.projects.empty") %></p>
+    <% if params[:q].present? || params[:tag].present? %>
+      <p><%= t("public.projects.no_matches") %></p>
+      <%= link_to t("public.search.clear"), localized_projects_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %>
+    <% else %>
+      <p><%= t("public.projects.empty") %></p>
+    <% end %>
   <% end %>
 </main>

@@ -5,48 +5,109 @@
   image_url: (@translation.project.cover_image.attached? ? url_for(@translation.project.cover_image) : nil),
   json_ld: project_json_ld(@translation)
 ) %>
+<% project = @translation.project %>
 
 <main id="main-content" class="site-container page-shell" tabindex="-1">
-  <article class="space-y-8">
-    <header class="space-y-3">
-      <p class="text-sm uppercase"><%= @translation.project.role %></p>
-      <h1 class="text-4xl font-bold"><%= @translation.title %></h1>
-      <p class="max-w-prose text-lg"><%= @translation.summary %></p>
-      <%= render "public/shared/tags", taggable: @translation.project %>
+  <article class="page-stack">
+    <header class="page-header">
+      <h1><%= @translation.title %></h1>
+      <p class="type-lede"><%= @translation.summary %></p>
+      <% if @translation.outcome.present? %>
+        <p class="case-outcome"><span class="sr-only"><%= t("public.projects.outcome") %>: </span><%= @translation.outcome %></p>
+      <% end %>
     </header>
 
-    <% if @translation.project.cover_image.attached? %>
+    <% if project.cover_image.attached? %>
       <%= responsive_image_tag(
-        @translation.project.cover_image,
-        alt: @translation.title,
+        project.cover_image,
+        alt: "",
         sizes: "(min-width: 80rem) 80rem, 100vw",
         widths: [640, 960, 1280, 1600],
         loading: "eager",
         fetchpriority: "high",
-        class: "max-w-full"
+        class: "case-cover"
       ) %>
     <% end %>
 
-    <div class="rich-text"><%= sanitize @translation.body_html %></div>
-
-    <% if @translation.project.gallery_images.attached? %>
-      <ul class="grid gap-4 md:grid-cols-2">
-        <% @translation.project.gallery_images.each_with_index do |image, index| %>
-          <li><%= responsive_image_tag(
-            image,
-            alt: t("public.projects.gallery_alt", title: @translation.title, number: index + 1),
-            sizes: "(min-width: 48rem) 50vw, 100vw",
-            class: "max-w-full"
-          ) %></li>
+    <div class="case-body rail">
+      <dl class="facts case-facts">
+        <div>
+          <dt><%= t("public.projects.role") %></dt>
+          <dd><%= @translation.role %></dd>
+        </div>
+        <% if project.started_on %>
+          <div>
+            <dt><%= t("public.projects.timeline") %></dt>
+            <dd><%= project_timeline(project) %></dd>
+          </div>
         <% end %>
-      </ul>
-    <% end %>
+        <% if project.working_languages.any? %>
+          <div>
+            <dt><%= t("public.projects.working_languages") %></dt>
+            <dd class="fact-languages">
+              <%= safe_join(project.working_languages.map { |locale| content_tag(:span, t("locales.#{locale}"), lang: locale) }, content_tag(:span, " · ", aria: { hidden: true })) %>
+            </dd>
+          </div>
+        <% end %>
+        <% if project.tags.any? %>
+          <div>
+            <dt><%= t("public.tags.label") %></dt>
+            <dd><%= render "public/shared/tags", taggable: project %></dd>
+          </div>
+        <% end %>
+        <% if project.live_url.present? || project.source_url.present? %>
+          <div>
+            <dt><%= t("public.projects.links") %></dt>
+            <dd>
+              <ul class="grid justify-items-start">
+                <% if project.live_url.present? %>
+                  <li><%= link_to t("public.projects.live"), project.live_url, rel: "noopener noreferrer", class: "inline-flex min-h-11 items-center" %></li>
+                <% end %>
+                <% if project.source_url.present? %>
+                  <li><%= link_to t("public.projects.source"), project.source_url, rel: "noopener noreferrer", class: "inline-flex min-h-11 items-center" %></li>
+                <% end %>
+              </ul>
+            </dd>
+          </div>
+        <% end %>
+      </dl>
 
-    <% if @translation.project.live_url.present? || @translation.project.source_url.present? %>
-      <nav aria-label="<%= t("public.projects.links") %>" class="flex gap-4">
-        <%= link_to t("public.projects.live"), @translation.project.live_url, rel: "noopener" if @translation.project.live_url.present? %>
-        <%= link_to t("public.projects.source"), @translation.project.source_url, rel: "noopener" if @translation.project.source_url.present? %>
+      <div class="case-main">
+        <div class="rich-text"><%= sanitize @translation.body_html %></div>
+
+        <% if project.gallery_images.attached? %>
+          <ul class="gallery">
+            <% project.gallery_images.each_with_index do |image, index| %>
+              <% caption = @translation.gallery_caption(index) %>
+              <li>
+                <figure>
+                  <%= responsive_image_tag(
+                    image,
+                    alt: caption || t("public.projects.gallery_alt", title: @translation.title, number: index + 1),
+                    sizes: "(min-width: 80rem) 30rem, (min-width: 48rem) 40vw, 100vw"
+                  ) %>
+                  <% if caption %>
+                    <figcaption aria-hidden="true"><%= caption %></figcaption>
+                  <% end %>
+                </figure>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+      </div>
+    </div>
+
+    <footer class="page-end">
+      <nav class="page-end-nav" aria-label="<%= t("public.projects.more") %>">
+        <% if @next_translation %>
+          <div>
+            <p class="entry-meta"><%= t("public.projects.next") %></p>
+            <%= link_to @next_translation.title, localized_project_path(locale: current_locale, slug: @next_translation.slug), class: "type-heading" %>
+          </div>
+        <% end %>
+        <%= link_to t("public.projects.all"), localized_projects_path(locale: current_locale), class: "page-end-back" %>
       </nav>
-    <% end %>
+      <%= render "public/shared/next_step" %>
+    </footer>
   </article>
 </main>

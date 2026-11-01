@@ -56,6 +56,19 @@ class PublicContactMessagesTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "n’est pas valide"
   end
 
+  test "ties each validation error to its field and links the summary to it" do
+    params = valid_params
+    params[:contact_message][:sender_email] = "invalid"
+
+    post localized_contact_path(locale: :en), params: params
+
+    assert_response :unprocessable_entity
+    assert_select "[role=alert] a[href='#contact_message_sender_email']", text: "Email is invalid"
+    assert_select "input#contact_message_sender_email[aria-invalid=true][aria-describedby='contact_message_sender_email_error'][autocomplete=email]"
+    assert_select "p#contact_message_sender_email_error", text: "is invalid"
+    assert_select "input#contact_message_sender_name:not([aria-invalid])"
+  end
+
   test "persists before returning receipt feedback and enqueues one id-only job" do
     assert_difference("ContactMessage.count", 1) do
       assert_enqueued_with(job: ContactNotificationJob) do
@@ -66,7 +79,7 @@ class PublicContactMessagesTest < ActionDispatch::IntegrationTest
     message = ContactMessage.order(:id).last
     assert_redirected_to localized_contact_path(locale: :en)
     follow_redirect!
-    assert_includes response.body, "Your message has been saved."
+    assert_includes response.body, "Thanks, your message was sent."
     assert message.pending?
     assert_equal [ message.id ], enqueued_jobs.last.fetch(:args)
   end
@@ -97,7 +110,7 @@ class PublicContactMessagesTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :unprocessable_entity
-    assert_includes response.body, "We could not accept that submission."
+    assert_includes response.body, "Your message couldn’t be sent. Please try again."
   end
 
   test "the sixth request from one IP is rate limited" do
@@ -113,7 +126,7 @@ class PublicContactMessagesTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :too_many_requests
-    assert_includes response.body, "Too many messages were submitted. Please try again later."
+    assert_includes response.body, "You’ve sent several messages in a short time. Please wait 10 minutes, then try again."
   end
 
   test "message body parameters are filtered from logs" do

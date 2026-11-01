@@ -156,7 +156,6 @@ class PublishableTranslationTest < ActiveSupport::TestCase
 
   def create_project(optional_locales: [])
     Project.create!(
-      role: "Developer",
       started_on: Date.new(2026, 1, 1),
       translations_attributes: translation_attributes("Project", optional_locales, summary: "Summary")
     )
@@ -174,6 +173,7 @@ class PublishableTranslationTest < ActiveSupport::TestCase
         locale: locale,
         title: "#{prefix} #{locale}",
         slug: "#{prefix.downcase}-#{locale}",
+        role: (summary && "Engineer"),
         summary: summary,
         excerpt: excerpt,
         body_markdown: "# #{prefix} #{locale}"

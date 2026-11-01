@@ -11,7 +11,7 @@ class ContactNotificationJobTest < ActiveJob::TestCase
       translations_attributes: {
         "0" => {
           locale: "en", display_name: "Owner", headline: "Portfolio",
-          introduction: "Introduction", biography_markdown: "Biography", availability_label: "Available"
+          introduction: "Introduction", biography_markdown: "Biography", job_title: "Product engineer", availability_label: "Available"
         }
       }
     )

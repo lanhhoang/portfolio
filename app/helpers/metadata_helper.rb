@@ -14,7 +14,7 @@ module MetadataHelper
       tag.meta(name: "description", content: description),
       tag.meta(name: "robots", content: robots),
       tag.link(rel: "canonical", href: canonical_url),
-      tag.meta(property: "og:site_name", content: t("seo.site_name")),
+      tag.meta(property: "og:site_name", content: site_name),
       tag.meta(property: "og:title", content: title),
       tag.meta(property: "og:description", content: description),
       tag.meta(property: "og:type", content: og_type),

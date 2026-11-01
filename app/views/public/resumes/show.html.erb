@@ -1,18 +1,44 @@
 <% page_metadata(
-  title: @translation.title,
+  title: t("pages.resume.title"),
   description: @translation.description,
   alternates: alternate_locale_links(locale_switch_paths: @locale_switch_paths)
 ) %>
 
 <main id="main-content" class="site-container page-shell" tabindex="-1">
-  <article class="space-y-6">
-    <h1 class="text-4xl font-bold"><%= @translation.title %></h1>
-    <p class="max-w-prose"><%= @translation.description %></p>
-    <p><%= t("public.resume.updated", date: l(@resume.updated_on, format: :long)) %></p>
-    <% if @translation.pdf.attached? %>
-      <%= link_to t("public.resume.download"), localized_resume_download_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %>
-    <% else %>
-      <p><%= t("public.resume.pdf_unavailable") %></p>
-    <% end %>
+  <article class="page-stack">
+    <div class="with-aside">
+      <header class="page-header justify-items-start">
+        <h1><%= t("pages.resume.title") %></h1>
+        <p class="type-lede"><%= @translation.description %></p>
+        <p class="type-meta"><%= t("public.resume.updated", date: l(@resume.updated_on, format: :long)) %></p>
+        <div class="action-row">
+          <% if @translation.pdf.attached? %>
+            <%= link_to localized_resume_download_path(locale: current_locale), class: "button button-primary" do %>
+              <%= t("public.resume.download") %>
+              <span class="button-meta"><%= number_to_human_size(@translation.pdf.byte_size, precision: 2) %></span>
+            <% end %>
+          <% else %>
+            <p><%= t("public.resume.pdf_unavailable") %></p>
+          <% end %>
+          <%= link_to t("public.resume.see_work"), localized_projects_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %>
+        </div>
+      </header>
+      <% if @other_translations.any? %>
+        <aside class="aside-links" aria-labelledby="resume-languages-heading">
+          <h2 id="resume-languages-heading" class="type-label"><%= t("public.resume.other_languages") %></h2>
+          <ul>
+            <% @other_translations.each do |translation| %>
+              <li>
+                <%= link_to localized_resume_download_path(locale: translation.locale), lang: translation.locale, hreflang: translation.locale do %>
+                  <%= t("public.resume.download_in", language: t("locales.#{translation.locale}")) %>
+                <% end %>
+                <span class="type-meta"><%= number_to_human_size(translation.pdf.byte_size, precision: 2) %></span>
+              </li>
+            <% end %>
+          </ul>
+        </aside>
+      <% end %>
+    </div>
+    <%= render "public/shared/next_step" %>
   </article>
 </main>

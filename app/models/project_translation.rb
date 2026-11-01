@@ -12,7 +12,7 @@ class ProjectTranslation < ApplicationRecord
   enum :state, { draft: "draft", scheduled: "scheduled", published: "published" }, validate: true
 
   validates :locale, inclusion: { in: %w[en fr vi] }, uniqueness: { scope: :project_id }
-  validates :title, :slug, :summary, :body_markdown, presence: true
+  validates :title, :slug, :role, :summary, :body_markdown, presence: true
   validates :slug, uniqueness: { scope: :locale }
   validates :slug, format: {
     with: /\A[a-z0-9]+(?:-[a-z0-9]+)*\z/,
@@ -24,7 +24,12 @@ class ProjectTranslation < ApplicationRecord
   before_validation :set_initial_slug, on: :create
 
   def complete?
-    title.present? && summary.present? && body_markdown.present?
+    title.present? && role.present? && summary.present? && body_markdown.present?
+  end
+
+  # One caption per gallery image, in upload order; blank lines keep positions.
+  def gallery_caption(index)
+    gallery_captions.to_s.lines.map(&:strip)[index].presence
   end
 
   def publication_parent
@@ -64,6 +69,6 @@ class ProjectTranslation < ApplicationRecord
   end
 
   def refresh_search_text
-    self.search_text = SearchText.normalize([ title, summary, body_markdown ].join(" "))
+    self.search_text = SearchText.normalize([ title, role, summary, outcome, body_markdown ].join(" "))
   end
 end

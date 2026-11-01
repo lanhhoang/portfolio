@@ -6,8 +6,8 @@ class Admin::DashboardTest < ActionDispatch::IntegrationTest
   setup { sign_in_as_admin }
 
   test "shows mobile friendly links and content counts" do
-    project = Project.new(role: "Engineer")
-    project.translations.build(locale: "en", title: "One", slug: "one", summary: "Summary", body_markdown: "Body")
+    project = Project.new
+    project.translations.build(locale: "en", title: "One", slug: "one", role: "Engineer", summary: "Summary", body_markdown: "Body")
     project.save!
 
     post = Post.new
@@ -41,12 +41,11 @@ class Admin::DashboardTest < ActionDispatch::IntegrationTest
   test "shows drafts upcoming schedules and overdue English-blocked work" do
     now = Time.current
     project = Project.create!(
-        role: "Developer",
         started_on: Date.new(2026, 1, 1),
         translations_attributes: [
-          { locale: "en", title: "Draft English", slug: "draft-english", summary: "Summary", body_markdown: "Body" },
-          { locale: "fr", title: "Blocked French", slug: "blocked-french", summary: "Résumé", body_markdown: "Corps" },
-          { locale: "vi", title: "Upcoming Vietnamese", slug: "upcoming-vietnamese", summary: "Tóm tắt", body_markdown: "Nội dung" }
+          { locale: "en", title: "Draft English", slug: "draft-english", role: "Engineer", summary: "Summary", body_markdown: "Body" },
+          { locale: "fr", title: "Blocked French", slug: "blocked-french", role: "Engineer", summary: "Résumé", body_markdown: "Corps" },
+          { locale: "vi", title: "Upcoming Vietnamese", slug: "upcoming-vietnamese", role: "Engineer", summary: "Tóm tắt", body_markdown: "Nội dung" }
         ]
       )
     project.translations.find_by!(locale: "fr").update_columns(state: "scheduled", scheduled_at: now - 1.hour)

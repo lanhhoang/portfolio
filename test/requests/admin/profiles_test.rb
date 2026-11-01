@@ -25,7 +25,7 @@ class Admin::ProfilesTest < ActionDispatch::IntegrationTest
 
     assert_no_difference [ "Profile.count", "ProfileTranslation.count" ] do
       patch admin_profile_path, params: { profile: profile_params.merge(
-        translations_attributes: { "0" => { id: translation.id, locale: "en", display_name: "Owner", headline: "Ideas. Interfaces. Impact.", introduction: "Short intro", biography_markdown: "# Biography", availability_label: "Available" } }
+        translations_attributes: { "0" => { id: translation.id, locale: "en", display_name: "Owner", headline: "Ideas. Interfaces. Impact.", introduction: "Short intro", biography_markdown: "# Biography", job_title: "Product engineer", availability_label: "Available" } }
       ) }
     end
 
@@ -60,7 +60,7 @@ class Admin::ProfilesTest < ActionDispatch::IntegrationTest
     translation = Profile.current.translations.sole
 
     patch admin_profile_path, params: { profile: profile_params.merge(
-      translations_attributes: { "0" => { id: translation.id, locale: "vi", display_name: "X", headline: "X", introduction: "X", biography_markdown: "X", availability_label: "X" } }
+      translations_attributes: { "0" => { id: translation.id, locale: "vi", display_name: "X", headline: "X", introduction: "X", biography_markdown: "X", job_title: "Product engineer", availability_label: "X" } }
     ) }
 
     assert_response :see_other
@@ -105,7 +105,7 @@ class Admin::ProfilesTest < ActionDispatch::IntegrationTest
 
   def create_profile
     Profile.create!(public_contact_email: "owner@example.test", accent: "lime", translations_attributes: {
-      "0" => { locale: "en", display_name: "Portfolio Owner", headline: "H", introduction: "I", biography_markdown: "B", availability_label: "A" }
+      "0" => { locale: "en", display_name: "Portfolio Owner", headline: "H", introduction: "I", biography_markdown: "B", job_title: "Product engineer", availability_label: "A" }
     })
   end
 
@@ -114,7 +114,7 @@ class Admin::ProfilesTest < ActionDispatch::IntegrationTest
       public_contact_email: "hello@example.test", accent: "orange",
       social_links: { github: "https://github.com/owner", linkedin: "", website: "https://example.test" },
       translations_attributes: {
-        "0" => { locale: "en", display_name: "Portfolio Owner", headline: "Ideas. Interfaces. Impact.", introduction: "Short intro", biography_markdown: "# Biography", availability_label: "Available" }
+        "0" => { locale: "en", display_name: "Portfolio Owner", headline: "Ideas. Interfaces. Impact.", introduction: "Short intro", biography_markdown: "# Biography", job_title: "Product engineer", availability_label: "Available" }
       }
     }
   end

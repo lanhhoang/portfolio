@@ -13,6 +13,8 @@ module Public
       @posts = PostTranslation.publicly_visible(locale: current_locale)
         .order(published_at: :desc)
         .limit(5)
+      resume_translation = Resume.current&.translations&.find_by(locale: current_locale.to_s)
+      @resume_pdf = resume_translation.pdf if resume_translation&.pdf&.attached?
     end
   end
 end

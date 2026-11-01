@@ -8,7 +8,7 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     @profile.translations.build(
       locale: "en", display_name: "Demo Owner", headline: "Ideas. Interfaces. Impact.",
       introduction: "A demonstration introduction.", biography_markdown: "## Biography",
-      availability_label: "Available"
+      job_title: "Senior product engineer", availability_label: "Available"
     )
     @profile.save!
 
@@ -16,16 +16,16 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     @resume.translations.build(locale: "en", title: "Résumé", description: "Current résumé")
     @resume.save!
 
-    @project = Project.new(role: "Engineer", featured_position: 1)
+    @project = Project.new(featured_position: 1)
     @project.translations.build(
-      locale: "en", title: "Visible Project", slug: "visible-project", summary: "SQLite search target",
+      locale: "en", title: "Visible Project", slug: "visible-project", role: "Engineer", summary: "SQLite search target",
       body_markdown: "Project body", state: "published", published_at: 2.days.ago
     )
     @project.save!
 
-    @draft = Project.new(role: "Engineer")
+    @draft = Project.new
     @draft.translations.build(
-      locale: "en", title: "Secret Draft", slug: "secret-draft", summary: "Private",
+      locale: "en", title: "Secret Draft", slug: "secret-draft", role: "Engineer", summary: "Private",
       body_markdown: "Draft body", state: "draft"
     )
     @draft.save!
@@ -43,9 +43,19 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select 'html[data-accent="orange"]'
-    assert_select "h1", text: "Ideas. Interfaces. Impact."
-    assert_select "h2", text: "Visible Project"
-    assert_select "h2", text: "Visible Post"
+    assert_select "h1", text: "Demo Owner"
+    assert_select ".hero-role", text: "Senior product engineer · works in English\u00A0· Français\u00A0· Tiếng Việt"
+    assert_select ".hero-role a[href='/en'][aria-current='true'][lang=en]", text: "English"
+    assert_select ".hero-role a[href='/fr'][hreflang=fr]", text: "Français"
+    assert_select ".hero-role a[href='/vi'][hreflang=vi]", text: "Tiếng Việt"
+    assert_select ".availability", text: "Available"
+    assert_select "title", text: "Demo Owner · Senior product engineer"
+    assert_select ".site-mark", text: "Demo Owner"
+    assert_select "p", text: "Ideas. Interfaces. Impact."
+    assert_select "a[href=?]", "/en/projects", text: "See the work"
+    assert_select "a[href=?]", "/en/resume", text: "Read résumé"
+    assert_select "h3", text: "Visible Project"
+    assert_select "h3", text: "Visible Post"
     assert_select "img", count: 0
   end
 
@@ -57,12 +67,203 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     assert_select "h2", text: "Secret Draft", count: 0
   end
 
+  test "project page leads with case study facts and links to the next case study" do
+    @project.update!(started_on: Date.new(2024, 3, 1), live_url: "https://example.test")
+    other = Project.new
+    other.translations.build(
+      locale: "en", title: "Older Project", slug: "older-project", role: "Engineer", summary: "Older",
+      body_markdown: "Body", state: "published", published_at: 5.days.ago
+    )
+    other.save!
+
+    get "/en/projects/visible-project"
+
+    assert_select "dl.facts dt", text: "Role"
+    assert_select "dl.facts dd", text: "Engineer"
+    assert_select "dl.facts time[datetime='2024-03-01']", text: "2024"
+    assert_select "dl.facts dd", text: /Present/
+    assert_select "dl.facts a[href='https://example.test'][rel='noopener noreferrer']"
+    assert_select ".page-end-nav a[href='/en/projects/older-project']", text: "Older Project"
+    assert_select ".page-end-nav a[href='/en/projects']", text: "All work"
+    assert_select ".page-end a[href='/en/contact']"
+
+    get "/en/projects/older-project"
+    assert_select ".page-end-nav a[href='/en/projects/visible-project']"
+  end
+
+  test "project page omits the next link when it is the only case study" do
+    get "/en/projects/visible-project"
+
+    assert_select ".page-end-nav a[href^='/en/projects/']", count: 0
+    assert_select ".page-end-nav a[href='/en/projects']"
+  end
+
+  test "work rows show role and years before the summary" do
+    @project.update!(started_on: Date.new(2021, 1, 1), ended_on: Date.new(2023, 6, 1))
+
+    get "/en/projects"
+    assert_select ".entry .entry-meta", text: /Engineer · 2021–2023/
+
+    get "/en"
+    assert_select "ul.entry-list li .entry-meta", text: /Engineer · 2021–2023/
+  end
+
+  test "project role and outcome follow the page locale" do
+    @project.translations.find_by!(locale: "en").update!(outcome: "Cut checkout time in half.")
+    @project.translations.create!(
+      locale: "fr", title: "Projet visible", slug: "projet-visible", role: "Ingénieur principal",
+      summary: "Résumé", body_markdown: "Corps", state: "published", published_at: 1.day.ago
+    )
+
+    get "/fr/projects/projet-visible"
+    assert_select ".facts dd", text: "Ingénieur principal"
+    assert_select ".facts dd", text: "Engineer", count: 0
+    assert_select ".case-outcome", count: 0
+
+    get "/fr/projects"
+    assert_select ".entry .entry-meta", text: /Ingénieur principal/
+
+    get "/en/projects/visible-project"
+    assert_select "header .case-outcome", text: /Cut checkout time in half\./
+    assert_select ".case-outcome .sr-only", text: /Outcome/
+
+    get "/en/projects"
+    assert_select ".entry .entry-outcome", text: /Cut checkout time in half\./
+  end
+
+  test "post page links to older and newer articles and back to the index" do
+    older = Post.new
+    older.translations.build(
+      locale: "en", title: "Older Post", slug: "older-post", excerpt: "Earlier",
+      body_markdown: "Body", state: "published", published_at: 3.days.ago
+    )
+    older.save!
+
+    get "/en/blog/visible-post"
+    assert_select ".page-end-nav a[href='/en/blog/older-post']", text: "Older Post"
+    assert_select ".page-end-nav", text: /Newer article/, count: 0
+    assert_select ".page-end-nav a[href='/en/blog']", text: "All articles"
+    assert_select ".page-end-nav a[href='/en/projects']", text: "See the work"
+
+    get "/en/blog/older-post"
+    assert_select ".page-end-nav a[href='/en/blog/visible-post']", text: "Visible Post"
+    assert_select ".next-step", count: 0
+  end
+
+  test "footer lists the owner's social links" do
+    @profile.update!(social_links: { "GitHub" => "https://github.com/demo" })
+
+    get "/en"
+    assert_select ".site-footer a[href='https://github.com/demo'][rel~=me]", text: "GitHub"
+    assert_select ".site-footer a[href='/en/contact']", count: 0
+  end
+
+  test "home links straight to the résumé PDF when one is attached" do
+    translation = @resume.translations.first
+    translation.update!(title: "Jane-CV-final-v3")
+    translation.pdf.attach(
+      io: file_fixture("resume.pdf").open, filename: "resume.pdf", content_type: "application/pdf"
+    )
+
+    get "/en"
+    assert_select "a[href='/en/resume/download']", text: /Download résumé \(PDF\)/
+
+    get "/en/resume"
+    assert_select "h1", text: "Résumé"
+    assert_select "h1", text: "Jane-CV-final-v3", count: 0
+  end
+
+  test "case study lists working languages only when set" do
+    get "/en/projects/visible-project"
+    assert_select ".facts dt", text: "Working languages", count: 0
+
+    @project.update!(working_languages: [ "vi", "", "en", "xx" ])
+    assert_equal %w[en vi], @project.reload.working_languages
+
+    get "/en/projects/visible-project"
+    assert_select ".facts dt", text: "Working languages"
+    assert_select ".fact-languages span[lang=en]", text: "English"
+    assert_select ".fact-languages span[lang=vi]", text: "Tiếng Việt"
+  end
+
+  test "footer names the three site languages" do
+    get "/en"
+    assert_select ".footer-languages", text: "Published in English · Français · Tiếng Việt"
+    assert_select ".footer-languages span[lang=vi]", text: "Tiếng Việt"
+  end
+
+  test "résumé page links to the PDFs in other languages" do
+    @resume.translations.first.pdf.attach(
+      io: file_fixture("resume.pdf").open, filename: "resume.pdf", content_type: "application/pdf"
+    )
+    french = @resume.translations.create!(locale: "fr", title: "CV", description: "CV actuel")
+    french.pdf.attach(io: file_fixture("resume.pdf").open, filename: "cv.pdf", content_type: "application/pdf")
+    @resume.translations.create!(locale: "vi", title: "Hồ sơ", description: "Hồ sơ hiện tại")
+
+    get "/en/resume"
+    assert_select "aside a[href='/fr/resume/download'][hreflang='fr']", text: /Français PDF/
+    assert_select "aside a[href='/vi/resume/download']", count: 0
+    assert_select "aside a[href='/en/resume/download']", count: 0
+  end
+
+  test "contact and about pages offer direct channels beside the main content" do
+    @profile.update!(social_links: { "GitHub" => "https://github.com/demo" })
+
+    [ "/en/contact", "/en/about" ].each do |path|
+      get path
+      assert_select ".with-aside .aside-links a[href^='mailto:']"
+      assert_select ".with-aside .aside-links a[href='https://github.com/demo'][rel~=me]", text: "GitHub"
+    end
+  end
+
+  test "short indexes skip the search form until a search is underway" do
+    get "/en/projects"
+    assert_select "form[role=search]", count: 0
+
+    get "/en/projects", params: { tag: "anything" }
+    assert_select "form[role=search]"
+
+    6.times do |index|
+      project = Project.new
+      project.translations.build(
+        locale: "en", title: "Extra #{index}", slug: "extra-#{index}", role: "Engineer", summary: "Extra",
+        body_markdown: "Body", state: "published", published_at: index.days.ago
+      )
+      project.save!
+    end
+
+    get "/en/projects"
+    assert_select "form[role=search] input[type=submit].button"
+  end
+
+  test "a search with no matches explains it and offers a way back" do
+    get "/en/projects", params: { q: "nothing-matches-this" }
+
+    assert_response :success
+    assert_select "p", text: "No case studies match this search."
+    assert_select "a[href=?]", "/en/projects", text: "Clear search and filters"
+  end
+
   test "draft and absent locale detail routes return 404" do
     get "/en/projects/secret-draft"
     assert_response :not_found
 
     get "/fr/projects/visible-project"
     assert_response :not_found
+  end
+
+  test "tags link to their filtered index" do
+    tag = Tag.new
+    tag.translations.build(locale: "en", name: "Ruby", slug: "ruby")
+    tag.save!
+    @project.tags << tag
+    @post.tags << tag
+
+    get "/en/projects/visible-project"
+    assert_select "dl.facts .tag-list a[href='/en/projects?tag=ruby']", text: "Ruby"
+
+    get "/en/blog/visible-post"
+    assert_select ".tag-list a[href='/en/blog?tag=ruby']", text: "Ruby"
   end
 
   test "post detail renders stored HTML" do
@@ -84,19 +285,19 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
 
   test "detail locale switches use published sibling slugs and disable unavailable translations" do
     @project.translations.create!(
-      locale: "fr", title: "Projet visible", slug: "projet-visible", summary: "Résumé",
+      locale: "fr", title: "Projet visible", slug: "projet-visible", role: "Engineer", summary: "Résumé",
       body_markdown: "Corps", state: "published", published_at: 1.day.ago
     )
     @project.translations.create!(
-      locale: "vi", title: "Dự án nháp", slug: "du-an-nhap", summary: "Tóm tắt",
+      locale: "vi", title: "Dự án nháp", slug: "du-an-nhap", role: "Engineer", summary: "Tóm tắt",
       body_markdown: "Nội dung", state: "draft"
     )
 
     get "/en/projects/visible-project"
 
-    assert_select '.locale-switcher a[href="/fr/projects/projet-visible"]', text: "Français"
-    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"]', text: "Tiếng Việt"
-    assert_select '.locale-switcher a[href="/vi/projects/visible-project"]', count: 0
+    assert_select '.locale-switcher a[href="/fr/projects/projet-visible"] .locale-name', text: "Français"
+    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"] .locale-name', text: "Tiếng Việt"
+    assert_select '.locale-switcher a[href="/vi/projects/visible-project"] .locale-name', count: 0
 
     @post.translations.create!(
       locale: "fr", title: "Article visible", slug: "article-visible", excerpt: "Extrait",
@@ -105,25 +306,25 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
 
     get "/en/blog/visible-post"
 
-    assert_select '.locale-switcher a[href="/fr/blog/article-visible"]', text: "Français"
-    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"]', text: "Tiếng Việt"
+    assert_select '.locale-switcher a[href="/fr/blog/article-visible"] .locale-name', text: "Français"
+    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"] .locale-name', text: "Tiếng Việt"
   end
 
   test "singleton locale switches link existing and disable missing translations" do
     @profile.translations.create!(
       locale: "fr", display_name: "Propriétaire démo", headline: "Titre",
       introduction: "Introduction", biography_markdown: "Biographie",
-      availability_label: "Disponible"
+      job_title: "Product engineer", availability_label: "Disponible"
     )
     @resume.translations.create!(locale: "fr", title: "CV", description: "CV actuel")
 
     get "/en/about"
-    assert_select '.locale-switcher a[href="/fr/about"]', text: "Français"
-    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"]', text: "Tiếng Việt"
+    assert_select '.locale-switcher a[href="/fr/about"] .locale-name', text: "Français"
+    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"] .locale-name', text: "Tiếng Việt"
 
     get "/en/resume"
-    assert_select '.locale-switcher a[href="/fr/resume"]', text: "Français"
-    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"]', text: "Tiếng Việt"
+    assert_select '.locale-switcher a[href="/fr/resume"] .locale-name', text: "Français"
+    assert_select '.locale-switcher span[lang="vi"][aria-disabled="true"] .locale-name', text: "Tiếng Việt"
   end
 
   test "French and Vietnamese dates render without missing translations" do
@@ -149,6 +350,8 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     get "/en/resume"
     assert_response :success
     assert_select "p", text: I18n.t("public.resume.pdf_unavailable", locale: :en)
+    assert_select "a[href='/en/projects']", text: "See the work"
+    assert_select "a[href='/en/contact']", text: "Send a message"
 
     get "/en/resume/download"
     assert_response :not_found
@@ -156,11 +359,11 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
 
   test "publication transitions expose only the selected locale" do
     french = @project.translations.create!(
-      locale: "fr", title: "Projet", slug: "projet", summary: "Résumé",
+      locale: "fr", title: "Projet", slug: "projet", role: "Engineer", summary: "Résumé",
       body_markdown: "Corps"
     )
     vietnamese = @project.translations.create!(
-      locale: "vi", title: "Dự án", slug: "du-an", summary: "Tóm tắt",
+      locale: "vi", title: "Dự án", slug: "du-an", role: "Engineer", summary: "Tóm tắt",
       body_markdown: "Nội dung"
     )
 
@@ -198,6 +401,20 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select 'img[srcset][sizes][width="512"][height="512"][loading="eager"][fetchpriority="high"]'
+  end
+
+  test "gallery images use per-locale captions as alt text and fall back when blank" do
+    2.times do |index|
+      @project.gallery_images.attach(io: Rails.root.join("public/icon.png").open, filename: "g#{index}.png", content_type: "image/png")
+    end
+    @project.translations.find_by!(locale: "en").update!(gallery_captions: "\nCheckout flow on a phone\n")
+
+    get localized_project_path(locale: :en, slug: "visible-project")
+
+    assert_select ".gallery figure", count: 2
+    assert_select ".gallery img[alt=?]", "Visible Project, image 1"
+    assert_select ".gallery img[alt=?]", "Checkout flow on a phone"
+    assert_select ".gallery figcaption", count: 1, text: "Checkout flow on a phone"
   end
 
   test "every public page has one focusable main landmark" do

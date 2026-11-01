@@ -7,7 +7,7 @@ class AdminManagesContentTest < ApplicationSystemTestCase
       translations_attributes: {
         "0" => {
           locale: "en", display_name: "Portfolio Owner", headline: "Ideas. Interfaces. Impact.",
-          introduction: "Short introduction", biography_markdown: "Biography", availability_label: "Available"
+          introduction: "Short introduction", biography_markdown: "Biography", job_title: "Product engineer", availability_label: "Available"
         }
       }
     )
@@ -19,11 +19,18 @@ class AdminManagesContentTest < ApplicationSystemTestCase
     )
     sign_in_owner
     page.current_window.resize_to(320, 700)
+    # Desktop Chrome can clamp resize_to to a wider minimum window.
+    page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride",
+      width: 320, height: 700, deviceScaleFactor: 1, mobile: false)
+  end
+
+  teardown do
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
   test "owner creates translations, previews markdown, uploads assets, and changes accent" do
     visit new_admin_project_path
-    fill_in "Role", with: "Lead developer"
+    fill_in "Role", with: "Lead developer", match: :first
     fill_in "Title", with: "Phone-first project", match: :first
     fill_in "Summary", with: "Created from a narrow viewport", match: :first
     fill_in "Body (Markdown)", with: "# Preview heading", match: :first
@@ -37,6 +44,7 @@ class AdminManagesContentTest < ApplicationSystemTestCase
     click_button "French"
     within("[role='tabpanel']:not([hidden])") do
       fill_in "Title", with: "Projet mobile"
+      fill_in "Role", with: "Développeur principal"
       fill_in "Summary", with: "Résumé français"
       fill_in "Body (Markdown)", with: "# Aperçu"
     end

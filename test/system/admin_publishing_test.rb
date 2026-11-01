@@ -8,12 +8,11 @@ class AdminPublishingTest < ApplicationSystemTestCase
 
   test "owner publishes locales independently and a due schedule becomes public" do
     project = Project.create!(
-      role: "Developer",
       started_on: Date.new(2026, 1, 1),
       translations_attributes: [
-        { locale: "en", title: "English Case Study", slug: "english-case-study", summary: "Summary", body_markdown: "English body" },
-        { locale: "fr", title: "Étude de cas", slug: "etude-de-cas", summary: "Résumé", body_markdown: "Corps français" },
-        { locale: "vi", title: "Dự án", slug: "du-an", summary: "Tóm tắt", body_markdown: "Nội dung" }
+        { locale: "en", title: "English Case Study", slug: "english-case-study", role: "Engineer", summary: "Summary", body_markdown: "English body" },
+        { locale: "fr", title: "Étude de cas", slug: "etude-de-cas", role: "Engineer", summary: "Résumé", body_markdown: "Corps français" },
+        { locale: "vi", title: "Dự án", slug: "du-an", role: "Engineer", summary: "Tóm tắt", body_markdown: "Nội dung" }
       ]
     )
     english = project.translations.find_by!(locale: "en")

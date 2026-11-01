@@ -9,11 +9,13 @@ export default class extends Controller {
 
   connect() {
     this.close();
+    this.element.dataset.menuConnected = "";
     this.handleKeydown = this.handleKeydown.bind(this);
     document.addEventListener("keydown", this.handleKeydown);
   }
 
   disconnect() {
+    delete this.element.dataset.menuConnected;
     document.removeEventListener("keydown", this.handleKeydown);
   }
 

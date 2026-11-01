@@ -1,8 +1,9 @@
 <% translations = taggable.tags.flat_map(&:translations).select { |item| item.locale == I18n.locale.to_s } %>
 <% if translations.any? %>
-  <ul aria-label="<%= t("public.tags.label") %>" class="flex flex-wrap gap-2">
+  <% index_path = taggable.is_a?(Post) ? :localized_blog_path : :localized_projects_path %>
+  <ul aria-label="<%= t("public.tags.label") %>" class="tag-list">
     <% translations.each do |translation| %>
-      <li><span class="text-sm uppercase"><%= translation.name %></span></li>
+      <li><%= link_to translation.name, public_send(index_path, locale: current_locale, tag: translation.slug) %></li>
     <% end %>
   </ul>
 <% end %>

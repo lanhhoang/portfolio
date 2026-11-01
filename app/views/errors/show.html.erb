@@ -8,8 +8,9 @@
 ) %>
 
 <main id="main-content" class="site-container page-shell" tabindex="-1">
-  <p class="eyebrow" aria-hidden="true"><%= code %></p>
-  <h1><%= t("errors.pages.#{code}.title") %></h1>
-  <p class="prose-lead"><%= t("errors.pages.#{code}.message") %></p>
-  <%= link_to t("errors.pages.home"), localized_root_path(locale: current_locale), class: "admin-action" %>
+  <div class="page-header justify-items-start">
+    <h1><%= t("errors.pages.#{code}.title") %></h1>
+    <p class="type-lede"><%= t("errors.pages.#{code}.message") %></p>
+    <%= link_to t("errors.pages.home"), localized_root_path(locale: current_locale), class: "inline-flex min-h-11 items-center" %>
+  </div>
 </main>

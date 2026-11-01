@@ -1,26 +1,26 @@
 fr:
   seo:
-    site_name: "Portfolio"
     home:
-      title: "Idées. Interfaces. Impact."
-      description: "Ingénierie logicielle indépendante, design d’interfaces et écrits techniques."
+      title: "%{name} · %{title}"
+      fallback_title: "Portfolio"
+      description: "Études de cas en ingénierie produit, articles techniques et CV, en anglais, en français et en vietnamien."
     projects:
       title: "Réalisations"
-      description: "Une sélection de projets d’ingénierie logicielle et de design d’interfaces."
+      description: "Études de cas en ingénierie produit : le problème, mon rôle et le résultat."
     blog:
-      title: "Journal"
-      description: "Notes sur l’ingénierie logicielle, le design produit et la création web."
+      title: "Articles"
+      description: "Articles techniques sur l’ingénierie produit et le développement web."
     about:
       title: "À propos"
     contact:
       title: "Contactez-moi"
-      description: "Échangeons autour de l’ingénierie logicielle et des produits numériques."
+      description: "Contactez-moi pour un poste ou un projet en ingénierie produit."
   site:
     name: "Portfolio"
   navigation:
     label: "Navigation principale"
     work: "Réalisations"
-    journal: "Journal"
+    writing: "Articles"
     about: "À propos"
     resume: "CV"
     contact: "Contact"
@@ -44,11 +44,11 @@ fr:
     projects:
       eyebrow: "Travaux sélectionnés"
       title: "Réalisations"
-      introduction: "Des études de cas, leurs résultats et leurs décisions techniques."
+      introduction: "Études de cas : le problème, mon rôle et le résultat."
     blog:
       eyebrow: "Écrits techniques"
-      title: "Journal"
-      introduction: "Des articles techniques, des notes pratiques et des retours d’expérience."
+      title: "Articles"
+      introduction: "Articles techniques et notes tirées de la création de produits."
     about:
       eyebrow: "Profil"
       title: "À propos"
@@ -58,37 +58,81 @@ fr:
       title: "CV"
       introduction: "Une expérience localisée avec un téléchargement direct du CV."
     contact:
-      eyebrow: "Échangeons"
       title: "Contactez-moi"
-      introduction: "Un moyen direct et sécurisé de commencer une conversation."
+      introduction: "Écrivez-moi au sujet d’un poste ou d’un projet. Le message arrive directement dans ma boîte de réception."
   public:
     home:
-      selected_work: "Projets sélectionnés"
+      role_html: "%{title} · travaille en %{languages}"
+      selected_work: "Réalisations choisies"
       recent_writing: "Articles récents"
       contact: "Prendre contact"
+      contact_prompt: "Un poste ou un projet en tête ?"
+      contact_action: "Envoyer un message"
+      view_work: "Voir les réalisations"
+      view_resume: "Lire le CV"
+      no_projects: "Les études de cas à la une seront bientôt publiées."
+      no_posts: "Aucun article pour le moment."
     search:
       label: "Rechercher"
-      submit: "Appliquer"
+      submit: "Rechercher"
+      clear: "Effacer la recherche et les filtres"
     tags:
       label: "Étiquettes"
       all: "Toutes les étiquettes"
     projects:
-      title: "Projets"
-      empty: "Aucun projet publié ne correspond à ces filtres."
+      title: "Réalisations"
+      empty: "Aucune étude de cas n’est encore publiée."
+      no_matches: "Aucune étude de cas ne correspond à cette recherche."
+      role: "Rôle"
+      outcome: "Résultat"
+      working_languages: "Langues de travail"
+      timeline: "Période"
+      present: "Aujourd’hui"
+      next: "Étude de cas suivante"
+      more: "Autres réalisations"
+      all: "Toutes les réalisations"
       gallery_alt: "%{title}, image %{number}"
       links: "Liens du projet"
-      live: "Voir le projet"
+      live: "Voir le site en ligne"
       source: "Voir le code source"
     posts:
-      title: "Journal"
-      empty: "Aucun article publié ne correspond à ces filtres."
+      title: "Articles"
+      empty: "Aucun article n’est encore publié."
+      no_matches: "Aucun article ne correspond à cette recherche."
+      more: "Autres articles"
+      older: "Article précédent"
+      newer: "Article suivant"
+      all: "Tous les articles"
+    contact:
+      direct: "Autres moyens de me joindre"
+    about:
+      links: "E-mail et profils"
     resume:
       updated: "Mis à jour le %{date}"
-      download: "Télécharger le PDF"
+      download: "Télécharger le CV (PDF)"
       pdf_unavailable: "Le PDF n’est pas encore disponible."
+      see_work: "Voir les réalisations"
+      other_languages: "Autres langues"
+      download_in: "PDF en %{language}"
 
+  number:
+    format:
+      separator: ","
+      delimiter: "\u202F"
+    human:
+      storage_units:
+        format: "%n %u"
+        units:
+          byte:
+            one: "octet"
+            other: "octets"
+          kb: "Ko"
+          mb: "Mo"
+          gb: "Go"
+          tb: "To"
   footer:
-    rights: "Conçu avec soin."
+    rights: "© %{year} %{name}"
+    languages_html: "Publié en %{languages}"
   accessibility:
     skip_to_content: "Aller au contenu"
   date:
@@ -119,9 +163,9 @@ fr:
     errors:
       one: "Veuillez corriger 1 erreur."
       other: "Veuillez corriger %{count} erreurs."
-    received: "Votre message a été enregistré."
-    spam_rejected: "Nous n’avons pas pu accepter cet envoi."
-    rate_limited: "Trop de messages ont été envoyés. Veuillez réessayer plus tard."
+    received: "Merci, votre message a bien été envoyé."
+    spam_rejected: "Votre message n’a pas pu être envoyé. Veuillez réessayer."
+    rate_limited: "Vous avez envoyé plusieurs messages en peu de temps. Patientez 10 minutes, puis réessayez."
   activerecord:
     attributes:
       contact_message:

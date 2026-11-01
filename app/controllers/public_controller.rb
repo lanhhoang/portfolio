@@ -1,5 +1,7 @@
 class PublicController < ApplicationController
   SUPPORTED_LOCALES = %w[en fr vi].freeze
+  # Below this many entries a list is scanned faster than it is searched.
+  SEARCH_THRESHOLD = 6
 
   around_action :with_locale, except: :root
   helper_method :current_locale
@@ -17,6 +19,10 @@ class PublicController < ApplicationController
   end
 
   private
+
+  def search_offered?(visible)
+    params[:q].present? || params[:tag].present? || visible.count >= SEARCH_THRESHOLD
+  end
 
   def with_locale(&action)
     @current_locale = params.fetch(:locale)

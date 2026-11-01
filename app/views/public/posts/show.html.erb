@@ -8,26 +8,45 @@
 ) %>
 
 <main id="main-content" class="site-container page-shell" tabindex="-1">
-  <article class="space-y-8">
-    <header class="space-y-3">
-      <p><%= l(@translation.published_at.to_date, format: :long) %></p>
-      <h1 class="text-4xl font-bold"><%= @translation.title %></h1>
-      <p class="max-w-prose text-lg"><%= @translation.excerpt %></p>
+  <article class="grid gap-12">
+    <header class="page-header">
+      <%= time_tag @translation.published_at.to_date, l(@translation.published_at.to_date, format: :long), class: "entry-meta" %>
+      <h1><%= @translation.title %></h1>
+      <p class="type-lede"><%= @translation.excerpt %></p>
       <%= render "public/shared/tags", taggable: @translation.post %>
     </header>
 
     <% if @translation.post.cover_image.attached? %>
       <%= responsive_image_tag(
         @translation.post.cover_image,
-        alt: @translation.title,
-        sizes: "(min-width: 80rem) 80rem, 100vw",
+        alt: "",
+        sizes: "(min-width: 56rem) 50rem, 100vw",
         widths: [640, 960, 1280, 1600],
         loading: "eager",
         fetchpriority: "high",
-        class: "max-w-full"
+        class: "case-cover reading-cover"
       ) %>
     <% end %>
 
     <div class="rich-text"><%= sanitize @translation.body_html %></div>
+
+    <footer class="page-end">
+      <nav class="page-end-nav" aria-label="<%= t("public.posts.more") %>">
+        <% if @older_translation %>
+          <div>
+            <p class="entry-meta"><%= t("public.posts.older") %></p>
+            <%= link_to @older_translation.title, localized_post_path(locale: current_locale, slug: @older_translation.slug), class: "type-heading" %>
+          </div>
+        <% end %>
+        <% if @newer_translation %>
+          <div>
+            <p class="entry-meta"><%= t("public.posts.newer") %></p>
+            <%= link_to @newer_translation.title, localized_post_path(locale: current_locale, slug: @newer_translation.slug), class: "type-heading" %>
+          </div>
+        <% end %>
+        <%= link_to t("public.posts.all"), localized_blog_path(locale: current_locale), class: "page-end-back" %>
+        <%= link_to t("public.resume.see_work"), localized_projects_path(locale: current_locale), class: "page-end-back" %>
+      </nav>
+    </footer>
   </article>
 </main>

@@ -1,26 +1,26 @@
 en:
   seo:
-    site_name: "Portfolio"
     home:
-      title: "Ideas. Interfaces. Impact."
-      description: "Independent software engineering, interface design, and technical writing."
+      title: "%{name} · %{title}"
+      fallback_title: "Portfolio"
+      description: "Product engineering case studies, technical writing, and résumé in English, French, and Vietnamese."
     projects:
       title: "Work"
-      description: "Selected software engineering and interface design projects."
+      description: "Product engineering case studies: the problem, my role, and the outcome."
     blog:
-      title: "Journal"
-      description: "Notes on software engineering, product design, and building for the web."
+      title: "Writing"
+      description: "Technical writing on product engineering and building for the web."
     about:
       title: "About"
     contact:
       title: "Contact"
-      description: "Get in touch about software engineering and product work."
+      description: "Contact me about a product engineering role or project."
   site:
     name: "Portfolio"
   navigation:
     label: "Primary navigation"
     work: "Work"
-    journal: "Journal"
+    writing: "Writing"
     about: "About"
     resume: "Résumé"
     contact: "Contact"
@@ -44,11 +44,11 @@ en:
     projects:
       eyebrow: "Selected work"
       title: "Work"
-      introduction: "Selected project case studies, outcomes, and technical decisions."
+      introduction: "Case studies: the problem, my role, and the outcome."
     blog:
       eyebrow: "Technical writing"
-      title: "Journal"
-      introduction: "Technical articles, practical notes, and engineering lessons."
+      title: "Writing"
+      introduction: "Technical articles and notes from building products."
     about:
       eyebrow: "Profile"
       title: "About"
@@ -58,37 +58,73 @@ en:
       title: "Résumé"
       introduction: "Localized experience with a direct résumé download."
     contact:
-      eyebrow: "Start a conversation"
       title: "Contact"
-      introduction: "A direct and secure way to start a conversation."
+      introduction: "Send a message about a role or a project. It goes straight to my inbox."
   public:
     home:
+      role_html: "%{title} · works in %{languages}"
       selected_work: "Selected work"
       recent_writing: "Recent writing"
       contact: "Get in touch"
+      contact_prompt: "Have a role or a project in mind?"
+      contact_action: "Send a message"
+      view_work: "See the work"
+      view_resume: "Read résumé"
+      no_projects: "Featured case studies will appear here soon."
+      no_posts: "No articles yet."
     search:
       label: "Search"
-      submit: "Apply"
+      submit: "Search"
+      clear: "Clear search and filters"
     tags:
       label: "Tags"
       all: "All tags"
     projects:
       title: "Work"
-      empty: "No published projects match these filters."
+      empty: "No case studies are published yet."
+      no_matches: "No case studies match this search."
+      role: "Role"
+      outcome: "Outcome"
+      working_languages: "Working languages"
+      timeline: "Timeline"
+      present: "Present"
+      next: "Next case study"
+      more: "More work"
+      all: "All work"
       gallery_alt: "%{title}, image %{number}"
       links: "Project links"
-      live: "Visit project"
+      live: "Visit live site"
       source: "View source"
     posts:
-      title: "Journal"
-      empty: "No published posts match these filters."
+      title: "Writing"
+      empty: "No articles are published yet."
+      no_matches: "No articles match this search."
+      more: "More articles"
+      older: "Older article"
+      newer: "Newer article"
+      all: "All articles"
+    contact:
+      direct: "Other ways to reach me"
+    about:
+      links: "Email and profiles"
     resume:
       updated: "Updated %{date}"
-      download: "Download PDF"
+      download: "Download résumé (PDF)"
       pdf_unavailable: "The PDF is not available yet."
+      see_work: "See the work"
+      other_languages: "Other languages"
+      download_in: "%{language} PDF"
 
+  number:
+    human:
+      storage_units:
+        units:
+          byte:
+            one: "byte"
+            other: "bytes"
   footer:
-    rights: "Built with care."
+    rights: "© %{year} %{name}"
+    languages_html: "Published in %{languages}"
   accessibility:
     skip_to_content: "Skip to content"
   date:
@@ -105,9 +141,9 @@ en:
     errors:
       one: "Please correct 1 error."
       other: "Please correct %{count} errors."
-    received: "Your message has been saved."
-    spam_rejected: "We could not accept that submission."
-    rate_limited: "Too many messages were submitted. Please try again later."
+    received: "Thanks, your message was sent."
+    spam_rejected: "Your message couldn’t be sent. Please try again."
+    rate_limited: "You’ve sent several messages in a short time. Please wait 10 minutes, then try again."
   activerecord:
     attributes:
       contact_message:

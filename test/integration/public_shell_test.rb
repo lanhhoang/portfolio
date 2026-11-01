@@ -8,8 +8,8 @@ class PublicShellTest < ActionDispatch::IntegrationTest
     assert_select "html[lang='en'][data-accent='lime']"
     assert_select "a.skip-link[href='#main-content']", text: "Skip to content"
     assert_select "header.site-header"
-    assert_select "nav#primary-navigation[aria-label='Primary navigation']"
-    assert_select "button[aria-controls='primary-navigation'][aria-expanded='false']"
+    assert_select "nav#primary-navigation[aria-label='Primary navigation']:not([hidden])"
+    assert_select "button[aria-controls='site-menu'][aria-expanded='false']"
     assert_select "nav.locale-switcher[aria-label='Choose language'] a", count: 3
     assert_select "button[data-controller='theme'][data-theme-target='toggle']"
     assert_select "footer.site-footer"
@@ -32,7 +32,7 @@ class PublicShellTest < ActionDispatch::IntegrationTest
     assert_select "html[lang='fr']"
     assert_select "nav[aria-label='Navigation principale']"
     assert_select "a[aria-current='page']", text: "Réalisations"
-    assert_select "a[href='#{localized_projects_path(locale: "vi")}']", text: "Tiếng Việt"
+    assert_select "a[href='#{localized_projects_path(locale: "vi")}'] .locale-name", text: "Tiếng Việt"
   end
 
   test "Vietnamese shell translates both theme actions" do

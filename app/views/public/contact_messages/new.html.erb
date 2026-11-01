@@ -1,46 +1,64 @@
 <% page_metadata(title: t("seo.contact.title"), description: t("seo.contact.description")) %>
 
-<main id="main-content" class="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6" tabindex="-1" aria-labelledby="contact-title">
-  <p class="text-sm font-semibold uppercase tracking-widest text-[var(--accent)]"><%= t("pages.contact.eyebrow") %></p>
-  <h1 id="contact-title" class="mt-3 text-4xl font-bold sm:text-6xl"><%= t("pages.contact.title") %></h1>
-  <p class="mt-4 max-w-prose"><%= t("pages.contact.introduction") %></p>
+<main id="main-content" class="site-container page-shell page-stack" tabindex="-1" aria-labelledby="contact-title">
+  <header class="page-header">
+    <h1 id="contact-title"><%= t("pages.contact.title") %></h1>
+    <p class="type-lede"><%= t("pages.contact.introduction") %></p>
+  </header>
 
-  <% if notice.present? %><p role="status" class="mt-6 border p-4"><%= notice %></p><% end %>
-  <% if alert.present? %><p role="alert" class="mt-6 border border-red-600 p-4"><%= alert %></p><% end %>
+  <div class="with-aside">
+    <div class="with-aside-main">
+      <% if notice.present? %><p role="status" class="form-message"><%= notice %></p><% end %>
+      <% if alert.present? %><p role="alert" class="form-message"><%= alert %></p><% end %>
 
-  <%= form_with model: @contact_message, url: localized_contact_path(locale: I18n.locale), class: "mt-8 space-y-6" do |form| %>
-    <% if @contact_message.errors.any? %>
-      <div role="alert" class="border border-red-600 p-4">
-        <p class="font-semibold"><%= t("contact.errors", count: @contact_message.errors.count) %></p>
-        <ul class="mt-2 list-disc pl-5">
-          <% @contact_message.errors.full_messages.each do |message| %>
-            <li><%= message %></li>
+      <%= form_with model: @contact_message, url: localized_contact_path(locale: I18n.locale), class: "form-stack" do |form| %>
+        <% if @contact_message.errors.any? %>
+          <div role="alert" class="form-message">
+            <p class="font-semibold"><%= t("contact.errors", count: @contact_message.errors.count) %></p>
+            <ul>
+              <% @contact_message.errors.each do |error| %>
+                <li><a href="#contact_message_<%= error.attribute %>"><%= error.full_message %></a></li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+
+        <div class="absolute -left-[10000px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
+          <%= label_tag "contact_message_website", t("contact.fields.website") %>
+          <%= text_field_tag "contact_message[website]", nil, id: "contact_message_website", tabindex: -1, autocomplete: "off" %>
+        </div>
+
+        <% {
+          sender_name: [ :text_field, { maxlength: 120, autocomplete: "name" } ],
+          sender_email: [ :email_field, { maxlength: 254, autocomplete: "email", spellcheck: false } ],
+          subject: [ :text_field, { maxlength: 200 } ],
+          body: [ :text_area, { maxlength: 10_000, rows: 8 } ]
+        }.each do |field, (input, options)| %>
+          <% errors = @contact_message.errors.messages_for(field) %>
+          <div>
+            <%= form.label field, t("contact.fields.#{field}") %>
+            <%= form.public_send(input, field, required: true, **options,
+              aria: ({ invalid: true, describedby: "contact_message_#{field}_error" } if errors.any?)) %>
+            <% if errors.any? %>
+              <p id="contact_message_<%= field %>_error" class="field-error"><%= errors.to_sentence %></p>
+            <% end %>
+          </div>
+        <% end %>
+
+        <%= form.submit t("contact.submit"), class: "button button-primary justify-self-start" %>
+      <% end %>
+    </div>
+
+    <% if site_profile %>
+      <aside class="aside-links" aria-labelledby="contact-direct-title">
+        <h2 id="contact-direct-title" class="type-label"><%= t("public.contact.direct") %></h2>
+        <ul>
+          <li><%= mail_to site_profile.public_contact_email %></li>
+          <% site_profile.social_links.sort.each do |label, url| %>
+            <li><%= link_to label, url, rel: "me noopener" %></li>
           <% end %>
         </ul>
-      </div>
+      </aside>
     <% end %>
-
-    <div class="absolute -left-[10000px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
-      <%= label_tag "contact_message_website", t("contact.fields.website") %>
-      <%= text_field_tag "contact_message[website]", nil, id: "contact_message_website", tabindex: -1, autocomplete: "off" %>
-    </div>
-
-    <% {
-      sender_name: [ "text", 120 ],
-      sender_email: [ "email", 254 ],
-      subject: [ "text", 200 ]
-    }.each do |field, (type, maxlength)| %>
-      <div>
-        <%= form.label field, t("contact.fields.#{field}"), class: "block font-semibold" %>
-        <%= form.public_send("#{type}_field", field, required: true, maxlength: maxlength, class: "mt-2 min-h-12 w-full border bg-transparent px-3 py-2") %>
-      </div>
-    <% end %>
-
-    <div>
-      <%= form.label :body, t("contact.fields.body"), class: "block font-semibold" %>
-      <%= form.text_area :body, required: true, rows: 8, maxlength: 10_000, class: "mt-2 w-full border bg-transparent px-3 py-2" %>
-    </div>
-
-    <%= form.submit t("contact.submit"), class: "min-h-12 cursor-pointer bg-[var(--accent)] px-6 py-3 font-semibold text-[var(--accent-foreground)]" %>
-  <% end %>
+  </div>
 </main>

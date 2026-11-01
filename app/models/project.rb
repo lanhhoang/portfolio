@@ -21,10 +21,15 @@ class Project < ApplicationRecord
   accepts_nested_attributes_for :translations, allow_destroy: true,
     reject_if: ->(attributes) {
       attributes["locale"] != "en" && attributes["id"].blank? &&
-        attributes.values_at("title", "slug", "summary", "body_markdown").all?(&:blank?)
+        attributes.values_at("title", "slug", "role", "summary", "outcome", "body_markdown").all?(&:blank?)
     }
 
-  validates :role, presence: true
+  WORKING_LANGUAGES = %w[en fr vi].freeze
+
+  normalizes :working_languages, with: ->(languages) {
+    WORKING_LANGUAGES & Array(languages).compact_blank.map(&:to_s)
+  }
+
   validates :featured_position, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validate :links_are_http_urls
   validate :english_translation_present

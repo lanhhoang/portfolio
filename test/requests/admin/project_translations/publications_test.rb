@@ -6,9 +6,9 @@ class Admin::ProjectTranslations::PublicationsTest < ActionDispatch::Integration
   include ActiveSupport::Testing::TimeHelpers
 
   setup do
-    @project = Project.create!(role: "Developer", translations_attributes: {
-      "0" => { locale: "en", title: "English project", slug: "english-project", summary: "Summary", body_markdown: "Body" },
-      "1" => { locale: "fr", title: "Projet français", slug: "projet-francais", summary: "Résumé", body_markdown: "Corps" }
+    @project = Project.create!(translations_attributes: {
+      "0" => { locale: "en", title: "English project", slug: "english-project", role: "Engineer", summary: "Summary", body_markdown: "Body" },
+      "1" => { locale: "fr", title: "Projet français", slug: "projet-francais", role: "Engineer", summary: "Résumé", body_markdown: "Corps" }
     })
     @english = @project.translations.find_by!(locale: "en")
     @french = @project.translations.find_by!(locale: "fr")
@@ -89,10 +89,9 @@ class Admin::ProjectTranslations::PublicationsTest < ActionDispatch::Integration
   test "ordinary content updates cannot change publication state" do
     sign_in_as_admin
     patch admin_project_path(@project), params: { project: {
-      role: @project.role,
       translations_attributes: {
         "0" => { id: @english.id, title: @english.title, slug: @english.slug,
-          summary: @english.summary, body_markdown: @english.body_markdown, state: "published" }
+          role: "Engineer", summary: @english.summary, body_markdown: @english.body_markdown, state: "published" }
       }
     } }
 

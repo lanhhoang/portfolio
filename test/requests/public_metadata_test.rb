@@ -7,21 +7,21 @@ class PublicMetadataTest < ActionDispatch::IntegrationTest
     host! "portfolio.example"
     https!
 
-    @project = Project.new(role: "Engineer")
+    @project = Project.new
     @english = @project.translations.build(
       locale: "en", title: "Fast systems", slug: "fast-systems",
-      summary: "A concise case study", body_markdown: "Body",
+      role: "Engineer", summary: "A concise case study", body_markdown: "Body",
       state: "published", published_at: Time.zone.parse("2026-08-01 12:00:00")
     )
     @project.save!
     @project.translations.create!(
       locale: "fr", title: "Systèmes rapides", slug: "systemes-rapides",
-      summary: "Une étude de cas concise", body_markdown: "Corps",
+      role: "Engineer", summary: "Une étude de cas concise", body_markdown: "Corps",
       state: "published", published_at: Time.zone.parse("2026-08-02 12:00:00")
     )
     @project.translations.create!(
       locale: "vi", title: "Hệ thống nhanh", slug: "he-thong-nhanh",
-      summary: "Bản nháp", body_markdown: "Nội dung", state: "draft"
+      role: "Engineer", summary: "Bản nháp", body_markdown: "Nội dung", state: "draft"
     )
   end
 

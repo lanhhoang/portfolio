@@ -2,10 +2,6 @@
 <%= form_with model: [:admin, project] do |form| %>
   <div class="grid gap-4 md:grid-cols-2">
     <div>
-      <%= form.label :role %>
-      <%= form.text_field :role, required: true %>
-    </div>
-    <div>
       <%= form.label :featured_position %>
       <%= form.number_field :featured_position, min: 1 %>
     </div>
@@ -30,6 +26,12 @@
       <%= form.collection_check_boxes :tag_ids, Tag.includes(:translations).order(:id), :id,
         ->(tag) { tag.translations.find { |item| item.locale == "en" }&.name || "Tag ##{tag.id}" } %>
     </div>
+    <fieldset>
+      <legend>Working languages</legend>
+      <%= form.collection_check_boxes :working_languages, Project::WORKING_LANGUAGES, :itself,
+        ->(locale) { I18n.t("locales.#{locale}", locale: locale) } %>
+      <p class="text-sm opacity-70">Optional. Languages you worked in with the client or team. Shown on the case study.</p>
+    </fieldset>
     <div>
       <%= form.label :cover_image, "Cover image" %>
       <%= form.file_field :cover_image, accept: "image/png,image/jpeg,image/webp" %>

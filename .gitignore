@@ -39,3 +39,6 @@
 
 # Ignore Playwright cache
 /.playwright-mcp
+
+# Impeccable
+.impeccable/

@@ -5,25 +5,31 @@ if Rails.env.development?
   require "base64"
   require "stringio"
 
+  # find_or_initialize_by queries outside the loaded association, so autosave
+  # would skip edits to existing rows; look the row up in memory instead.
+  translation_for = lambda do |record, locale|
+    record.translations.find { |item| item.locale == locale } || record.translations.build(locale: locale)
+  end
+
   translations = {
     "en" => {
-      profile: [ "Demo Designer", "Ideas. Interfaces. Impact.", "A neutral demonstration profile.", "## About\n\nThis content is safe to replace.", "Available" ],
+      profile: [ "Demo Designer", "Ideas. Interfaces. Impact.", "A neutral demonstration profile.", "## About\n\nThis content is safe to replace.", "Open to product engineering roles", "Product engineer" ],
       tag: [ "Ruby", "ruby" ],
-      project: [ "Sample System", "sample-system", "A database-backed demonstration project.", "## Result\n\nA small, useful result." ],
+      project: [ "Sample System", "sample-system", "A database-backed demonstration project.", "## Result\n\nA small, useful result.", "Designer and engineer" ],
       post: [ "A Sample Technical Note", "sample-technical-note", "A short demonstration article.", "## Note\n\n```ruby\nputs :hello\n```" ],
       resume: [ "Demo Résumé", "A localized demonstration résumé." ]
     },
     "fr" => {
-      profile: [ "Designer Démo", "Idées. Interfaces. Impact.", "Un profil de démonstration neutre.", "## À propos\n\nCe contenu peut être remplacé.", "Disponible" ],
+      profile: [ "Designer Démo", "Idées. Interfaces. Impact.", "Un profil de démonstration neutre.", "## À propos\n\nCe contenu peut être remplacé.", "Ouvert aux postes d’ingénieur produit", "Ingénieur produit" ],
       tag: [ "Ruby", "ruby-fr" ],
-      project: [ "Système exemple", "systeme-exemple", "Un projet de démonstration stocké en base.", "## Résultat\n\nUn résultat simple et utile." ],
+      project: [ "Système exemple", "systeme-exemple", "Un projet de démonstration stocké en base.", "## Résultat\n\nUn résultat simple et utile.", "Designer et ingénieur" ],
       post: [ "Une note technique", "note-technique", "Un court article de démonstration.", "## Note\n\n```ruby\nputs :bonjour\n```" ],
       resume: [ "CV de démonstration", "Un CV de démonstration localisé." ]
     },
     "vi" => {
-      profile: [ "Nhà thiết kế mẫu", "Ý tưởng. Giao diện. Tác động.", "Hồ sơ minh họa trung lập.", "## Giới thiệu\n\nNội dung này có thể được thay thế.", "Sẵn sàng" ],
+      profile: [ "Nhà thiết kế mẫu", "Ý tưởng. Giao diện. Tác động.", "Hồ sơ minh họa trung lập.", "## Giới thiệu\n\nNội dung này có thể được thay thế.", "Sẵn sàng nhận vị trí kỹ sư sản phẩm", "Kỹ sư sản phẩm" ],
       tag: [ "Ruby", "ruby-vi" ],
-      project: [ "Hệ thống mẫu", "he-thong-mau", "Dự án minh họa được lưu trong cơ sở dữ liệu.", "## Kết quả\n\nMột kết quả nhỏ và hữu ích." ],
+      project: [ "Hệ thống mẫu", "he-thong-mau", "Dự án minh họa được lưu trong cơ sở dữ liệu.", "## Kết quả\n\nMột kết quả nhỏ và hữu ích.", "Nhà thiết kế và kỹ sư" ],
       post: [ "Ghi chú kỹ thuật mẫu", "ghi-chu-ky-thuat-mau", "Một bài viết minh họa ngắn.", "## Ghi chú\n\n```ruby\nputs :xin_chao\n```" ],
       resume: [ "Hồ sơ mẫu", "Hồ sơ minh họa đã được bản địa hóa." ]
     }
@@ -36,32 +42,32 @@ if Rails.env.development?
     accent: "lime"
   )
   translations.each do |locale, copy|
-    item = profile.translations.find_or_initialize_by(locale: locale)
+    item = translation_for.call(profile, locale)
     item.assign_attributes(
       display_name: copy[:profile][0], headline: copy[:profile][1],
       introduction: copy[:profile][2], biography_markdown: copy[:profile][3],
-      availability_label: copy[:profile][4]
+      availability_label: copy[:profile][4], job_title: copy[:profile][5]
     )
   end
   profile.save!
 
   tag = TagTranslation.find_by(locale: "en", slug: "ruby")&.tag || Tag.new
   translations.each do |locale, copy|
-    item = tag.translations.find_or_initialize_by(locale: locale)
+    item = translation_for.call(tag, locale)
     item.assign_attributes(name: copy[:tag][0], slug: copy[:tag][1])
   end
   tag.save!
 
   project = ProjectTranslation.find_by(locale: "en", slug: "sample-system")&.project || Project.new
   project.assign_attributes(
-    role: "Designer and engineer", started_on: Date.new(2026, 1, 1),
+    started_on: Date.new(2026, 1, 1),
     ended_on: Date.new(2026, 6, 30), source_url: "https://github.com/example/sample-system",
     featured_position: 1
   )
   translations.each do |locale, copy|
-    item = project.translations.find_or_initialize_by(locale: locale)
+    item = translation_for.call(project, locale)
     item.assign_attributes(
-      title: copy[:project][0], slug: copy[:project][1], summary: copy[:project][2],
+      title: copy[:project][0], slug: copy[:project][1], summary: copy[:project][2], role: copy[:project][4],
       body_markdown: copy[:project][3], state: "published", published_at: Time.zone.parse("2026-07-01 09:00")
     )
     # The fr/vi publication validation reads persisted rows, so save the
@@ -73,7 +79,7 @@ if Rails.env.development?
 
   post = PostTranslation.find_by(locale: "en", slug: "sample-technical-note")&.post || Post.new
   translations.each do |locale, copy|
-    item = post.translations.find_or_initialize_by(locale: locale)
+    item = translation_for.call(post, locale)
     item.assign_attributes(
       title: copy[:post][0], slug: copy[:post][1], excerpt: copy[:post][2],
       body_markdown: copy[:post][3], state: "published", published_at: Time.zone.parse("2026-08-01 09:00")
@@ -87,7 +93,7 @@ if Rails.env.development?
   resume = Resume.find_or_initialize_by(singleton_guard: 1)
   resume.updated_on = Date.new(2026, 9, 2)
   translations.each do |locale, copy|
-    item = resume.translations.find_or_initialize_by(locale: locale)
+    item = translation_for.call(resume, locale)
     item.assign_attributes(title: copy[:resume][0], description: copy[:resume][1])
   end
   resume.save!
