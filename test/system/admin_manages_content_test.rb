@@ -19,6 +19,13 @@ class AdminManagesContentTest < ApplicationSystemTestCase
     )
     sign_in_owner
     page.current_window.resize_to(320, 700)
+    # Desktop Chrome can clamp resize_to to a wider minimum window.
+    page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride",
+      width: 320, height: 700, deviceScaleFactor: 1, mobile: false)
+  end
+
+  teardown do
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
 
   test "owner creates translations, previews markdown, uploads assets, and changes accent" do
