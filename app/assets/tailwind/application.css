@@ -472,6 +472,8 @@ html.js .site-header:not([data-menu-connected]) .header-panel {
 
 .page-shell {
   min-height: min(68vh, 48rem);
+  /* Short pages must not stretch grid rows to fill the min-height. */
+  align-content: start;
   padding-block: clamp(3rem, 12vw, 8rem);
 }
 
@@ -1067,6 +1069,7 @@ h1 {
   }
 
   .primary-navigation a {
+    justify-content: center;
     border: 0;
   }
 

@@ -10,7 +10,7 @@
             link_to t("locales.#{locale}"), localized_root_path(locale: locale),
               lang: locale, hreflang: locale, aria: { current: ("true" if locale == current_locale.to_s) }
           end %>
-          <p class="hero-role"><%= t("public.home.role_html", title: @profile_translation.job_title, languages: safe_join(languages, content_tag(:span, " · ", class: "hero-role-sep", aria: { hidden: true }))) %></p>
+          <p class="hero-role"><%= t("public.home.role_html", title: @profile_translation.job_title, languages: safe_join(languages, content_tag(:span, "\u00A0· ", class: "hero-role-sep", aria: { hidden: true }))) %></p>
         </div>
         <p class="type-statement"><%= @profile_translation.headline %></p>
         <p class="type-lede"><%= @profile_translation.introduction %></p>
