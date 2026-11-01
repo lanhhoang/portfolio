@@ -85,6 +85,7 @@ vi:
       no_matches: "Không có dự án nào phù hợp với tìm kiếm này."
       role: "Vai trò"
       outcome: "Kết quả"
+      working_languages: "Ngôn ngữ làm việc"
       timeline: "Thời gian"
       present: "Hiện tại"
       next: "Dự án tiếp theo"
@@ -131,6 +132,7 @@ vi:
           tb: "TB"
   footer:
     rights: "© %{year} %{name}"
+    languages_html: "Xuất bản bằng %{languages}"
   accessibility:
     skip_to_content: "Chuyển đến nội dung"
   date:

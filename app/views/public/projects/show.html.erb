@@ -41,6 +41,14 @@
             <dd><%= project_timeline(project) %></dd>
           </div>
         <% end %>
+        <% if project.working_languages.any? %>
+          <div>
+            <dt><%= t("public.projects.working_languages") %></dt>
+            <dd class="fact-languages">
+              <%= safe_join(project.working_languages.map { |locale| content_tag(:span, t("locales.#{locale}"), lang: locale) }, content_tag(:span, " · ", aria: { hidden: true })) %>
+            </dd>
+          </div>
+        <% end %>
         <% if project.tags.any? %>
           <div>
             <dt><%= t("public.tags.label") %></dt>

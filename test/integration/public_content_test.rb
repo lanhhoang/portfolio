@@ -45,7 +45,7 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     assert_select 'html[data-accent="orange"]'
     assert_select "h1", text: "Demo Owner"
     assert_select ".hero-role", text: "Senior product engineer · works in English · Français · Tiếng Việt"
-    assert_select ".hero-role strong[lang=en]", text: "English"
+    assert_select ".hero-role a[href='/en'][aria-current='true'][lang=en]", text: "English"
     assert_select ".hero-role a[href='/fr'][hreflang=fr]", text: "Français"
     assert_select ".hero-role a[href='/vi'][hreflang=vi]", text: "Tiếng Việt"
     assert_select ".availability", text: "Available"
@@ -170,6 +170,25 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     get "/en/resume"
     assert_select "h1", text: "Résumé"
     assert_select "h1", text: "Jane-CV-final-v3", count: 0
+  end
+
+  test "case study lists working languages only when set" do
+    get "/en/projects/visible-project"
+    assert_select ".facts dt", text: "Working languages", count: 0
+
+    @project.update!(working_languages: [ "vi", "", "en", "xx" ])
+    assert_equal %w[en vi], @project.reload.working_languages
+
+    get "/en/projects/visible-project"
+    assert_select ".facts dt", text: "Working languages"
+    assert_select ".fact-languages span[lang=en]", text: "English"
+    assert_select ".fact-languages span[lang=vi]", text: "Tiếng Việt"
+  end
+
+  test "footer names the three site languages" do
+    get "/en"
+    assert_select ".footer-languages", text: "Published in English · Français · Tiếng Việt"
+    assert_select ".footer-languages span[lang=vi]", text: "Tiếng Việt"
   end
 
   test "résumé page links to the PDFs in other languages" do

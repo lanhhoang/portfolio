@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_31_214904) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_01_012153) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -167,6 +167,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_214904) do
     t.string "source_url"
     t.date "started_on"
     t.datetime "updated_at", null: false
+    t.json "working_languages", default: [], null: false
     t.index ["featured_position"], name: "index_projects_on_featured_position"
     t.check_constraint "featured_position IS NULL OR featured_position > 0", name: "projects_featured_position_positive"
   end

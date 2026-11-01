@@ -85,6 +85,7 @@ fr:
       no_matches: "Aucune étude de cas ne correspond à cette recherche."
       role: "Rôle"
       outcome: "Résultat"
+      working_languages: "Langues de travail"
       timeline: "Période"
       present: "Aujourd’hui"
       next: "Étude de cas suivante"
@@ -131,6 +132,7 @@ fr:
           tb: "To"
   footer:
     rights: "© %{year} %{name}"
+    languages_html: "Publié en %{languages}"
   accessibility:
     skip_to_content: "Aller au contenu"
   date:

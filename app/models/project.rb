@@ -24,6 +24,12 @@ class Project < ApplicationRecord
         attributes.values_at("title", "slug", "role", "summary", "outcome", "body_markdown").all?(&:blank?)
     }
 
+  WORKING_LANGUAGES = %w[en fr vi].freeze
+
+  normalizes :working_languages, with: ->(languages) {
+    WORKING_LANGUAGES & Array(languages).compact_blank.map(&:to_s)
+  }
+
   validates :featured_position, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validate :links_are_http_urls
   validate :english_translation_present

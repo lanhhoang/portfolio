@@ -533,7 +533,7 @@ html.js .site-header:not([data-menu-connected]) .primary-navigation {
   line-height: var(--leading-heading);
 }
 
-.hero-role :is(a, strong) {
+.hero-role a {
   color: var(--foreground);
   font-weight: 800;
   white-space: nowrap;
@@ -542,6 +542,11 @@ html.js .site-header:not([data-menu-connected]) .primary-navigation {
 /* Extends the language links' hit area past the line box to 24px+. */
 .hero-role a {
   position: relative;
+}
+
+/* The page's own language reads as settled, not as a destination. */
+.hero-role a[aria-current="true"] {
+  text-decoration-line: none;
 }
 
 .hero-role a::before {
@@ -926,6 +931,13 @@ h1 {
 
 .footer-grid p {
   margin: 0;
+}
+
+/* The three languages close every page as quietly as the hero opens with them. */
+.footer-languages span {
+  color: var(--foreground);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .footer-links {

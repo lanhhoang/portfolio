@@ -7,11 +7,8 @@
         <div class="hero-name">
           <h1 id="home-heading" class="type-display"><%= @profile_translation.display_name %></h1>
           <% languages = PublicController::SUPPORTED_LOCALES.map do |locale|
-            if locale == current_locale.to_s
-              content_tag(:strong, t("locales.#{locale}"), lang: locale)
-            else
-              link_to t("locales.#{locale}"), localized_root_path(locale: locale), lang: locale, hreflang: locale
-            end
+            link_to t("locales.#{locale}"), localized_root_path(locale: locale),
+              lang: locale, hreflang: locale, aria: { current: ("true" if locale == current_locale.to_s) }
           end %>
           <p class="hero-role"><%= t("public.home.role_html", title: @profile_translation.job_title, languages: safe_join(languages, content_tag(:span, " · ", class: "hero-role-sep", aria: { hidden: true }))) %></p>
         </div>
