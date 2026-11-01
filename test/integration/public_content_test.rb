@@ -143,6 +143,7 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
     assert_select ".page-end-nav a[href='/en/blog/older-post']", text: "Older Post"
     assert_select ".page-end-nav", text: /Newer article/, count: 0
     assert_select ".page-end-nav a[href='/en/blog']", text: "All articles"
+    assert_select ".page-end-nav a[href='/en/projects']", text: "See the work"
 
     get "/en/blog/older-post"
     assert_select ".page-end-nav a[href='/en/blog/visible-post']", text: "Visible Post"
@@ -400,6 +401,20 @@ class PublicContentRequestTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select 'img[srcset][sizes][width="512"][height="512"][loading="eager"][fetchpriority="high"]'
+  end
+
+  test "gallery images use per-locale captions as alt text and fall back when blank" do
+    2.times do |index|
+      @project.gallery_images.attach(io: Rails.root.join("public/icon.png").open, filename: "g#{index}.png", content_type: "image/png")
+    end
+    @project.translations.find_by!(locale: "en").update!(gallery_captions: "\nCheckout flow on a phone\n")
+
+    get localized_project_path(locale: :en, slug: "visible-project")
+
+    assert_select ".gallery figure", count: 2
+    assert_select ".gallery img[alt=?]", "Visible Project, image 1"
+    assert_select ".gallery img[alt=?]", "Checkout flow on a phone"
+    assert_select ".gallery figcaption", count: 1, text: "Checkout flow on a phone"
   end
 
   test "every public page has one focusable main landmark" do

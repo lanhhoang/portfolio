@@ -54,7 +54,7 @@ class Admin::ProjectsController < Admin::BaseController
       :started_on, :ended_on, :live_url, :source_url, :featured_position, :cover_image,
       {
         gallery_images: [], tag_ids: [], working_languages: [],
-        translations_attributes: [ %i[id locale title slug role summary outcome body_markdown _destroy] ]
+        translations_attributes: [ %i[id locale title slug role summary outcome gallery_captions body_markdown _destroy] ]
       }
     ])
   end

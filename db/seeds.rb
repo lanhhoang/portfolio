@@ -13,21 +13,21 @@ if Rails.env.development?
 
   translations = {
     "en" => {
-      profile: [ "Demo Designer", "Ideas. Interfaces. Impact.", "A neutral demonstration profile.", "## About\n\nThis content is safe to replace.", "Available", "Product engineer" ],
+      profile: [ "Demo Designer", "Ideas. Interfaces. Impact.", "A neutral demonstration profile.", "## About\n\nThis content is safe to replace.", "Open to product engineering roles", "Product engineer" ],
       tag: [ "Ruby", "ruby" ],
       project: [ "Sample System", "sample-system", "A database-backed demonstration project.", "## Result\n\nA small, useful result.", "Designer and engineer" ],
       post: [ "A Sample Technical Note", "sample-technical-note", "A short demonstration article.", "## Note\n\n```ruby\nputs :hello\n```" ],
       resume: [ "Demo Résumé", "A localized demonstration résumé." ]
     },
     "fr" => {
-      profile: [ "Designer Démo", "Idées. Interfaces. Impact.", "Un profil de démonstration neutre.", "## À propos\n\nCe contenu peut être remplacé.", "Disponible", "Ingénieur produit" ],
+      profile: [ "Designer Démo", "Idées. Interfaces. Impact.", "Un profil de démonstration neutre.", "## À propos\n\nCe contenu peut être remplacé.", "Ouvert aux postes d’ingénieur produit", "Ingénieur produit" ],
       tag: [ "Ruby", "ruby-fr" ],
       project: [ "Système exemple", "systeme-exemple", "Un projet de démonstration stocké en base.", "## Résultat\n\nUn résultat simple et utile.", "Designer et ingénieur" ],
       post: [ "Une note technique", "note-technique", "Un court article de démonstration.", "## Note\n\n```ruby\nputs :bonjour\n```" ],
       resume: [ "CV de démonstration", "Un CV de démonstration localisé." ]
     },
     "vi" => {
-      profile: [ "Nhà thiết kế mẫu", "Ý tưởng. Giao diện. Tác động.", "Hồ sơ minh họa trung lập.", "## Giới thiệu\n\nNội dung này có thể được thay thế.", "Sẵn sàng", "Kỹ sư sản phẩm" ],
+      profile: [ "Nhà thiết kế mẫu", "Ý tưởng. Giao diện. Tác động.", "Hồ sơ minh họa trung lập.", "## Giới thiệu\n\nNội dung này có thể được thay thế.", "Sẵn sàng nhận vị trí kỹ sư sản phẩm", "Kỹ sư sản phẩm" ],
       tag: [ "Ruby", "ruby-vi" ],
       project: [ "Hệ thống mẫu", "he-thong-mau", "Dự án minh họa được lưu trong cơ sở dữ liệu.", "## Kết quả\n\nMột kết quả nhỏ và hữu ích.", "Nhà thiết kế và kỹ sư" ],
       post: [ "Ghi chú kỹ thuật mẫu", "ghi-chu-ky-thuat-mau", "Một bài viết minh họa ngắn.", "## Ghi chú\n\n```ruby\nputs :xin_chao\n```" ],

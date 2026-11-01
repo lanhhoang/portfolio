@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_01_012153) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_01_013919) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -140,6 +140,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_012153) do
     t.text "body_html", default: "", null: false
     t.text "body_markdown", null: false
     t.datetime "created_at", null: false
+    t.text "gallery_captions", default: "", null: false
     t.string "locale", null: false
     t.text "outcome", default: "", null: false
     t.integer "project_id", null: false

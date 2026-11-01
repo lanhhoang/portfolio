@@ -720,6 +720,28 @@ html.js .site-header:not([data-menu-connected]) .header-panel {
   gap: var(--space-group);
 }
 
+.gallery {
+  display: grid;
+  gap: 1.5rem 1rem;
+}
+
+@media (min-width: 48rem) {
+  .gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.gallery img {
+  width: 100%;
+}
+
+.gallery figcaption {
+  margin-top: 0.5rem;
+  max-width: 60ch;
+  color: var(--muted);
+  font-size: var(--text-meta);
+}
+
 .aside-links li {
   display: flex;
   flex-wrap: wrap;

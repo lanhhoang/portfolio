@@ -27,6 +27,11 @@ class ProjectTranslation < ApplicationRecord
     title.present? && role.present? && summary.present? && body_markdown.present?
   end
 
+  # One caption per gallery image, in upload order; blank lines keep positions.
+  def gallery_caption(index)
+    gallery_captions.to_s.lines.map(&:strip)[index].presence
+  end
+
   def publication_parent
     project
   end

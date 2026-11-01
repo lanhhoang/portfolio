@@ -19,5 +19,6 @@
 <div>
   <%= form.label :availability_label, "Availability label" %>
   <%= form.text_field :availability_label %>
+  <p class="text-sm opacity-70">A short sentence a recruiter can act on, shown under your introduction. Say what you are open to and from when, e.g. “Open to product engineering roles from January”.</p>
 </div>
 <%= render "admin/shared/markdown_editor", form: form, attribute: :biography_markdown, label: "Biography (Markdown)" %>
