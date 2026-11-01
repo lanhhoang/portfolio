@@ -5,6 +5,7 @@ class PublicShellTest < ApplicationSystemTestCase
 
   test "locale choice survives navigation and a root reload" do
     visit localized_root_path(locale: "en")
+    find("button[aria-controls='site-menu']").click
 
     within ".locale-switcher" do
       click_link "Français"
@@ -29,10 +30,14 @@ class PublicShellTest < ApplicationSystemTestCase
     visit localized_root_path(locale: "en")
 
     assert_selector "#primary-navigation", visible: :hidden
-    menu_button = find("button[aria-controls='primary-navigation']")
+    assert_selector ".locale-switcher", visible: :hidden
+    header_height = page.evaluate_script("document.querySelector('.site-header').getBoundingClientRect().height")
+    assert_operator header_height, :<=, 64
+    menu_button = find("button[aria-controls='site-menu']")
     menu_button.click
 
     assert_selector "#primary-navigation", visible: :visible
+    assert_selector ".locale-switcher a[hreflang='fr']", text: "Français", visible: :visible
     assert_equal "true", menu_button["aria-expanded"]
 
     find("body").send_keys(:escape)
@@ -44,6 +49,7 @@ class PublicShellTest < ApplicationSystemTestCase
     page.current_window.resize_to(1280, 900)
     visit localized_root_path(locale: "en")
     assert_selector "#primary-navigation", visible: :visible
+    assert_selector ".locale-switcher", visible: :visible
     assert_selector ".menu-button", visible: :hidden
   end
 

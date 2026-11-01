@@ -9,44 +9,45 @@
     <button
       class="menu-button"
       type="button"
-      aria-controls="primary-navigation"
+      aria-controls="site-menu"
       aria-expanded="false"
       data-menu-target="button"
       data-action="menu#toggle">
       <span data-menu-target="label"><%= t("menu.open") %></span>
     </button>
 
-    <nav
-      id="primary-navigation"
-      class="primary-navigation"
-      aria-label="<%= t("navigation.label") %>"
-      data-menu-target="panel">
-      <% [
-        ["public/projects", nil, t("navigation.work"), localized_projects_path(locale: current_locale)],
-        ["public/posts", nil, t("navigation.writing"), localized_blog_path(locale: current_locale)],
-        ["public/profiles", nil, t("navigation.about"), localized_about_path(locale: current_locale)],
-        ["public/resumes", nil, t("navigation.resume"), localized_resume_path(locale: current_locale)],
-        ["public/contact_messages", nil, t("navigation.contact"), localized_contact_path(locale: current_locale)]
-      ].each do |target_controller, target_action, label, path| %>
-        <%= link_to label, path, aria: { current: ("page" if controller_path == target_controller && (target_action.nil? || action_name == target_action)) } %>
-      <% end %>
-    </nav>
-
-    <nav class="locale-switcher" aria-label="<%= t("locales.label") %>">
-      <% PublicController::SUPPORTED_LOCALES.each do |locale| %>
-        <% switch_path = locale_switch_path(locale) %>
-        <% if switch_path %>
-          <%= link_to switch_path,
-            lang: locale,
-            hreflang: locale,
-            aria: { current: ("true" if locale == current_locale) } do %>
-            <span class="locale-code" aria-hidden="true"><%= locale.upcase %></span><span class="locale-name"><%= t("locales.#{locale}") %></span>
-          <% end %>
-        <% else %>
-          <span lang="<%= locale %>" aria-disabled="true"><span class="locale-code" aria-hidden="true"><%= locale.upcase %></span><span class="locale-name"><%= t("locales.#{locale}") %></span></span>
+    <div id="site-menu" class="header-panel" data-menu-target="panel">
+      <nav
+        id="primary-navigation"
+        class="primary-navigation"
+        aria-label="<%= t("navigation.label") %>">
+        <% [
+          ["public/projects", nil, t("navigation.work"), localized_projects_path(locale: current_locale)],
+          ["public/posts", nil, t("navigation.writing"), localized_blog_path(locale: current_locale)],
+          ["public/profiles", nil, t("navigation.about"), localized_about_path(locale: current_locale)],
+          ["public/resumes", nil, t("navigation.resume"), localized_resume_path(locale: current_locale)],
+          ["public/contact_messages", nil, t("navigation.contact"), localized_contact_path(locale: current_locale)]
+        ].each do |target_controller, target_action, label, path| %>
+          <%= link_to label, path, aria: { current: ("page" if controller_path == target_controller && (target_action.nil? || action_name == target_action)) } %>
         <% end %>
-      <% end %>
-    </nav>
+      </nav>
+
+      <nav class="locale-switcher" aria-label="<%= t("locales.label") %>">
+        <% PublicController::SUPPORTED_LOCALES.each do |locale| %>
+          <% switch_path = locale_switch_path(locale) %>
+          <% if switch_path %>
+            <%= link_to switch_path,
+              lang: locale,
+              hreflang: locale,
+              aria: { current: ("true" if locale == current_locale) } do %>
+              <span class="locale-name"><%= t("locales.#{locale}") %></span>
+            <% end %>
+          <% else %>
+            <span lang="<%= locale %>" aria-disabled="true"><span class="locale-name"><%= t("locales.#{locale}") %></span></span>
+          <% end %>
+        <% end %>
+      </nav>
+    </div>
 
     <button
       class="theme-button"
